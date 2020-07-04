@@ -1,6 +1,6 @@
-# Integrated analysis of bulk and single cell DNA-seq
+# Integrated analysis of bulk and single cell RNA-seq
 
-This software performs integrated analysis of bulk DNA-seq and single cell DNA-seq data. 
+This software performs integrated analysis of bulk DNA-seq and single cell RNA-seq data. 
 
 ## Requirements to build the software
 + gsl
