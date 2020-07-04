@@ -24,6 +24,8 @@ enum CopyNumberInputType {
     TOTAL_CN, GENOTYPE, TOTAL_CN_PROFILE, UNDETERMINED
 };
 
+class CompactTSSBState;
+
 class NewickNode
 {
 public:
@@ -51,20 +53,20 @@ void WriteScRnaData(string output_path,
                     const vector<SingleCellData *> &sc_data);
 void write_tree(string output_path,
                 const vector<BulkDatum *> &bulk,
-                CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &state);
+                CompactTSSBState &state);
 void WriteTreeToFile(string output_path,
                 const vector<BulkDatum *> &bulk,
-                Node<BulkDatum,CloneTreeNodeParam> *root_node);
+                CloneTreeNode *root_node);
 
 void WriteCopyNumberProfileToFile(string output_path,
                       const vector<BulkDatum *> &bulk_data,
-                      Node<BulkDatum,CloneTreeNodeParam> *root_node,
-                      unordered_map<Node<BulkDatum,CloneTreeNodeParam> *, vector<pair<size_t, size_t> > > &cn_profile);
+                      CloneTreeNode *root_node,
+                      unordered_map<CloneTreeNode *, vector<pair<size_t, size_t> > > &cn_profile);
 
 CopyNumberInputType ReadBulkData(string bulk_data_path,
                                  vector<BulkDatum *> &bulk_data,
                                  unordered_map<string, Locus *> &somatic_loci);
-unordered_set<Locus> read_bulk_data_phyloWGS(string bulk_data_path, vector<BulkDatum *> &bulk_data);
+//unordered_set<Locus> read_bulk_data_phyloWGS(string bulk_data_path, vector<BulkDatum *> &bulk_data);
 //void read_scDNA_data(string sc_data_path, vector<BulkDatum *> &bulk_data, vector<SingleCellData *> &sc_data);
 //void read_scRNA_data(string sc_data_path, unordered_set<Locus> &somatic_loci, vector<SingleCellData *> &sc_data);
 void ReadCnPrior(string cn_prior_path, vector<BulkDatum *> &bulk_data);
@@ -78,8 +80,8 @@ void write_vector(string path, const vector<unsigned int> &data);
 void write_vector(string path, const vector<double> &data);
 void write_matrix_as_csv(string path, const gsl_matrix &data);
 
-string write_newick(Node<BulkDatum,CloneTreeNodeParam> *node);
-void fill_node_to_param(Node<BulkDatum,CloneTreeNodeParam> *node,
+string write_newick(CloneTreeNode *node);
+void fill_node_to_param(CloneTreeNode *node,
                         unordered_map<string, double> &node2param);
 void test_likelihood(string newick_path,
                      string bulk_data_path,

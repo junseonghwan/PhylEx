@@ -12,7 +12,6 @@
 
 #include "bulk_datum.hpp"
 #include "clone_node.hpp"
-#include "node.hpp"
 #include "single_cell.hpp"
 #include "tssb_state.hpp"
 
@@ -22,12 +21,12 @@ double v_measure(double beta,
 
 double v_measure(double beta,
                  const vector<BulkDatum *> &data,
-                 TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &true_state,
-                 TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &sampled_state);
+                 TSSBState &true_state,
+                 TSSBState &sampled_state);
 
 void compute_metrics(const vector<BulkDatum *> &data,
-                     TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &true_state,
-                     TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &sampled_state);
+                     TSSBState &true_state,
+                     TSSBState &sampled_state);
 
 void call_mutation(const unordered_map<Locus, LocusDatum*> &loci_data, const ModelParams &model_params, unordered_map<Locus, size_t> &mut_map, size_t max_cn = 6);
 

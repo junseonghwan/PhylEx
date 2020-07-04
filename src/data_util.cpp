@@ -22,7 +22,6 @@
 
 #include <gsl/gsl_randist.h>
 
-#include "node.hpp"
 #include "tssb_state.hpp"
 #include "utils.hpp"
 
@@ -318,7 +317,7 @@ void WriteScRnaData(string output_path,
 
 void WriteTreeToFile(string output_path,
                 const vector<BulkDatum *> &bulk,
-                Node<BulkDatum,CloneTreeNodeParam> *root_node)
+                CloneTreeNode *root_node)
 {
     if (!path_exists(output_path)) {
         // create path
@@ -328,19 +327,19 @@ void WriteTreeToFile(string output_path,
     size_t n_muts = bulk.size();
 
     // construct datum2node mapping
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> all_nodes;
-    Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(root_node, all_nodes, false);
-    unordered_map<BulkDatum *, Node<BulkDatum, CloneTreeNodeParam> *> datum2node;
-    Node<BulkDatum,CloneTreeNodeParam>::construct_datum2node(all_nodes, datum2node);
+    vector<CloneTreeNode *> all_nodes;
+    CloneTreeNode::breadth_first_traversal(root_node, all_nodes, false);
+    unordered_map<BulkDatum *, CloneTreeNode *> datum2node;
+    CloneTreeNode::construct_datum2node(all_nodes, datum2node);
 
     // ancestral matrix for mutations for computing accuracy on the ordering
-    gsl_matrix *A = Node<BulkDatum,CloneTreeNodeParam>::GetAncestralMatrix(root_node, bulk, datum2node);
+    gsl_matrix *A = CloneTreeNode::GetAncestralMatrix(root_node, bulk, datum2node);
     write_matrix_as_csv(output_path + "/ancestral_matrix.csv", *A);
 
     // cellular prevalence for each of the mutations: Nx2
     ofstream f;
     f.open(output_path + "/cellular_prev.csv", ios::out);
-    Node<BulkDatum,CloneTreeNodeParam> *node;
+    CloneTreeNode *node;
     for (size_t i = 0; i < n_muts; i++) {
         node = datum2node[bulk[i]];
         double phi = node->get_node_parameter().get_cellular_prev();
@@ -357,11 +356,11 @@ void WriteTreeToFile(string output_path,
     f.close();
     
     // output the tree using Newick format
-    string newick = write_newick(root_node);
-    newick += ";";
-    f.open(output_path + "/tree.newick", ios::out);
-    f << newick;
-    f.close();
+//    string newick = write_newick(root_node);
+//    newick += ";";
+//    f.open(output_path + "/tree.newick", ios::out);
+//    f << newick;
+//    f.close();
     
     // Cellular prevalence for each of the nodes.
     f.open(output_path + "/node2cellular_prev.csv", ios::out);
@@ -473,8 +472,8 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
     cerr << "Error in constructing the tree structure." << endl;
     exit(-1);
   }
-  vector<Node<BulkDatum, CloneTreeNodeParam> *> ret;
-  Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(clone_root, ret);
+  vector<CloneTreeNode *> ret;
+  CloneTreeNode::breadth_first_traversal(clone_root, ret);
   for (size_t i = 0; i < ret.size(); i++) {
     cout << ret.at(i)->print() << endl;
   }
@@ -482,13 +481,13 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
   gsl_rng *random = generate_random_object(1);
   ModelParams model_params(1, 0.5, 0.5, 0.001);
 
-  auto *tssb = new TSSBState<BulkDatum, SingleCellData, CloneTreeNodeParam>(random,
-                                                                            clone_root,
-                                                                            model_params,
-                                                                            BulkLogLikWithTotalCopyNumber,
-                                                                            ScLikelihood,
-                                                                            data,
-                                                                            0);
+  auto *tssb = new TSSBState(random,
+                             clone_root,
+                             model_params,
+                             BulkLogLikWithTotalCopyNumber,
+                             ScLikelihood,
+                             data,
+                             0);
 
     // convert data to map
     unordered_map<string, BulkDatum *> data_map;
@@ -517,46 +516,46 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
   return tssb->compute_log_likelihood_bulk(model_params);
 }
 
-void test_likelihood(string newick_path,
-                     string bulk_data_path,
-                     string bulk_assignment_path)
-{
-    vector<BulkDatum *> *bulk_data = new vector<BulkDatum *>();
-    vector<TSSBState<BulkDatum, SingleCellData, CloneTreeNodeParam> *> states;
-
-    // Read in bulk data
-    read_bulk_data_phyloWGS(bulk_data_path, *bulk_data);
-
-    // Read in the Newick file.
-    ifstream dat_file (newick_path);
-    if (!dat_file.is_open())
-    {
-        cerr << "Could not open the file: " << newick_path << endl;
-        exit(-1);
-    }
-    ifstream bulk_assignment_file(bulk_assignment_path);
-    if (!bulk_assignment_file.is_open())
-    {
-        cerr << "Could not open the file: " << bulk_assignment_path << endl;
-        exit(-1);
-    }
-
-  string line, line2;
-  while ( getline (dat_file, line) && getline (bulk_assignment_file, line2))
-  {
-      vector<string> results;
-      boost::split(results, line, boost::is_any_of(";"));
-
-      double likelihood1 = parse_newick(results[0], line2, bulk_data);
-      double likelihood2 = stod(results[1]);
-      cout << "Likelihood1: " << likelihood1 << endl;
-      cout << "Likelihood2: " << likelihood2 << endl;
-      assert(fabs(likelihood1 - likelihood2) < 1e-6);
-  }
-
-  dat_file.close();
-  bulk_assignment_file.close();
-}
+//void test_likelihood(string newick_path,
+//                     string bulk_data_path,
+//                     string bulk_assignment_path)
+//{
+//    vector<BulkDatum *> *bulk_data = new vector<BulkDatum *>();
+//    vector<TSSBState *> states;
+//
+//    // Read in bulk data
+//    read_bulk_data_phyloWGS(bulk_data_path, *bulk_data);
+//
+//    // Read in the Newick file.
+//    ifstream dat_file (newick_path);
+//    if (!dat_file.is_open())
+//    {
+//        cerr << "Could not open the file: " << newick_path << endl;
+//        exit(-1);
+//    }
+//    ifstream bulk_assignment_file(bulk_assignment_path);
+//    if (!bulk_assignment_file.is_open())
+//    {
+//        cerr << "Could not open the file: " << bulk_assignment_path << endl;
+//        exit(-1);
+//    }
+//
+//  string line, line2;
+//  while ( getline (dat_file, line) && getline (bulk_assignment_file, line2))
+//  {
+//      vector<string> results;
+//      boost::split(results, line, boost::is_any_of(";"));
+//
+//      double likelihood1 = parse_newick(results[0], line2, bulk_data);
+//      double likelihood2 = stod(results[1]);
+//      cout << "Likelihood1: " << likelihood1 << endl;
+//      cout << "Likelihood2: " << likelihood2 << endl;
+//      assert(fabs(likelihood1 - likelihood2) < 1e-6);
+//  }
+//
+//  dat_file.close();
+//  bulk_assignment_file.close();
+//}
 
 void read_data_assignment(string file_path)
 {
@@ -576,9 +575,9 @@ void read_data_assignment(string file_path)
   dat_file.close();
 }
 
-string write_newick(Node<BulkDatum,CloneTreeNodeParam> *node)
+string write_newick(CloneTreeNode *node)
 {
-    unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &children = node->get_idx2child();
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
     if (children.size() == 0) {
         //return (node->get_name() + ":" + to_string(node->get_node_parameter().get_cellular_prev()));
         return node->get_name() + ":" + to_string(1.0);
@@ -586,7 +585,7 @@ string write_newick(Node<BulkDatum,CloneTreeNodeParam> *node)
 
     string newick = "(";
     for (size_t i = 0; i < children.size(); i++) {
-        Node<BulkDatum,CloneTreeNodeParam> *child = children[i].second;
+        CloneTreeNode *child = children[i].second;
         string child_newick = write_newick(child);
         newick += child_newick;
         if (i < children.size() - 1) {
@@ -598,10 +597,10 @@ string write_newick(Node<BulkDatum,CloneTreeNodeParam> *node)
     return newick;
 }
 
-void fill_node_to_param(Node<BulkDatum,CloneTreeNodeParam> *node,
+void fill_node_to_param(CloneTreeNode *node,
                         unordered_map<string, double> &node2param) {
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> all_nodes;
-    Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(node, all_nodes, false);
+    vector<CloneTreeNode *> all_nodes;
+    CloneTreeNode::breadth_first_traversal(node, all_nodes, false);
     for (auto node : all_nodes) {
         node2param[node->get_name()] = node->get_node_parameter().get_cellular_prev();
     }
@@ -617,7 +616,7 @@ void WriteLogLikToFile(string output_path, double val)
 
 void write_tree(string output_path,
                 const vector<BulkDatum *> &bulk,
-                CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &state)
+                CompactTSSBState &state)
 {
     if (!path_exists(output_path)) {
         // create path
@@ -674,12 +673,12 @@ void write_tree(string output_path,
 
 void WriteCopyNumberProfileToFile(string output_path,
                       const vector<BulkDatum *> &bulk_data,
-                      Node<BulkDatum,CloneTreeNodeParam> *root_node,
-                      unordered_map<Node<BulkDatum,CloneTreeNodeParam> *, vector<pair<size_t, size_t> > > &cn_profile)
+                      CloneTreeNode *root_node,
+                      unordered_map<CloneTreeNode *, vector<pair<size_t, size_t> > > &cn_profile)
 {
     // cn_profile stores copy number profile for each node as vector, where vector is ordered in the same way as the mutations in the bulk input file
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
-    Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(root_node, nodes, false);
+    vector<CloneTreeNode *> nodes;
+    CloneTreeNode::breadth_first_traversal(root_node, nodes, false);
 
     size_t n_nodes = nodes.size();
     size_t n_muts = bulk_data.size();

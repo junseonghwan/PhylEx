@@ -19,12 +19,13 @@
 
 #include <gsl/gsl_statistics.h>
 
+#include "data_util.hpp"
 #include "numerical_utils.hpp"
 #include "utils.hpp"
 
 void write_best_trees(string output_path,
                       const vector<BulkDatum *> &bulk,
-                      vector<pair<double, shared_ptr<CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> > > > &best_states)
+                      vector<pair<double, shared_ptr<CompactTSSBState > > > &best_states)
 {
     size_t n_trees = best_states.size();
     for (size_t i = 0; i < best_states.size(); i++)
@@ -32,19 +33,19 @@ void write_best_trees(string output_path,
         string path = output_path + "/tree" + to_string(i);
         size_t idx = n_trees-i-1;
         write_tree(path,
-                   bulk,
-                   *best_states[idx].second.get());
+                             bulk,
+                             *best_states[idx].second.get());
         WriteLogLikToFile(path + "/log_lik.txt", best_states[idx].first);
     }
 }
 
-bool comp_states(const pair<double, shared_ptr<CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> > > &s1,
-                 const pair<double, shared_ptr<CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> > > &s2)
+bool comp_states(const pair<double, shared_ptr<CompactTSSBState > > &s1,
+                 const pair<double, shared_ptr<CompactTSSBState > > &s2)
 {
     return (s1.first < s2.first);
 }
 
-TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *RunSliceSampler(
+TSSBState *RunSliceSampler(
     const gsl_rng *random,
     ModelParams &params,
     Config &config,
@@ -55,34 +56,34 @@ TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *RunSliceSampler(
     CloneTreeNode *root = CloneTreeNode::create_root_node();
     root->sample_node_parameters(random, params, 0);
 
-    TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *tree;
+    TSSBState *tree;
     switch (cn_input_type) {
         case GENOTYPE:
-            tree = new TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam>(random,
-                                                                              root,
-                                                                              params,
-                                                                              BulkLogLikWithGenotype,
-                                                                              ScLikelihood,
-                                                                              bulk_data,
-                                                                              sc_data);
+            tree = new TSSBState(random,
+                                 root,
+                                 params,
+                                 BulkLogLikWithGenotype,
+                                 ScLikelihood,
+                                 bulk_data,
+                                 sc_data);
             break;
         case TOTAL_CN:
-            tree = new TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam>(random,
-                                                                              root,
-                                                                              params,
-                                                                              BulkLogLikWithTotalCopyNumber,
-                                                                              ScLikelihood,
-                                                                              bulk_data,
-                                                                              sc_data);
+            tree = new TSSBState(random,
+                                 root,
+                                 params,
+                                 BulkLogLikWithTotalCopyNumber,
+                                 ScLikelihood,
+                                 bulk_data,
+                                 sc_data);
             break;
         case TOTAL_CN_PROFILE:
-            tree = new TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam>(random,
-                                                                              root,
-                                                                              params,
-                                                                              BulkLogLikWithCopyNumberProfile,
-                                                                              ScLikelihood,
-                                                                              bulk_data,
-                                                                              sc_data);
+            tree = new TSSBState(random,
+                                 root,
+                                 params,
+                                 BulkLogLikWithCopyNumberProfile,
+                                 ScLikelihood,
+                                 bulk_data,
+                                 sc_data);
             break;
         case UNDETERMINED:
             exit(-1);
@@ -96,8 +97,8 @@ TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *RunSliceSampler(
     
     // Keep track of top 5 trees.
     size_t state_count = 5;
-    vector<pair<double, shared_ptr<CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> > > > joint_best;
-    vector<pair<double, shared_ptr<CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> > > > states;
+    vector<pair<double, shared_ptr<CompactTSSBState > > > joint_best;
+    vector<pair<double, shared_ptr<CompactTSSBState > > > states;
     
     size_t n_trees = 0;
     size_t n_iter = config.burn_in + config.n_mcmc_iter;
@@ -138,16 +139,16 @@ TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *RunSliceSampler(
         tree->update_sticks(random, params);
         
         // 4. resample hyper parameters
-        TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam>::update_hyper_params(random, config.n_mh_iter, *tree, params);
+        TSSBState::update_hyper_params(random, config.n_mh_iter, *tree, params);
         alpha0.push_back(params.get_alpha0());
         lambda.push_back(params.get_lambda());
         gamma.push_back(params.get_gamma());
         
         if (joint_best.size() < state_count) {
-            auto compact_state = shared_ptr<CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam > >(new CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam >(*tree));
+            auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree));
             joint_best.push_back(make_pair(log_lik, compact_state));
         } else {
-            auto compact_state = shared_ptr<CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam > >(new CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam >(*tree));
+            auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree));
             if (log_lik > joint_best[0].first) {
                 joint_best[0] = make_pair(log_lik, compact_state);
                 sort(joint_best.begin(), joint_best.end(), comp_states);
@@ -156,7 +157,7 @@ TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *RunSliceSampler(
         
         if ((iter % config.thinning) == 0 || (iter + 1) == n_iter) {
             // store current tree
-            auto compact_state = shared_ptr<CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> >(new  CompactTSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam>(*tree));
+            auto compact_state = shared_ptr<CompactTSSBState >(new  CompactTSSBState(*tree));
             states.push_back(make_pair(log_lik, compact_state));
         }
 
@@ -248,7 +249,7 @@ void Run(string config_file)
     // Parse the configuration file
     Config config = parse_config_file(config_file);
     cout << "Finished reading config file:" << config_file << endl;
-    
+
     gsl_rng *random = generate_random_object(config.seed);
     ModelParams params = ModelParams::RandomInit(random,
                                                  config.alpha0_max,

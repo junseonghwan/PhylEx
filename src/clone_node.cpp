@@ -27,61 +27,25 @@ bool CloneTreeNodeParam::is_consistent()
 }
 
 CloneTreeNode::CloneTreeNode(size_t child_idx,
-                             Node<BulkDatum,CloneTreeNodeParam> *parent) :
-Node<BulkDatum,CloneTreeNodeParam>(child_idx, parent)
+                             CloneTreeNode *parent) :
+parent_node(parent)
 {
+    if (parent != 0) {
+        this->name = parent->name; // copy the name vector
+    }
+    this->name.push_back(child_idx);
 }
 
-//CloneTreeNode::CloneTreeNode(size_t child_idx,
-//                             //Node<BulkDatum,CloneTreeNodeParam> *parent,
-//                             CloneTreeNode *parent,
-//                             TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *tssb) :
-//Node<BulkDatum,CloneTreeNodeParam>(child_idx, parent, tssb)
-//{
-////    this->ancestral_data.insert(parent->ancestral_data.begin(), parent->ancestral_data.end());
-////    this->ancestral_data.insert(parent->data.begin(), parent->data.end());
-//}
+CloneTreeNode::~CloneTreeNode() {
+    
+}
 
 const CloneTreeNodeParam &CloneTreeNode::get_node_parameter() const
 {
     return param;
 }
 
-//void CloneTreeNode::sample_node_parameters_prior(const gsl_rng *random, const ModelParams &params, Node<BulkDatum,CloneTreeNodeParam> *parent)
-//{
-//    if (parent_node == 0) {
-//        this->param.set_cellular_prev(1.0);
-//        this->param.set_clone_freq(1.0);
-//    } else {
-//        CloneTreeNode *parent_node = (CloneTreeNode *)parent;
-//        double parent_clone_freq = parent_node->get_node_parameter().get_clone_freq();
-//        double curr_cellular_prev = this->get_node_parameter().get_cellular_prev();
-//
-//        double min = 0.0;
-//        double max = 1.0;
-//        if (curr_cellular_prev == 0.0) { // new node
-//            max = parent_clone_freq;
-//            // sample from the prior distribution
-//            curr_cellular_prev = uniform(random) * parent_clone_freq;
-//            this->param.set_cellular_prev(curr_cellular_prev);
-//            this->param.set_clone_freq(curr_cellular_prev);
-//        } else {
-//            // find minimum and maximum values
-//            for (size_t i = 0; i < get_idx2child().size(); i++) {
-//                min += get_idx2child()[i].second->get_node_parameter().get_cellular_prev();
-//            }
-//            max = curr_cellular_prev + parent_clone_freq;
-//
-//            double new_cellular_prev = gsl_ran_flat(random, min, max);
-//            this->param.set_cellular_prev(new_cellular_prev);
-//            this->param.set_clone_freq(new_cellular_prev - min);
-//        }
-//
-//        parent_node->param.set_clone_freq(max - param.get_cellular_prev());
-//    }
-//}
-
-void CloneTreeNode::sample_node_parameters(const gsl_rng *random, const ModelParams &params,  Node<BulkDatum,CloneTreeNodeParam> *parent)
+void CloneTreeNode::sample_node_parameters(const gsl_rng *random, const ModelParams &params,  CloneTreeNode *parent)
 {
     if (parent_node == 0) {
         this->param.set_cellular_prev(1.0);
@@ -93,79 +57,13 @@ void CloneTreeNode::sample_node_parameters(const gsl_rng *random, const ModelPar
         this->param.set_cellular_prev(curr_cellular_prev);
         this->param.set_clone_freq(curr_cellular_prev);
         parent_node->param.set_clone_freq(parent_clone_freq - param.get_cellular_prev());
-//        double curr_cellular_prev = this->get_node_parameter().get_cellular_prev();
-//
-//        double min = 0.0;
-//        double max = 1.0;
-//        if (curr_cellular_prev == 0.0) { // new node
-//            max = parent_clone_freq;
-//            // sample from the prior distribution
-//            curr_cellular_prev = uniform(random) * parent_clone_freq;
-//            this->param.set_cellular_prev(curr_cellular_prev);
-//            this->param.set_clone_freq(curr_cellular_prev);
-//        } else {
-//            // find minimum and maximum values
-//            for (size_t i = 0; i < get_idx2child().size(); i++) {
-//                min += get_idx2child()[i].second->get_node_parameter().get_cellular_prev();
-//            }
-//            max = curr_cellular_prev + parent_clone_freq;
-//
-//            double new_cellular_prev = gsl_ran_flat(random, min, max);
-//            this->param.set_cellular_prev(new_cellular_prev);
-//            this->param.set_clone_freq(new_cellular_prev - min);
-//        }
-        
-//        parent_node->param.set_clone_freq(max - param.get_cellular_prev());
     }
-
-//    if (parent_node == 0) {
-//        this->param.set_cellular_prev(1.0);
-//        this->param.set_clone_freq(1.0);
-//    } else {
-//        CloneTreeNode *parent_node = (CloneTreeNode *)parent;
-//        double parent_clone_freq = parent_node->get_node_parameter().get_clone_freq();
-//        double curr_cellular_prev = this->get_node_parameter().get_cellular_prev();
-//        double min = 0.0;
-//        double max = 1.0;
-//        if (curr_cellular_prev == 0.0) { // new node
-//            max = parent_clone_freq;
-//            // sample from the prior distribution
-//            curr_cellular_prev = uniform(random) * parent_clone_freq;
-//            this->param.set_cellular_prev(curr_cellular_prev);
-//            this->param.set_clone_freq(curr_cellular_prev);
-//        } else {
-//            // find minimum and maximum values
-//            for (size_t i = 0; i < get_idx2child().size(); i++) {
-//                min += get_idx2child()[i].second->get_node_parameter().get_cellular_prev();
-//            }
-//            max = curr_cellular_prev + parent_clone_freq;
-//        }
-//
-//        double curr_log_lik = compute_log_likelihood(params);
-//        // independent MH
-//        for (size_t i = 0; i < 50; i++) {
-//            double new_cellular_prev = gsl_ran_flat(random, min, max);
-//            this->param.set_cellular_prev(new_cellular_prev);
-//            this->param.set_clone_freq(new_cellular_prev - min);
-//            // compute log likelihood of data assigned to this node
-//            double new_log_lik = compute_log_likelihood(params);
-//            double log_unif = log(gsl_ran_flat(random, 0, 1));
-//            if (log_unif < (new_log_lik - curr_log_lik)) {
-//                curr_log_lik = new_log_lik;
-//                curr_cellular_prev = new_cellular_prev;
-//            } else {
-//                this->param.set_clone_freq(curr_cellular_prev - min);
-//                this->param.set_cellular_prev(curr_cellular_prev);
-//            }
-//            parent_node->param.set_clone_freq(max - param.get_cellular_prev());
-//        }
-//    }
 }
 
-void CloneTreeNode::get_snvs(Node<BulkDatum,CloneTreeNodeParam> *node, unordered_set<Locus> &ret)
+void CloneTreeNode::get_snvs(CloneTreeNode *node, unordered_set<Locus> &ret)
 {
     // traverse to the root to retrieve all SNVs
-    Node<BulkDatum,CloneTreeNodeParam> *v = node;
+    CloneTreeNode *v = node;
     while (v != 0) {
         unordered_set<BulkDatum *> data = v->get_data();
         for (BulkDatum *datum : data) {
@@ -175,7 +73,7 @@ void CloneTreeNode::get_snvs(Node<BulkDatum,CloneTreeNodeParam> *node, unordered
     }
 }
 
-double get_branch_length(Node<BulkDatum,CloneTreeNodeParam> *child, Node<BulkDatum,CloneTreeNodeParam> *parent)
+double get_branch_length(CloneTreeNode *child, CloneTreeNode *parent)
 {
     // compute the sum of branch length from parent to child
     double len = 0.0;
@@ -190,211 +88,10 @@ double get_branch_length(Node<BulkDatum,CloneTreeNodeParam> *child, Node<BulkDat
     return len;
 }
 
-
-//double CloneTreeNode::compute_expectation_of_xi(const ModelParams &model_params)
-//{
-//    double xi = 0.0;
-//
-//    // perform dynamic programming on the tree
-//    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
-//    tssb->get_all_nodes(false, this, nodes); // breadth first retrieval
-//
-//    // DP table:
-//    // for each node, store 2D-array of dimension M x M
-//    size_t M = model_params.get_max_cn();
-//    unordered_map<Node<BulkDatum,CloneTreeNodeParam> *, vector<vector<double> > > dp_table;
-//    for (int i = nodes.size() - 1; i >= 0; i--) {
-//        auto node = nodes[i];
-//        if (node->is_leaf()) {
-//            vector<vector<double> > empty(M);
-//            for (size_t chi_r = 0; chi_r < M; chi_r++) {
-//                for (size_t chi_v = 0; chi_v < M; chi_v++) {
-//                    empty[chi_r].push_back(0);
-//                }
-//            }
-//            dp_table[node] = empty;
-//        } else {
-//            // get children
-//            unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &idx2child = node->get_idx2child();
-//            Node<BulkDatum,CloneTreeNodeParam> *child;
-//
-//            // fill the DP table
-//            vector<vector<double> > table(M);
-//            for (size_t chi_r = 0; chi_r < M; chi_r++) {
-//                for (size_t chi_v = 0; chi_v < M; chi_v++) {
-//                    double sum = 0.0;
-//                    for (size_t j = 0; j < node->get_num_children(); j++) {
-//                        child = idx2child.at(j).second;
-//                        if (dp_table.count(child) == 0) // if child does not have any data, nothing to compute so continue
-//                            continue;
-//
-//                        double eta = child->get_node_parameter().get_clone_freq();
-//                        // retrieve the DP table for the child node
-//                        vector<vector<double> > &child_table = dp_table[child];
-//
-//                        for (size_t chi_v_child = 0; chi_v_child < M; chi_v_child++) {
-//                            for (size_t chi_r_child = 0; chi_r_child < M; chi_r_child++) {
-//                                size_t chi_t_child = chi_v_child + chi_r_child;
-//                                double transition_prob_r = model_params.compute_transition_prob(chi_r, chi_r_child);
-//                                double transition_prob_v = model_params.compute_transition_prob(chi_v, chi_v_child);
-//                                double transition_prob = transition_prob_r * transition_prob_v;
-//                                double g = 0.0;
-//                                if (chi_v_child == 0) {
-//                                    g = model_params.get_seq_error();
-//                                } else {
-//                                    g = (double)chi_v_child/chi_t_child;
-//                                }
-//                                double val = transition_prob * (eta * g + child_table[chi_r_child][chi_v_child]);
-//                                
-//                                //printf("chi_r=%lu, chi_v=%lu, g=%f, p_v=%f, p_r=%f, val=%f\n", chi_r_child, chi_v_child, g, transition_prob_v, transition_prob_r, val);
-//                                sum += val;
-//                            }
-//                        }
-//                    }
-//                    table[chi_r].push_back(sum);
-//                }
-//            }
-//            dp_table[node] = table;
-//        }
-//    }
-//
-//    // sum over the copy number at the root
-//    // compute the initial distribution
-//    double branch_length = get_branch_length(this, tssb->get_root());
-//    gsl_matrix *trans_mat = gsl_matrix_alloc(model_params.get_max_cn(), model_params.get_max_cn());
-//    model_params.compute_transition_matrix(branch_length - 1, trans_mat);
-//    vector<vector<double> > &table = dp_table[this];
-//    double eta = this->get_node_parameter().get_clone_freq();
-//    for (size_t chi_v = 0; chi_v < M; chi_v++) {
-//        for (size_t chi_r = 0; chi_r < M; chi_r++) {
-//            size_t chi_t = chi_r + chi_v;
-//            double initial_prob = model_params.compute_initial_prob(trans_mat, chi_r, chi_v, 2);
-//            double g = 0.0;
-//            if (chi_v == 0) {
-//                g = model_params.get_seq_error();
-//            } else {
-//                g = (double)chi_v/chi_t;
-//            }
-//            double val = initial_prob * (eta * g + table[chi_r][chi_v]);
-//            //printf("chi_r=%lu, chi_v=%lu, g=%f, p=%f, val=%f\n", chi_r, chi_v, g, initial_prob, val);
-//            xi += val;
-//        }
-//    }
-//
-//    xi += (1 - get_node_parameter().get_cellular_prev()) * model_params.get_seq_error();
-//
-//    gsl_matrix_free(trans_mat);
-//    return xi;
-//}
-
-//double CloneTreeNode::compute_log_likelihood_of_datum(BulkDatum &datum, const ModelParams &model_params)
-//{
-//    if (datum.get_n_reads() == 0) {
-//        if (datum.get_n_variant_reads() > 0) {
-//            cerr << "Error in the data. Num reads: " << datum.get_n_reads() << ". Num variants: " << datum.get_n_variant_reads() << endl;
-//            exit(-1);
-//        } else {
-//            return 0.0;
-//        }
-//    }
-//
-//    double seq_err = model_params.get_seq_error();
-//    if (get_parent_node() == 0) {
-//        // this node is the root, represents the healthy population
-//        return log(gsl_ran_binomial_pdf(datum.get_n_variant_reads(), seq_err, datum.get_n_reads()));
-//    }
-//    double phi = param.get_cellular_prev();
-//    double xi = 0.0;
-//
-//    if (datum.is_var_cn_observed()) {
-//        xi += (1 - phi) * seq_err;
-//        xi += phi * datum.get_var_cn()/datum.get_total_cn();
-//        if (xi > 1) {
-//            cerr << "Error: probability of success: " << xi <<  " > 1." << endl;
-//            xi = 1.0;
-//        } else if (xi < 0) {
-//            cerr << "Error: negative probability of success." << endl;
-//            exit(-1);
-//        }
-//    } else {
-//        xi = compute_expectation_of_xi(model_params);
-//        assert(xi < 1+1e-6);
-//        assert(xi > 0);
-//    }
-//    double log_val = log(gsl_ran_binomial_pdf(datum.get_n_variant_reads(), xi, datum.get_n_reads()));
-//    return log_val;
-//}
-
-// compute log p(a_{c,s} | \zeta_c = this)
-//double CloneTreeNode::compute_log_likelihood_of_sc_at_site(const BulkDatum *s, const SingleCellData *sc, size_t exp_mut_status, const ModelParams &hyper_params)
-//{
-//    const unordered_map<Locus, size_t> &sc_mut_map = sc->get_mutation_map();
-//    size_t obs_mut_status = sc_mut_map.at(s->get_loci());
-//    double log_lik = 0.0;
-//    if (obs_mut_status == 0) {
-//        // mutation is not observed -- either a false negative or a true negative
-//        double beta = hyper_params.get_sc_fn_rate();
-//        log_lik += exp_mut_status * log(beta) + (1 - exp_mut_status) * log(1 - beta);
-//    } else if (obs_mut_status == 1) {
-//        // mutation is harboured -- either a false positive or a true positive
-//        double alpha = hyper_params.get_sc_fp_rate();
-//        log_lik += exp_mut_status * log(1-alpha) + (1 - exp_mut_status) * log(alpha);
-//    }
-//    return log_lik;
-//}
-//
-//double CloneTreeNode::compute_log_likelihood_of_sc(const SingleCellData *sc_datum, const unordered_set<BulkDatum *> &snas, const ModelParams &hyper_params)
-//{
-//    double log_lik = 0.0;
-//
-//    // extract Loci from snas
-//    unordered_set<Locus> muts_harboured;
-//    for (BulkDatum *datum : snas) {
-//        muts_harboured.insert(datum->get_loci());
-//    }
-//
-//    const unordered_map<Locus, size_t> &sc_mut_map = sc_datum->get_mutation_map();
-//    for (auto it = sc_mut_map.begin(); it != sc_mut_map.end(); ++it) {
-//        const Locus &loci = it->first;
-//        size_t observed_mut_status = it->second;
-//
-//        // check if mutation is harboured at the node
-//        size_t expected_mut_status = (muts_harboured.count(loci) > 0) ? 1 : 0;
-//
-//        if (observed_mut_status == 0) {
-//            // mutation is not harboured
-//            double beta = hyper_params.get_sc_fn_rate();
-//            log_lik += expected_mut_status * log(beta) + (1 - expected_mut_status) * log(1 - beta);
-//        } else if (observed_mut_status == 1) {
-//            // mutation is harboured
-//            double alpha = hyper_params.get_sc_fp_rate();
-//            log_lik += expected_mut_status * log(1-alpha) + (1 - expected_mut_status) * log(alpha);
-//        } else {
-//            // N/A: no reads
-//            // does not contribute to the likelihood
-//        }
-//    }
-//    
-//    if (log_lik > 0) {
-//        cout << "here" << endl;
-//    }
-//
-//    return log_lik;
-//}
-
-//double CloneTreeNode::compute_log_likelihood(const ModelParams &hyper_params)
-//{
-//    double log_lik = 0.0;
-//    for (auto it = get_data().begin(); it != get_data().end(); ++it) {
-//        log_lik += compute_log_likelihood_of_datum(*(*it), hyper_params);
-//    }
-//    return log_lik;
-//}
-
-Node<BulkDatum,CloneTreeNodeParam> *CloneTreeNode::spawn_child(double psi)
+CloneTreeNode *CloneTreeNode::spawn_child(double psi)
 {
     size_t j = get_idx2child().size();
-    //Node<BulkDatum,CloneTreeNodeParam> *child = new CloneTreeNode(j, this, tssb);
+    //CloneTreeNode *child = new CloneTreeNode(j, this, tssb);
     CloneTreeNode *child = new CloneTreeNode(j, this);
     idx2child[j] = make_pair(psi, child);
     return child;
@@ -403,7 +100,7 @@ Node<BulkDatum,CloneTreeNodeParam> *CloneTreeNode::spawn_child(double psi)
 string CloneTreeNode::print()
 {
     string psi_stick_str = "(";
-    unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &children = get_idx2child();
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = get_idx2child();
     for (size_t i = 0; i < get_num_children(); i++) {
         psi_stick_str += to_string(children[i].first);
         if (i < get_num_children() - 1) {
@@ -411,7 +108,7 @@ string CloneTreeNode::print()
         }
     }
     psi_stick_str += ")";
-    // print the Node<S,P> name, nu-stick, Node<S,P> params
+    // print the CloneTreeNode name, nu-stick, CloneTreeNode params
     string ret = "[" + (parent_node == 0 ? "root" : this->get_name()) + ", ";
     ret += "phi=" + to_string(get_node_parameter().get_cellular_prev()) + ", ";
     ret += "eta=" + to_string(get_node_parameter().get_clone_freq()) + ", ";
@@ -453,6 +150,481 @@ void CloneTreeNode::set_cellular_prev(double new_val)
     param.set_cellular_prev(new_val);
 }
 
+string CloneTreeNode::get_parent_string(string curr_node_str)
+{
+    // split the string using "_"
+    vector<string> fields;
+    boost::split(fields, curr_node_str, boost::is_any_of("_"));
+    string ret = "";
+    size_t num_iter = fields.size() - 1;
+    for (size_t i = 0; i < num_iter; i++)
+    {
+        ret += fields[i];
+        if (i < num_iter - 1) {
+            ret += "_";
+        }
+    }
+    return ret;
+}
+
+string CloneTreeNode::form_node_string(string curr_node_str, size_t branch)
+{
+    if (curr_node_str == "")
+        return to_string(branch);
+    
+    return curr_node_str + "_" + to_string(branch);
+}
+
+CloneTreeNode *CloneTreeNode::find_node(const gsl_rng *random, double u, CloneTreeNode *root, const ModelParams &params)
+{
+    CloneTreeNode *node = root;
+    double nu = 0.0;
+    size_t depth = 0;
+    while (true) {
+        depth = node->get_name_vec().size();
+        if (depth >= params.get_max_depth()) {
+            break;
+        }
+        nu = node->get_nu_stick();
+        
+        if (u < nu) {
+            // found the node!!
+            break;
+        }
+        
+        // shrink u relative to the remaining stick (1 - nu)
+        u = (u - nu) / (1 - nu);
+        
+        // find sub branch by enumerating over the branching sticks
+        node = node->locate_child(random, u, params);
+    }
+    return node; // TODO: consider returning the path for the purposes of better estimation of the parameters
+}
+
+string CloneTreeNode::get_name() const
+{
+    // concatenate vector into string
+    string str = "";
+    for (size_t i = 0; i < name.size(); i++) {
+        str = this->form_node_string(str, name[i]);
+    }
+    return str;
+}
+
+void CloneTreeNode::edit_name(size_t j)
+{
+    size_t n = this->name.size();
+    for (size_t i = 0; i < n - 1; i++) {
+        name[i] = parent_node->name[i];
+    }
+    name[n-1] = j;
+}
+
+// getters
+CloneTreeNode *CloneTreeNode::get_parent_node() const
+{
+    return parent_node;
+}
+
+const unordered_set<BulkDatum *> &CloneTreeNode::get_data() const
+{
+    return data;
+}
+
+void CloneTreeNode::get_dataset(CloneTreeNode *node,
+                            unordered_set<const BulkDatum *> &dataset)
+{
+    // trace up to the root node to get all SNVs
+    while (node != 0) {
+        dataset.insert(node->get_data().begin(), node->get_data().end());
+        node = node->get_parent_node();
+    }
+}
+
+size_t CloneTreeNode::get_num_data() const
+{
+    return data.size();
+}
+
+unordered_map<size_t, pair<double, CloneTreeNode *> > &CloneTreeNode::get_idx2child()
+{
+    return idx2child;
+}
+
+double CloneTreeNode::get_nu_stick() const
+{
+    return this->nu;
+}
+
+size_t CloneTreeNode::get_num_children() const
+{
+    return idx2child.size();
+}
+
+bool CloneTreeNode::is_root() const
+{
+    return parent_node == 0;
+}
+
+bool CloneTreeNode::is_leaf() const
+{
+    return (get_num_children() == 0);
+}
+
+const pair<double, CloneTreeNode *> &CloneTreeNode::get_child(size_t child_idx) const
+{
+    if (child_idx < idx2child.size()) {
+        return idx2child.at(child_idx);
+    }
+    cerr << "Error: child index out of bounds." << endl;
+    exit(-1);
+}
+
+void CloneTreeNode::set_nu_stick(double nu)
+{
+    this->nu = nu;
+}
+
+void CloneTreeNode::set_psi_stick(size_t child_idx, double psi)
+{
+    pair<double, CloneTreeNode *> &child = idx2child.at(child_idx);
+    child.first = psi;
+}
+
+void CloneTreeNode::add_datum(BulkDatum *datum)
+{
+    data.insert(datum);
+}
+
+void CloneTreeNode::remove_datum(BulkDatum *datum)
+{
+    data.erase(datum);
+}
+
+bool CloneTreeNode::contains_datum(BulkDatum *datum) const
+{
+    return (data.count(datum) > 0);
+}
+
+void CloneTreeNode::cull(unordered_set<size_t> &cull_list)
+{
+    // need to update the cullular prevalence as the nodes are culled (unfortunately, this needs to happen outside by the one that calls cull operation)
+    unordered_map<size_t, pair<double, CloneTreeNode *> > new_idx2child;
+    for (size_t j = 0; j < idx2child.size(); j++)
+    {
+        CloneTreeNode *node = idx2child[j].second;
+        if (cull_list.count(j) == 0) {
+            new_idx2child[j] = idx2child[j];
+        } else {
+            //cout << get_name() << " cull child " << j << endl;
+            idx2child[j].second = 0;
+            delete node;
+        }
+    }
+    idx2child = new_idx2child;
+}
+
+void CloneTreeNode::reset_children_names()
+{
+    // clear the children info
+    unordered_map<size_t, pair<double, CloneTreeNode *> > new_map;
+    
+    CloneTreeNode *child = 0;
+    size_t n_children = idx2child.size();
+    size_t idx = 0;
+    for (size_t i = 0; i < n_children; i++) {
+        child = idx2child[i].second;
+        if (child == 0) {
+            //idx2child.erase(i); // this is not necessarily since we will overwrite idx2child
+        } else {
+            child->edit_name(idx);
+            new_map[idx] = idx2child[i];
+            idx++;
+        }
+    }
+    idx2child = new_map;
+}
+
+
+void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &params)
+{
+    if (idx2child.size() == 0)
+        return;
+    
+    //vector<double> unnorm_w(idx2child.size());
+    vector<double> weights(idx2child.size());
+    vector<double> intervals(idx2child.size());
+    unordered_set<int> represented;
+    double cum_prod = 1.0;
+    for (size_t i = 0; i < idx2child.size(); i++)
+    {
+        weights[i] = idx2child[i].first * cum_prod;
+        cum_prod *= (1 - idx2child[i].first);
+        represented.insert(i);
+        if (i == 0)
+            intervals[i] = weights[i];
+        else
+            intervals[i] = intervals[i-1] + weights[i];
+    }
+    
+    unordered_map<size_t, pair<double, CloneTreeNode *> > new_map;
+    
+    // throw uniform darts until all represented sticks are sampled
+    double represented_stick_length = intervals[idx2child.size()-1];
+    size_t n_children = intervals.size();
+    while (represented.size() > 0) {
+        double u = gsl_ran_flat(random, 0, 1);
+        while (u > represented_stick_length) {
+            // need to represent new children: i.e., draw psi sticks
+            double psi_j = bounded_beta(random, 1, params.get_gamma());
+            CloneTreeNode *child = this->spawn_child(psi_j);
+            double nu_stick = bounded_beta(random, 1.0, params.alpha(child->get_name_vec()));
+            child->set_nu_stick(nu_stick);
+            child->sample_node_parameters(random, params, this);
+            
+            double ww = psi_j * cum_prod;
+            weights.push_back(ww);
+            intervals.push_back(intervals[n_children - 1] + ww);
+            represented.insert(n_children);
+            represented_stick_length += ww;
+            n_children++;
+        }
+        
+        for (size_t i = 0; i < n_children; i++) {
+            if (u < intervals[i]) {
+                // found the child
+                pair<double, CloneTreeNode *> &ret = idx2child[i];
+                ret.second->edit_name(i);
+                new_map[i] = ret;
+                represented.erase(i);
+                break;
+            }
+        }
+        
+        // renormalize?
+    }
+    
+    idx2child = new_map;
+}
+
+////void CloneTreeNode::reorder_sticks(const gsl_rng *random)
+//{
+//    if (idx2child.size() <= 1)
+//        return;
+//
+//    vector<double> unnorm_w(idx2child.size());
+//    double norm = 0.0;
+//    double cum_prod = 1.0;
+//    for (size_t i = 0; i < idx2child.size(); i++)
+//    {
+//        double ww = idx2child[i].first;
+//        cum_prod *= (1 - ww);
+//        unnorm_w[i] = (1 - cum_prod) - norm;
+//        if (unnorm_w[i] > 0) {
+//            unnorm_w[i] = std::numeric_limits< double >::min();
+//        }
+//        assert(unnorm_w[i] > 0);
+//        norm += unnorm_w[i];
+//    }
+//    size_t N = unnorm_w.size();
+//    //this->children_node_str.clear(); // remove all names
+//    unordered_map<size_t, pair<double, CloneTreeNode *> > new_map;
+//    int idx;
+//    for (size_t i = 0; i < N; i++)
+//    {
+//        if (norm == 0.0) {
+//            // the remaining sticks have 0 measure -- just keep the current ordering
+//            idx = i;
+//        } else {
+//            idx = multinomial(random, unnorm_w, norm);
+//        }
+//        pair<double, CloneTreeNode *> &ret = idx2child[idx];
+//        ret.second->edit_name(i);
+//        //this->children_node_str.insert(ret.second->get_name_vec());
+//        new_map[i] = ret;
+//        norm -= unnorm_w[idx];
+//        unnorm_w[idx] = 0.0;
+//    }
+//    idx2child = new_map;
+//}
+
+void CloneTreeNode::InitializeChild(const gsl_rng *random,
+                                const ModelParams &params)
+{
+    double psi_j = bounded_beta(random, 1, params.get_gamma());
+    CloneTreeNode *child = this->spawn_child(psi_j);
+    double nu_stick = bounded_beta(random, 1.0, params.alpha(child->get_name_vec()));
+    child->set_nu_stick(nu_stick);
+    child->sample_node_parameters(random, params, this);
+}
+
+CloneTreeNode *CloneTreeNode::locate_child(const gsl_rng *random, double &u, const ModelParams &params)
+{
+    unsigned int j = 0;
+    double cum_prod = 1.0;
+    double begin = 0;
+    while (true) {
+        if (get_num_children() <= j) { // draw new psi-stick and create a new child
+            InitializeChild(random, params);
+            /*
+             double psi_j = bounded_beta(random, 1, params.get_gamma());
+             CloneTreeNode *child = this->spawn_child(psi_j);
+             double nu_stick = bounded_beta(random, 1.0, params.alpha(child->get_name_vec()));
+             child->set_nu_stick(nu_stick);
+             child->sample_node_parameters(random, params, this);
+             */
+        }
+        pair<double, CloneTreeNode *> pair = idx2child[j];
+        double interval_length = cum_prod * pair.first;
+        if (u >= begin && u < (begin + interval_length)) {
+            // found the corresponding interval
+            u = (u - begin) / interval_length;
+            break;
+        }
+        begin += interval_length;
+        cum_prod *= (1 - pair.first);
+        j++;
+    }
+    return idx2child[j].second;
+}
+
+bool CloneTreeNode::less(CloneTreeNode *lhs, CloneTreeNode *rhs)
+{
+    size_t lhs_size = lhs->name.size();
+    size_t rhs_size = rhs->name.size();
+    if (rhs_size == 0 && lhs_size == 0) {
+        return false;
+    } else if (lhs_size == 0) {
+        return true;
+    } else if (rhs_size == 0) {
+        return false;
+    }
+    
+    size_t len = min(lhs_size, rhs_size);
+    for (size_t i = 0; i < len; i++) {
+        if (lhs->name[i] < rhs->name[i]) {
+            return true;
+        } else if (lhs->name[i] > rhs->name[i]) {
+            return false;
+        }
+    }
+    
+    // if we are here, the two strings are same up to len
+    // then, we determine the order one is shorter than the other
+    if (lhs_size < rhs_size) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void CloneTreeNode::breadth_first_traversal(CloneTreeNode *root_node, vector<CloneTreeNode *> &ret, bool non_empty)
+{
+    // get nodes in the subtree rooted at root
+    if (ret.size() > 0) {
+        cout << "Warning: get_all_nodes() is going to clear vector ret." << endl;
+        ret.clear();
+    }
+    if (root_node == 0) {
+        cout << "Warning: root node is null." << endl;
+        return;
+    }
+    
+    set<CloneTreeNode *> nodes;
+    CloneTreeNode *node = 0;
+    
+    queue<CloneTreeNode *> q;
+    q.push(root_node);
+    while (!q.empty())
+    {
+        node = q.front();
+        q.pop();
+        if (!nodes.count(node)) {
+            if (!non_empty) {
+                ret.push_back(node);
+                nodes.insert(node);
+            } else {
+                if (node->get_num_data() > 0) {
+                    ret.push_back(node);
+                    nodes.insert(node);
+                }
+            }
+        }
+        unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+        for (size_t i = 0; i < children.size(); i++)
+        {
+            CloneTreeNode *child = children[i].second;
+            q.push(child);
+        }
+    }
+}
+
+void CloneTreeNode::get_cluster_labels(CloneTreeNode *root,
+                                   const vector<BulkDatum *> &data,
+                                   vector<unsigned int> &cluster_labels)
+{
+    vector<CloneTreeNode *> all_nodes;
+    CloneTreeNode::breadth_first_traversal(root, all_nodes, false);
+    unordered_map<BulkDatum *, CloneTreeNode *> datum2node;
+    construct_datum2node(all_nodes, datum2node);
+    
+    // determine the classes and clusters
+    // assign class label from 0, ..., N = num nodes
+    unordered_map<CloneTreeNode *, size_t> node2class;
+    size_t num_classes = all_nodes.size();
+    for (size_t c = 0; c < num_classes; c++) {
+        node2class[all_nodes[c]] = c;
+    }
+    for (size_t i = 0; i < data.size(); i++) {
+        CloneTreeNode *v = datum2node[data[i]];
+        size_t c = node2class[v];
+        cluster_labels.push_back(c);
+    }
+}
+
+void CloneTreeNode::construct_datum2node(vector<CloneTreeNode *> &all_nodes,
+                                     unordered_map<BulkDatum *, CloneTreeNode *> &datum2node)
+{
+    for (auto it = all_nodes.begin(); it != all_nodes.end(); ++it) {
+        for (BulkDatum *datum : (*it)->get_data())
+        {
+            datum2node[datum] = (*it);
+        }
+    }
+}
+
+gsl_matrix *CloneTreeNode::GetAncestralMatrix(CloneTreeNode *root,
+                                          const vector<BulkDatum *> &data,
+                                          const unordered_map<BulkDatum *, CloneTreeNode *> &datum2node)
+{
+    size_t N = data.size();
+    vector<unordered_set<BulkDatum *> > ancestors(N);
+    for (size_t i = 0; i < N; i++) {
+        BulkDatum *datum = data.at(i);
+        CloneTreeNode *v = datum2node.at(datum);
+        // trace up to the root and set the row of A
+        while (v != root) {
+            v = v->get_parent_node();
+            unordered_set<BulkDatum *> d = v->get_data();
+            ancestors[i].insert(d.begin(), d.end());
+        }
+    }
+    
+    // A_ij = 1 if i occurs before j
+    gsl_matrix *A = gsl_matrix_alloc(N, N);
+    for (size_t i = 0; i < N; i++) {
+        for (size_t j = 0; j < N; j++) {
+            if (ancestors[j].count(data.at(i))) {
+                gsl_matrix_set(A, i, j, 1);
+            } else {
+                gsl_matrix_set(A, i, j, 0);
+            }
+        }
+    }
+    
+    return A;
+}
+
 double ScLikelihood(const BulkDatum *s, const SingleCellData *sc, bool has_snv, const ModelParams &model_params) {
     double log_lik = 0.0;
 
@@ -491,7 +663,7 @@ double ScLikelihood(const BulkDatum *s, const SingleCellData *sc, bool has_snv, 
     return log_lik;
 }
 
-double BulkLogLikWithTotalCopyNumber(const Node<BulkDatum, CloneTreeNodeParam> *node,
+double BulkLogLikWithTotalCopyNumber(const CloneTreeNode *node,
                                      const BulkDatum *datum,
                                      const ModelParams &model_params)
 {
@@ -546,7 +718,7 @@ double BulkLogLikWithTotalCopyNumber(const Node<BulkDatum, CloneTreeNodeParam> *
     return log_lik;
 }
 
-double BulkLogLikWithCopyNumberProfile(const Node<BulkDatum, CloneTreeNodeParam> *node,
+double BulkLogLikWithCopyNumberProfile(const CloneTreeNode *node,
                                        const BulkDatum *datum,
                                        const ModelParams &model_params)
 {
@@ -604,7 +776,7 @@ double BulkLogLikWithCopyNumberProfile(const Node<BulkDatum, CloneTreeNodeParam>
     return log_lik;
 }
 
-double BulkLogLikWithGenotype(const Node<BulkDatum, CloneTreeNodeParam> *node,
+double BulkLogLikWithGenotype(const CloneTreeNode *node,
                               const BulkDatum *datum,
                               const ModelParams &model_params)
 {
@@ -674,224 +846,10 @@ double BulkLogLikWithGenotype(const Node<BulkDatum, CloneTreeNodeParam> *node,
     return log_lik;
 }
 
-double update_cellular_prev_recursive(Node<BulkDatum,CloneTreeNodeParam> * node)
+double ZeroBulkLikelihood(const CloneTreeNode *node,
+                          const BulkDatum *datum,
+                          const ModelParams &model_params)
 {
-    unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &children = node->get_idx2child();
-    double children_prev = 0.0;
-    for (auto it = children.begin(); it != children.end(); ++it)
-    {
-        Node<BulkDatum,CloneTreeNodeParam> *child = it->second.second;
-        children_prev += update_cellular_prev_recursive(child);
-    }
-    const CloneTreeNodeParam &param = node->get_node_parameter();
-    double prevalence = param.get_clone_freq() + children_prev;
-    ((CloneTreeNode *)node)->set_cellular_prev(prevalence);
-    return prevalence;
+    return 0.0;
 }
-
-double get_children_cellular_prev(Node<BulkDatum,CloneTreeNodeParam> *node)
-{
-    double children_prev = 0.0;
-    unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &children = node->get_idx2child();
-    for (auto it = children.begin(); it != children.end(); ++it)
-    {
-        Node<BulkDatum,CloneTreeNodeParam> *child = it->second.second;
-        children_prev += child->get_node_parameter().get_cellular_prev();
-    }
-    return children_prev;
-}
-
-void update_params(Node<BulkDatum,CloneTreeNodeParam> *node, double curr_cellular_prev, double new_cellular_prev)
-{
-    auto clone_node = (CloneTreeNode *)node;
-    double children_prev = get_children_cellular_prev(node);
-    clone_node->set_cellular_prev(new_cellular_prev);
-    clone_node->set_clone_freq(new_cellular_prev - children_prev);
-    auto parent_node = (CloneTreeNode *)(node->get_parent_node());
-    double parent_clone_freq = parent_node->get_node_parameter().get_clone_freq();
-    double diff = new_cellular_prev - curr_cellular_prev;
-    parent_node->set_clone_freq(parent_clone_freq - diff);
-}
-
-void update_params(vector<Node<BulkDatum,CloneTreeNodeParam> *> &nodes, double *new_clone_freq)
-{
-    // update clone frequencies
-    for (size_t i = 0; i < nodes.size(); i++) {
-        ((CloneTreeNode *)nodes[i])->set_clone_freq(new_clone_freq[i]);
-    }
-    // update cellular prevalences
-    update_cellular_prev_recursive(nodes[0]);
-}
-
-void get_clone_freqs(TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &state,
-                     double *clone_freqs)
-{
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
-    state.get_all_nodes(false, nodes);
-    Node<BulkDatum,CloneTreeNodeParam> *node = 0;
-    for (size_t i = 0; i < nodes.size(); i++)
-    {
-        node = nodes[i];
-        clone_freqs[i] = node->get_node_parameter().get_cellular_prev();
-        unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &children = node->get_idx2child();
-        for (auto it = children.begin(); it != children.end(); ++it)
-        {
-            Node<BulkDatum,CloneTreeNodeParam> *child = it->second.second;
-            clone_freqs[i] -= child->get_node_parameter().get_cellular_prev();
-        }
-    }
-}
-
-void sample_params_bottom_up(const gsl_rng *random,
-                             size_t n_mh_iter,
-                             TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &tree,
-                             const ModelParams &params)
-{
-    // start from the leaf on up
-    // update the clone freq using independent MH
-    // note that likelihood over all mutations must be re-computed due to DP
-    //double curr_log_lik = tree.compute_log_likelihood_bulk(params);
-    double new_log_lik;
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
-    tree.get_all_nodes(nodes);
-    // Note: nodes[0] is the root node, we do not update its cellulare prevalence, as it is always set to 1
-    for (int i = nodes.size() - 1; i > 0; i--)
-    {
-        //cout << nodes[i]->get_name() << endl;
-        double curr_phi = nodes[i]->get_node_parameter().get_cellular_prev();
-        double new_phi;
-        double children_cellular_prev = get_children_cellular_prev(nodes[i]);
-        double parent_clone_req = nodes[i]->get_parent_node()->get_node_parameter().get_clone_freq();
-        double minimum = children_cellular_prev;
-        double maximum = parent_clone_req + curr_phi;
-        double range = maximum - minimum;
-        double interval = range / n_mh_iter;
-        vector<double> log_liks;
-        vector<double> new_phis;
-        double log_norm = DOUBLE_NEG_INF;
-        for (size_t j = 0; j < n_mh_iter; j++) {
-            new_phi = gsl_ran_flat(random, minimum + j*interval, minimum + (j+1)*interval);
-            update_params(nodes[i], curr_phi, new_phi);
-            new_log_lik = tree.compute_log_likelihood_bulk(params);
-            log_liks.push_back(new_log_lik);
-            new_phis.push_back(new_phi);
-            log_norm = log_add(log_norm, new_log_lik);
-            update_params(nodes[i], new_phi, curr_phi);
-            //cout << new_phi << ", " << new_log_lik << endl;
-        }
-        if (log_norm != DOUBLE_NEG_INF) {
-            normalize_destructively(log_liks);
-            size_t idx = multinomial(random, log_liks);
-            update_params(nodes[i], curr_phi, new_phis[idx]);
-        }
-    }
-    
-}
-
-double sample_params_dirichlet(const gsl_rng *random,
-                             size_t n_mh_iter,
-                             TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &tree,
-                             const ModelParams &params)
-{
-    double curr_log_lik = tree.compute_log_likelihood_bulk(params);
-    double new_log_lik;
-    
-    // Perform MH to update the parameters
-    // collect current parameters via tree traversal
-    // sample from DP centered at current parameters multipled by constant factor
-    double K = params.get_dir_conc_mult_factor();
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
-    tree.get_all_nodes(nodes);
-    size_t dim = nodes.size();
-    double *curr_clone_freq = new double[dim];
-    double *new_clone_freq = new double[dim];
-    double *dir_concentration_params_curr = new double[dim];
-    double *dir_concentration_params_new = new double[dim];
-    
-    get_clone_freqs(tree, curr_clone_freq);
-    
-    size_t n_accepts = 0;
-    double log_proposal_new = 0.0, log_proposal_curr = 0.0, log_accept, log_unif;
-    for (size_t i = 0; i < n_mh_iter; i++) {
-        for (size_t i = 0; i < nodes.size(); i++) {
-            dir_concentration_params_curr[i] = K * curr_clone_freq[i] + 1;
-        }
-        gsl_ran_dirichlet(random, nodes.size(), dir_concentration_params_curr, new_clone_freq);
-        for (size_t i = 0; i < nodes.size(); i++) {
-            dir_concentration_params_new[i] = K * new_clone_freq[i] + 1;
-        }
-        update_params(nodes, new_clone_freq);
-        new_log_lik = tree.compute_log_likelihood_bulk(params);
-        log_proposal_new = log_dirichlet_pdf(dim, dir_concentration_params_curr, new_clone_freq);
-        log_proposal_curr = log_dirichlet_pdf(dim, dir_concentration_params_new, curr_clone_freq);
-        log_unif = log(uniform(random, 0, 1));
-        log_accept = (new_log_lik - curr_log_lik) + (log_proposal_curr - log_proposal_new);
-        if (log_unif < log_accept) {
-            copy(new_clone_freq, new_clone_freq+dim, curr_clone_freq);
-            copy(dir_concentration_params_new, dir_concentration_params_new + dim, dir_concentration_params_curr);
-            curr_log_lik = new_log_lik;
-            n_accepts++;
-        } else {
-            update_params(nodes, curr_clone_freq);
-        }
-    }
-    cout << "n accepts: " << n_accepts << endl;
-    double r = (double) n_accepts / n_mh_iter;
-    
-    delete [] curr_clone_freq;
-    delete [] new_clone_freq;
-    delete [] dir_concentration_params_curr;
-    delete [] dir_concentration_params_new;
-    
-    return r;
-}
-
-void cull(Node<BulkDatum,CloneTreeNodeParam> *root)
-{
-    descend_and_cull(root);
-    descend_and_update_names(root);
-    
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
-    Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(root, nodes);
-    
-    // update the clone frequencies
-    CloneTreeNode *curr_node;
-    for (size_t i = 0; i < nodes.size(); i++) {
-        curr_node = (CloneTreeNode *)nodes[i];
-        unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &idx2child = curr_node->get_idx2child();
-        double children_cellular_prev = 0.0;
-        for (size_t idx = 0; idx < idx2child.size(); idx++) {
-            CloneTreeNode *child_node = (CloneTreeNode *)idx2child[idx].second;
-            children_cellular_prev += child_node->get_node_parameter().get_cellular_prev();
-        }
-        // cull does not alter cellular prevalence but it does change the clone frequncy because some children gets removed
-        curr_node->set_clone_freq(curr_node->get_node_parameter().get_cellular_prev() - children_cellular_prev);
-    }
-}
-
-//void cull(TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *state)
-//{
-//    //state->cull();
-//    descend_and_cull(state->get_root());
-//    descend_and_update_names(state->get_root());
-//    
-//    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
-//    state->get_all_nodes(nodes);
-//    unordered_set<Node<BulkDatum,CloneTreeNodeParam> *> node_set;
-//    node_set.insert(nodes.begin(), nodes.end());
-//    state->clear_cache(node_set);
-//    
-//    CloneTreeNode *curr_node;
-//    for (size_t i = 0; i < nodes.size(); i++) {
-//        curr_node = (CloneTreeNode *)nodes[i];
-//        unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &idx2child = curr_node->get_idx2child();
-//        double children_cellular_prev = 0.0;
-//        for (size_t idx = 0; idx < idx2child.size(); idx++) {
-//            CloneTreeNode *child_node = (CloneTreeNode *)idx2child[idx].second;
-//            children_cellular_prev += child_node->get_node_parameter().get_cellular_prev();
-//        }
-//        // cull does not alter cellular prevalence but it does change the clone frequncy because some children gets removed
-//        curr_node->set_clone_freq(curr_node->get_node_parameter().get_cellular_prev() - children_cellular_prev);
-//    }
-//}
 

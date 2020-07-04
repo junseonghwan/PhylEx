@@ -44,7 +44,7 @@ public:
     double sc_dropout_beta0 = 0.01;
 };
 
-TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> *RunSliceSampler(
+TSSBState *RunSliceSampler(
     const gsl_rng *random,
     ModelParams &params,
     Config &config,

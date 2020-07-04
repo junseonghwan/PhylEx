@@ -9,15 +9,15 @@
 
 #include "utils.hpp"
 
-//void check_parameter_feasibility_helper(Node<BulkDatum,CloneTreeNodeParam> *node)
+//void check_parameter_feasibility_helper(CloneTreeNode *node)
 //{
 //    double cellular_prev = node->get_node_parameter().get_cellular_prev();
 //    double clone_freq = node->get_node_parameter().get_clone_freq();
 //    assert( clone_freq >= 0.0 );
-//    unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &idx2child = node->get_idx2child();
+//    unordered_map<size_t, pair<double, CloneTreeNode *> > &idx2child = node->get_idx2child();
 //    double children_cellular_prev = 0.0;
 //    for (size_t i = 0; i < idx2child.size(); i++) {
-//        Node<BulkDatum,CloneTreeNodeParam> *child_node = idx2child[i].second;
+//        CloneTreeNode *child_node = idx2child[i].second;
 //        children_cellular_prev += child_node->get_node_parameter().get_cellular_prev();
 //    }
 //    assert( cellular_prev >= children_cellular_prev );
@@ -25,35 +25,35 @@
 //    assert( abs(diff - clone_freq) < 1e-3 );
 //}
 
-//void check_parameter_feasibility(Node<BulkDatum,CloneTreeNodeParam> *root, bool print = false)
+//void check_parameter_feasibility(CloneTreeNode *root, bool print = false)
 //{
-//    queue<Node<BulkDatum,CloneTreeNodeParam> *> q;
+//    queue<CloneTreeNode *> q;
 //    q.push(root);
-//    Node<BulkDatum,CloneTreeNodeParam> *node = 0;
+//    CloneTreeNode *node = 0;
 //    while (!q.empty()) {
 //        node = q.front();
 //        q.pop();
 //        if (print)
 //            cout << node->get_name() << ": " << node->get_node_parameter().get_cellular_prev() << ", " << node->get_node_parameter().get_clone_freq() << endl;
 //        check_parameter_feasibility_helper(node);
-//        unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &idx2child = node->get_idx2child();
+//        unordered_map<size_t, pair<double, CloneTreeNode *> > &idx2child = node->get_idx2child();
 //        for (size_t i = 0; i < idx2child.size(); i++) {
 //            q.push(idx2child[i].second);
 //        }
 //    }
 //}
 
-bool check_clone_freq(Node<BulkDatum,CloneTreeNodeParam> *root)
+bool check_clone_freq(CloneTreeNode *root)
 {
     double sum_of_freqs = 0.0;
-    queue<Node<BulkDatum,CloneTreeNodeParam> *> q;
+    queue<CloneTreeNode *> q;
     q.push(root);
-    Node<BulkDatum,CloneTreeNodeParam> *node = 0;
+    CloneTreeNode *node = 0;
     while (!q.empty()) {
         node = q.front();
         q.pop();
         sum_of_freqs += node->get_node_parameter().get_clone_freq();
-        unordered_map<size_t, pair<double, Node<BulkDatum,CloneTreeNodeParam> *> > &idx2child = node->get_idx2child();
+        unordered_map<size_t, pair<double, CloneTreeNode *> > &idx2child = node->get_idx2child();
         for (size_t i = 0; i < idx2child.size(); i++) {
             q.push(idx2child[i].second);
         }
@@ -161,20 +161,20 @@ double v_measure(double beta,
 
 double v_measure(double beta,
                  const vector<BulkDatum *> &data,
-                 TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &true_state,
-                 TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &sampled_state)
+                 TSSBState &true_state,
+                 TSSBState &sampled_state)
 {
     // determine the classes and clusters
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> classes;
+    vector<CloneTreeNode *> classes;
     true_state.get_all_nodes(true, classes);
-    unordered_map<Node<BulkDatum,CloneTreeNodeParam> *, size_t> node2class;
+    unordered_map<CloneTreeNode *, size_t> node2class;
     for (size_t c = 0; c < classes.size(); c++) {
         node2class[classes[c]] = c;
     }
     
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> clusters;
+    vector<CloneTreeNode *> clusters;
     sampled_state.get_all_nodes(true, clusters);
-    unordered_map<Node<BulkDatum,CloneTreeNodeParam> *, size_t> node2cluster;
+    unordered_map<CloneTreeNode *, size_t> node2cluster;
     for (size_t k = 0; k < clusters.size(); k++) {
         node2cluster[clusters[k]] = k;
     }
@@ -184,7 +184,7 @@ double v_measure(double beta,
     // formulate true and predicted labels
     vector<size_t> true_labels;
     vector<size_t> predicted_labels;
-    Node<BulkDatum,CloneTreeNodeParam> *node = 0;
+    CloneTreeNode *node = 0;
     for (size_t i = 0; i < N; i++) {
         node = true_state.get_node(data[i]);
         size_t c = node2class[node];
@@ -200,12 +200,12 @@ double v_measure(double beta,
 }
 
 void compute_metrics(const vector<BulkDatum *> &data,
-                     TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &true_state,
-                     TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &sampled_state)
+                     TSSBState &true_state,
+                     TSSBState &sampled_state)
 {
     // get ancestral matrices
-    gsl_matrix *true_A = TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam>::get_ancestral_matrix(true_state);
-    gsl_matrix *sampled_A = TSSBState<BulkDatum, SingleCellData,CloneTreeNodeParam>::get_ancestral_matrix(sampled_state);
+    gsl_matrix *true_A = TSSBState::get_ancestral_matrix(true_state);
+    gsl_matrix *sampled_A = TSSBState::get_ancestral_matrix(sampled_state);
     // compute the differences between the ancestral matrices
     double err = 0.0;
     for (size_t i = 0; i < data.size(); i++) {
@@ -218,7 +218,7 @@ void compute_metrics(const vector<BulkDatum *> &data,
     cout << "Err: " << err << "/" << (data.size() * (data.size() - 1) / 2) << endl;
     
     // compute L1-loss on cellular prevalences for each of SNA
-    Node<BulkDatum,CloneTreeNodeParam> *node = 0;
+    CloneTreeNode *node = 0;
     double l1_loss = 0.0;
     for (size_t i = 0; i < data.size(); i++) {
         node = true_state.get_node(data[i]);

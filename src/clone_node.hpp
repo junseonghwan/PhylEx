@@ -8,10 +8,24 @@
 #ifndef clone_node_hpp
 #define clone_node_hpp
 
+#include <iostream>
+#include <limits>
+#include <map>
+#include <memory.h>
+#include <queue>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+#include <boost/regex.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/regex.hpp>
+#include <gsl/gsl_randist.h>
 
 #include "bulk_datum.hpp"
-#include "node.hpp"
+#include "model_params.hpp"
+#include "sampling_utils.hpp"
 #include "single_cell.hpp"
 
 using namespace std;
@@ -28,55 +42,138 @@ public:
     bool is_consistent();
 };
 
-class CloneTreeNode : public Node<BulkDatum,CloneTreeNodeParam>
+class CloneTreeNode
 {
-public:
-    CloneTreeNode(size_t child_idx, Node<BulkDatum,CloneTreeNodeParam> *parent);
+    CloneTreeNodeParam param;
+    
+    vector<size_t> name;
+    double nu = 0.0;
+    CloneTreeNode *parent_node = 0;
+    unordered_set<BulkDatum *> data;
+    
+    // map: child branch idx -> pair<psi_stick, Node *>
+    unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child;
+    bool operator==(const CloneTreeNode &other) const
+    {
+        if (this->parent_node != other.parent_node)
+            return false;
+        if (name.size() != other.name.size())
+            return false;
+        size_t n = name.size();
+        return (name[n-1] == other.name[n-1]);
+    }
 
-    const CloneTreeNodeParam &get_node_parameter() const override;
+    // change the last part of the node's name to j -- used extensively by reorder_sticks
+    void edit_name(size_t j);
+
+public:
+    CloneTreeNode(size_t child_idx, CloneTreeNode *parent);
+    ~CloneTreeNode();
+    
+    string get_name() const;
+    inline const vector<size_t> &get_name_vec() const { return name; };
+    inline size_t get_depth() const { return name.size() - 1; }
+    size_t get_num_data() const;
+    double get_nu_stick() const;
+    CloneTreeNode *get_parent_node() const;
+    const unordered_set<BulkDatum *> &get_data() const;
+    const pair<double, CloneTreeNode *> &get_child(size_t child_idx) const;
+    size_t get_num_children() const;
+    bool is_root() const;
+    bool is_leaf() const;
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &get_idx2child();
+
+    // setters
+    void set_nu_stick(double nu);
+    void set_psi_stick(size_t child_idx, double psi);
+    
+    // add/remove datum
+    void add_datum(BulkDatum *datum);
+    void remove_datum(BulkDatum *datum);
+    bool contains_datum(BulkDatum *datum) const;
+    
+    // operations on sticks
+    void cull(unordered_set<size_t> &cull_list);
+    void reorder_sticks(const gsl_rng *random, const ModelParams &params);
+    void reset_children_names();
+    
+    // identify the branch that contains u, return the corresponding child Node
+    CloneTreeNode *locate_child(const gsl_rng *random, double &u, const ModelParams &hyper_params);
+    void InitializeChild(const gsl_rng *random,
+                         const ModelParams &params);
+    
+    static string form_node_string(string curr_node_str, size_t branch);
+    static string get_parent_string(string curr_node_str);
+    
+    static void breadth_first_traversal(CloneTreeNode *root, vector<CloneTreeNode *> &ret, bool non_empty = false);
+    static CloneTreeNode *find_node(const gsl_rng *random, double u, CloneTreeNode *root, const ModelParams &params);
+    // return all data from ancestors including node itself
+    static void get_dataset(CloneTreeNode *node, unordered_set<const BulkDatum *> &dataset);
+    static void get_cluster_labels(CloneTreeNode *root,
+                                   const vector<BulkDatum *> &data,
+                                   vector<unsigned int> &cluster_labels);
+    static void construct_datum2node(vector<CloneTreeNode *> &all_nodes,
+                                     unordered_map<BulkDatum *, CloneTreeNode *> &datum2node);
+    static gsl_matrix *GetAncestralMatrix(CloneTreeNode *root,
+                                          const vector<BulkDatum *> &bulk_data,
+                                          const unordered_map<BulkDatum *, CloneTreeNode *> &datum2node);
+    
+    static bool less(CloneTreeNode *l, CloneTreeNode *r);
+    friend bool operator<(const CloneTreeNode& lhs, const CloneTreeNode& rhs) {
+        vector<string> lhs_arr, rhs_arr;
+        boost::split(lhs_arr, lhs.name, boost::is_any_of("_"));
+        boost::split(rhs_arr, rhs.name, boost::is_any_of("_"));
+        if (lhs_arr.size() < rhs_arr.size())
+            return true;
+        else if (lhs_arr.size() > rhs_arr.size())
+            return false;
+        else {
+            // same length, compare one by one
+            for (size_t i = 0; i < lhs_arr.size(); i++) {
+                if (stoi(lhs_arr[i]) < stoi(rhs_arr[i])) {
+                    return true;
+                } else if (stoi(lhs_arr[i]) > stoi(rhs_arr[i])) {
+                    return false;
+                }
+            }
+            return false;
+        }
+        //return tie(lhs.name) < tie(rhs.name);
+    }
+    friend bool operator> (const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return rhs < lhs; }
+    friend bool operator<=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs > rhs); }
+    friend bool operator>=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs < rhs); }
+
+    const CloneTreeNodeParam &get_node_parameter() const;
     void sample_node_parameters(const gsl_rng *random,
                                 const ModelParams &params,
-                                Node<BulkDatum,CloneTreeNodeParam> *parent) override;
-    Node<BulkDatum,CloneTreeNodeParam> *spawn_child(double psi) override;
-    string print() override;
+                                CloneTreeNode *parent);
+    CloneTreeNode *spawn_child(double psi);
+    string print();
 
     void change_clone_freq(double diff);
     void set_clone_freq(double new_val);
     void set_cellular_prev(double new_val);
-    //double compute_expectation_of_xi(const ModelParams &model_params);
 
     static CloneTreeNode *create_root_node();
-    static void get_snvs(Node<BulkDatum,CloneTreeNodeParam> *node, unordered_set<Locus> &ret);
+    static void get_snvs(CloneTreeNode *node, unordered_set<Locus> &ret);
 };
 
 double ScLikelihood(const BulkDatum *s,
                      const SingleCellData *sc,
                      bool has_snv,
                      const ModelParams &model_params);
-double BulkLogLikWithTotalCopyNumber(const Node<BulkDatum, CloneTreeNodeParam> *node,
+double BulkLogLikWithTotalCopyNumber(const CloneTreeNode *node,
                        const BulkDatum *s,
                        const ModelParams &model_params);
-double zero_bulk_likelihood(const Node<BulkDatum, CloneTreeNodeParam> *node,
-                            const BulkDatum *datum,
-                            const ModelParams &model_params);
-double BulkLogLikWithCopyNumberProfile(const Node<BulkDatum, CloneTreeNodeParam> *node,
+double BulkLogLikWithCopyNumberProfile(const CloneTreeNode *node,
                                        const BulkDatum *datum,
                                        const ModelParams &model_params);
-double BulkLogLikWithGenotype(const Node<BulkDatum, CloneTreeNodeParam> *node,
+double BulkLogLikWithGenotype(const CloneTreeNode *node,
                               const BulkDatum *datum,
                               const ModelParams &model_params);
-void update_params(vector<Node<BulkDatum,CloneTreeNodeParam> *> &nodes, double *new_clone_freq);
-double update_cellular_prev_recursive(Node<BulkDatum,CloneTreeNodeParam> *node);
-void get_clone_freqs(TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &state,
-                     double *clone_freqs);
-void sample_params_bottom_up(const gsl_rng *random,
-                             size_t n_mh_iter,
-                             TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &tree,
-                             const ModelParams &params);
-double sample_params_dirichlet(const gsl_rng *random,
-                             size_t n_mh_iter,
-                             TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam> &tree,
-                             const ModelParams &params);
-void cull(Node<BulkDatum,CloneTreeNodeParam> *root);
+double ZeroBulkLikelihood(const CloneTreeNode *node,
+                          const BulkDatum *datum,
+                          const ModelParams &model_params);
 
 #endif /* clone_node_hpp */
