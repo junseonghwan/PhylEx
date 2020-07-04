@@ -5,7 +5,7 @@ file( GLOB SRCS *.cpp *.hpp)
 add_library(tssb STATIC ${SRCS}) # create static library
 add_executable(run ${SRCS}) # create the executable file
 
-find_package (OpenMP REQUIRED)
+#find_package (OpenMP REQUIRED)
 find_package (PkgConfig REQUIRED)
 find_package(Boost 1.61 COMPONENTS regex system filesystem program_options REQUIRED)
 find_package (GSL REQUIRED)

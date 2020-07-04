@@ -1,0 +1,13 @@
+_ignore/
+xcode/
+bin/
+.Rhistory
+build/
+run
+simul
+nohup*
+data/
+.Rproj.user
+*/slurm*
+configs/
+B-SCITE/
