@@ -12,6 +12,7 @@
 
 #include "data_util.hpp"
 #include "utils.hpp"
+#include "tssb_state.hpp"
 
 size_t SampleCnProfile(const gsl_rng *random,
                        size_t curr,
@@ -109,10 +110,10 @@ void CreateSNVs(gsl_rng *random,
     }
 }
 
-Node<BulkDatum,CloneTreeNodeParam> *SampleFromTssbPrior(const gsl_rng *random,
-                                                           size_t n_data,
-                                                           ModelParams &model_params,
-                                                           vector<BulkDatum *> &data)
+CloneTreeNode *SampleFromTssbPrior(const gsl_rng *random,
+                                   size_t n_data,
+                                   ModelParams &model_params,
+                                   vector<BulkDatum *> &data)
 {
     CloneTreeNode *root = CloneTreeNode::create_root_node();
     root->set_nu_stick(0.0);
@@ -121,7 +122,7 @@ Node<BulkDatum,CloneTreeNodeParam> *SampleFromTssbPrior(const gsl_rng *random,
     // sample tree and latent assignment of datum to node
     for (size_t i = 0; i < n_data; i++) {
         double u = gsl_ran_flat(random, 0, 1);
-        auto node = Node<BulkDatum,CloneTreeNodeParam>::find_node(random, u, root, model_params);
+        auto node = CloneTreeNode::find_node(random, u, root, model_params);
         node->add_datum(data[i]);
     }
 
@@ -133,13 +134,13 @@ Node<BulkDatum,CloneTreeNodeParam> *SampleFromTssbPrior(const gsl_rng *random,
 void GenerateBulkData(gsl_rng *random,
                       const SimulationConfig &simul_config,
                       vector<BulkDatum *> &data,
-                      Node<BulkDatum,CloneTreeNodeParam> *root_node)
+                      CloneTreeNode *root_node)
 {
     // Sample a node for each SNV.
     // When assigning SNV to a node, sample clonal copy number profile.
     size_t n_data = data.size();
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> all_nodes;
-    Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(root_node, all_nodes, false);
+    vector<CloneTreeNode *> all_nodes;
+    CloneTreeNode::breadth_first_traversal(root_node, all_nodes, false);
     double seq_err = simul_config.seq_err;
     size_t b_alleles, depth;
     BulkDatum *datum;
@@ -192,9 +193,9 @@ void GenerateBulkData(gsl_rng *random,
 
 // Assumes nodes are in breadth first traversal order.
 EigenMatrix EvolveCn(gsl_rng *random,
-                     vector<Node<BulkDatum,CloneTreeNodeParam> *> &nodes,
-                     unordered_map<Node<BulkDatum,CloneTreeNodeParam> *, size_t> &node2idx,
-                     Node<BulkDatum,CloneTreeNodeParam> *assigned_node,
+                     vector<CloneTreeNode *> &nodes,
+                     unordered_map<CloneTreeNode *, size_t> &node2idx,
+                     CloneTreeNode *assigned_node,
                      const SimulationConfig &config,
                      EigenMatrix P0,
                      EigenMatrix P1)
@@ -208,7 +209,7 @@ EigenMatrix EvolveCn(gsl_rng *random,
     EigenMatrix cn_profile(n_nodes, 2);
 
     // Get ancestor nodes.
-    unordered_set<Node<BulkDatum,CloneTreeNodeParam> *> ancestors;
+    unordered_set<CloneTreeNode *> ancestors;
     auto node = assigned_node;
     while (true) {
         if (node->is_root()) {
@@ -259,9 +260,9 @@ EigenMatrix EvolveCn(gsl_rng *random,
 void GenerateBulkDataWithBDProcess(gsl_rng *random,
                                    const SimulationConfig &simul_config,
                                    vector<BulkDatum *> &data,
-                                   Node<BulkDatum,CloneTreeNodeParam> *root_node)
+                                   CloneTreeNode *root_node)
 {
-    unordered_map<Node<BulkDatum,CloneTreeNodeParam>*, vector<pair<size_t, size_t> > > cn_profile;
+    unordered_map<CloneTreeNode*, vector<pair<size_t, size_t> > > cn_profile;
 
     size_t n_data = data.size();
     double birth_rate = simul_config.birth_rate;
@@ -274,9 +275,9 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
     auto Q0 = GetCnRateMatrix(birth_rate, death_rate, 0, simul_config.max_cn);
     auto P0 = ExponentiateMatrix(Q0);
 
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
-    Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(root_node, nodes, false);
-    unordered_map<Node<BulkDatum,CloneTreeNodeParam> *, size_t> node2idx;
+    vector<CloneTreeNode *> nodes;
+    CloneTreeNode::breadth_first_traversal(root_node, nodes, false);
+    unordered_map<CloneTreeNode *, size_t> node2idx;
     for (size_t i = 0; i < nodes.size(); i++) {
         auto node = nodes[i];
         node2idx[node] = i;
@@ -329,17 +330,17 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
 }
 
 void GenerateScRnaData(gsl_rng *random,
-                       Node<BulkDatum,CloneTreeNodeParam> *root_node,
+                       CloneTreeNode *root_node,
                        const vector<BulkDatum *> &data,
                        const ModelParams &model_params,
                        const SimulationConfig &simul_config,
                        vector<SingleCellData *> &sc_data)
 {
     // Retrieve all nodes/clones with at least one SNV assigned.
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> non_empty_nodes;
-    Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(root_node, non_empty_nodes, true);
+    vector<CloneTreeNode *> non_empty_nodes;
+    CloneTreeNode::breadth_first_traversal(root_node, non_empty_nodes, true);
 
-    Node<BulkDatum,CloneTreeNodeParam> *node;
+    CloneTreeNode *node;
     for (size_t c = 0; c < simul_config.n_cells; c++) {
         size_t idx = gsl_rng_uniform_int(random, non_empty_nodes.size());
         node = non_empty_nodes[idx];
@@ -360,7 +361,7 @@ void GenerateScRnaData(gsl_rng *random,
 
 void GenerateScRnaReads2(const gsl_rng *random,
                          const SimulationConfig &simul_config,
-                         Node<BulkDatum,CloneTreeNodeParam> *node,
+                         CloneTreeNode *node,
                          const vector<BulkDatum*> &somatic_loci,
                          unordered_map<Locus, LocusDatum *> &single_site_reads)
 {

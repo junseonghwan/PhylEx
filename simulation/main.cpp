@@ -42,7 +42,7 @@ void parse_config_file(string config_file_path, SimulationConfig &config)
 }
 
 void CreateLinearTree(gsl_rng *random, CloneTreeNode *root, size_t max_depth) {
-    vector<Node<BulkDatum,CloneTreeNodeParam> *> nodes;
+    vector<CloneTreeNode *> nodes;
     nodes.push_back(root);
     auto node = root;
     for (size_t i = 0; i < max_depth; i++) {
@@ -101,8 +101,8 @@ void CreateNaryTree(gsl_rng *random,
             queue.push_back(child_node);
         }
     }
-    vector<Node<BulkDatum, CloneTreeNodeParam> *> nodes;
-    Node<BulkDatum, CloneTreeNodeParam>::breadth_first_traversal(root,
+    vector<CloneTreeNode *> nodes;
+    CloneTreeNode::breadth_first_traversal(root,
                                                                  nodes);
     for (size_t i = 0; i < nodes.size(); i++) {
         cout << nodes[i]->print() << endl;
@@ -216,18 +216,18 @@ int main(int argc, char *argv[])
             WriteBetaBinomHp(output_path, data);
 
             // Output information needed for evaluation.
-            vector<Node<BulkDatum,CloneTreeNodeParam> *> all_nodes;
-            Node<BulkDatum,CloneTreeNodeParam>::breadth_first_traversal(root_node,
+            vector<CloneTreeNode *> all_nodes;
+            CloneTreeNode::breadth_first_traversal(root_node,
                                                                         all_nodes,
                                                                         false);
-            unordered_map<BulkDatum *, Node<BulkDatum, CloneTreeNodeParam> *> datum2node;
-            Node<BulkDatum,CloneTreeNodeParam>::construct_datum2node(all_nodes, datum2node);
+            unordered_map<BulkDatum *, CloneTreeNode *> datum2node;
+            CloneTreeNode::construct_datum2node(all_nodes, datum2node);
             double bulk_log_lik = 0.0;
             for (size_t i = 0; i < simul_config.n_sites; i++) {
                 bulk_log_lik += BulkLogLikWithGenotype(datum2node[data[i]], data[i], model_params);
             }
             double sc_log_lik =
-                TSSBState<BulkDatum,SingleCellData,CloneTreeNodeParam>::compute_log_likelihood_sc(
+                TSSBState::compute_log_likelihood_sc(
                           root_node, data, sc_data, ScLikelihood, model_params);
             WriteTreeToFile(output_path, data, root_node);
             WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
@@ -235,7 +235,7 @@ int main(int argc, char *argv[])
 
             // output cluster labels
             vector<unsigned int> cluster_labels;
-            Node<BulkDatum,CloneTreeNodeParam>::get_cluster_labels(root_node,
+            CloneTreeNode::get_cluster_labels(root_node,
                                                                    data,
                                                                    cluster_labels);
             ofstream f;

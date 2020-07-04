@@ -25,13 +25,13 @@ class CompactTSSBState
     string newick;
 public:
     CompactTSSBState(TSSBState &tssb_state);
+    ~CompactTSSBState();
+    
     const vector<CloneTreeNodeParam *> get_param() const { return datum2param; };
     inline const vector<unsigned int> &get_cluster_labels() const { return cluster_labels; };
     inline const string get_newick() const { return newick; }
     inline const vector<string> &get_datum2node() const { return datum2node; }
     inline const unordered_map<string, double> &get_node2param() const { return node2param; }
-    
-    ~CompactTSSBState();
 };
 
 #endif /* compact_tssb_state_hpp */
