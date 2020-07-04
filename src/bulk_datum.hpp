@@ -21,6 +21,9 @@ class BulkDatum
     string  id_;
 
     Locus &locus_;
+    
+    vector<size_t> variant_reads_, total_reads_;
+    vector<size_t> major_cns_, minor_cns_;
 
     size_t  read_count_ = 0;
     size_t  variant_read_count_ = 0;
@@ -39,6 +42,9 @@ public:
               size_t total_cn);
     BulkDatum(string name, Locus &locus, size_t n_variants, size_t n_reads,
               size_t major_cn, size_t minor_cn);
+    BulkDatum(string name, Locus &locus,
+              vector<size_t> n_variants, vector<size_t> n_reads,
+              vector<size_t> major_cn, vector<size_t> minor_cn);
     
     string GetId() const { return id_; }
     size_t GetVariantReadCount() const { return variant_read_count_; }

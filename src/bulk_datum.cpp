@@ -47,6 +47,20 @@ variant_read_count_(n_variants)
     SetGenotype(make_pair(major_cn, minor_cn));
 }
 
+BulkDatum::BulkDatum(string name, Locus &locus,
+                     vector<size_t> variant_reads, vector<size_t> total_reads,
+                     vector<size_t> major_cns, vector<size_t> minor_cns) :
+id_(name),
+locus_(locus),
+variant_reads_(variant_reads),
+total_reads_(total_reads),
+major_cns_(major_cns),
+minor_cns_(minor_cns)
+{
+    //SetGenotype(make_pair(major_cn, minor_cn));
+}
+
+
 void BulkDatum::SetTotalCopyNumber(size_t val)
 {
     this->total_cn_ = val;

@@ -775,6 +775,16 @@ void ProcessBulkWithTotalCopyNumber(ifstream &dat_file,
     }
 }
 
+vector<size_t> ParseRegionalData(string line) {
+    vector<string> result;
+    vector<size_t> data;
+    boost::split(result, line, boost::is_any_of(","));
+    for (size_t i = 0; i < result.size(); i++) {
+        data[i] = stoul(result[i]);
+    }
+    return data;
+}
+
 void ProcessBulkWithGenotype(ifstream &dat_file,
                              vector<BulkDatum *> &bulk_data,
                              unordered_map<string, Locus *> &somatic_loci)
@@ -788,11 +798,17 @@ void ProcessBulkWithGenotype(ifstream &dat_file,
         string chr = results[1];
         size_t pos = stol(results[2]);
         //string gene = results[3];
-        size_t n_vars = stol(results[5]);
-        size_t n_reads = stol(results[6]);
-        size_t major_cn = stol(results[7]);
-        size_t minor_cn = stol(results[8]);
+        //size_t n_vars = stol(results[5]);
+        //size_t n_reads = stol(results[6]);
+        //size_t major_cn = stol(results[7]);
+        //size_t minor_cn = stol(results[8]);
 
+        vector<size_t> var_reads = ParseRegionalData(results[5]);
+        vector<size_t> total_reads = ParseRegionalData(results[6]);
+        
+        vector<size_t> major_cns = ParseRegionalData(results[7]);
+        vector<size_t> minor_cns = ParseRegionalData(results[8]);
+        
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
             exit(-1);
