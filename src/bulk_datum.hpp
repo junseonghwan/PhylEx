@@ -24,44 +24,40 @@ class BulkDatum
     
     vector<size_t> variant_reads_, total_reads_;
     vector<size_t> major_cns_, minor_cns_;
-
-    size_t  read_count_ = 0;
-    size_t  variant_read_count_ = 0;
-    
-    // Three different inputs for copy number.
-    // 1. Total copy number.
-    // 2. Major and minor copy numbers.
-    // 3. Prior on total copy number.
-    size_t  total_cn_ = 0;
-    pair<size_t, size_t> genotype_;
-    vector<double> cn_profile_;
+    vector<size_t> total_cns_;
+    // Each entry stores prior belief on the total copy number.
+    // e.g., cn_prob_matrix[0] is the prior belief on total copy number for the
+    // first region. cn_prob_matrix[0][0] is the probability that total copy
+    // number is 0, cn_prob_matrix[0][n], where n is the total possible copy number.
+    vector<vector<double> > cn_prob_matrix_;
 public:
     BulkDatum(string name, Locus &locus);
-    BulkDatum(string name, Locus &locus, size_t n_variants, size_t n_reads);
-    BulkDatum(string name, Locus &locus, size_t n_variants, size_t n_reads,
-              size_t total_cn);
-    BulkDatum(string name, Locus &locus, size_t n_variants, size_t n_reads,
-              size_t major_cn, size_t minor_cn);
+    BulkDatum(string name, Locus &locus,
+              vector<size_t> n_variants, vector<size_t> n_reads);
+    BulkDatum(string name, Locus &locus,
+              vector<size_t> n_variants, vector<size_t> n_reads,
+              vector<size_t> total_cns);
     BulkDatum(string name, Locus &locus,
               vector<size_t> n_variants, vector<size_t> n_reads,
               vector<size_t> major_cn, vector<size_t> minor_cn);
     
     string GetId() const { return id_; }
-    size_t GetVariantReadCount() const { return variant_read_count_; }
-    size_t GetReadCount() const { return read_count_; }
-    size_t GetTotalCN() const { return total_cn_; }
-    size_t GetMajorCN() const { return genotype_.first; }
-    size_t GetMinorCN() const { return genotype_.second; }
+    vector<size_t> GetVariantReadCount() const { return variant_reads_; }
+    vector<size_t> GetReadCount() const { return total_reads_; }
+    const vector<size_t> &GetMajorCN() const { return major_cns_; }
+    const vector<size_t> &GetMinorCN() const { return minor_cns_; }
+    const vector<size_t> &GetTotalCN() const { return total_cns_; }
+    const vector<double> &GetCNProbs(size_t idx) const { return cn_prob_matrix_[idx]; }
     const Locus &GetLocus() const { return locus_; }
-    const vector<double> &GetCopyNumberProfile() const {
-        return cn_profile_;
-    }
 
-    void SetVariantReadCount(size_t val);
-    void SetReadCount(size_t n_reads);
-    void SetTotalCopyNumber(size_t val);
-    void SetGenotype(pair<size_t, size_t> val);
-    void SetCopyNumberPrior(vector<double> &cn_profile);
+    void AddRegionData(size_t var_reads, size_t total_reads,
+                       size_t major_cn, size_t minor_cn);
+    void SetCopyNumberProbs(vector<vector<double> > cn_prob_matrix) {
+        cn_prob_matrix_ = cn_prob_matrix;
+    }
+    size_t GetRegionCount() const {
+        return variant_reads_.size();
+    }
 };
 
 #endif /* bulk_datum_hpp */

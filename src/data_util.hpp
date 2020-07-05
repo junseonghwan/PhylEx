@@ -41,8 +41,6 @@ size_t convert_chr_to_int(string chr);
 bool path_exists(string path);
 void WriteLogLikToFile(string output_path, double val);
 void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool output_genotype);
-void WriteBulkForPhyloWGS(string output_path, const vector<BulkDatum *> &bulk);
-void WriteCNVForPhyloWGS(string output_path); // write an empty cnv file for running PhyloWGS
 void write_scDNA_data(string output_path,
                       const vector<SingleCellData *> &sc_data,
                       const vector<BulkDatum *> &bulk);
@@ -66,7 +64,6 @@ void WriteCopyNumberProfileToFile(string output_path,
 CopyNumberInputType ReadBulkData(string bulk_data_path,
                                  vector<BulkDatum *> &bulk_data,
                                  unordered_map<string, Locus *> &somatic_loci);
-//unordered_set<Locus> read_bulk_data_phyloWGS(string bulk_data_path, vector<BulkDatum *> &bulk_data);
 //void read_scDNA_data(string sc_data_path, vector<BulkDatum *> &bulk_data, vector<SingleCellData *> &sc_data);
 //void read_scRNA_data(string sc_data_path, unordered_set<Locus> &somatic_loci, vector<SingleCellData *> &sc_data);
 void ReadCnPrior(string cn_prior_path, vector<BulkDatum *> &bulk_data);
@@ -81,8 +78,6 @@ void write_vector(string path, const vector<double> &data);
 void write_matrix_as_csv(string path, const gsl_matrix &data);
 
 string write_newick(CloneTreeNode *node);
-void fill_node_to_param(CloneTreeNode *node,
-                        unordered_map<string, double> &node2param);
 void test_likelihood(string newick_path,
                      string bulk_data_path,
                      string bulk_assignment_path);

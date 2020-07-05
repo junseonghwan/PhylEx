@@ -53,7 +53,8 @@ TSSBState *RunSliceSampler(
     vector<SingleCellData *> *sc_data,
     CopyNumberInputType cn_input_type)
 {
-    CloneTreeNode *root = CloneTreeNode::create_root_node();
+    size_t region_count = bulk_data->at(0)->GetRegionCount();
+    CloneTreeNode *root = CloneTreeNode::create_root_node(region_count);
     root->sample_node_parameters(random, params, 0);
 
     TSSBState *tree;
@@ -109,7 +110,7 @@ TSSBState *RunSliceSampler(
 
         // 1. resample assignment
         tree->resample_data_assignment(random, params);
-
+        
         cull(tree->get_root());
         tree->clear_cache();
         
