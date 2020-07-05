@@ -194,20 +194,20 @@ template <class T>
 string ConvertToCommaSeparatedValues(vector<T> values) {
     string str = "";
     for (size_t i = 0; i < values.size() - 1; i++) {
-        str += values[i];
+        str += to_string(values[i]);
         str += ",";
     }
-    str += values.back();
+    str += to_string(values.back());
     return str;
 }
 
 string ConvertToCommaSeparatedValues(EigenVectorRef values) {
     string str = "";
     for (size_t i = 0; i < values.size() - 1; i++) {
-        str += values[i];
+        str += to_string(values[i]);
         str += ",";
     }
-    str += values[values.size() - 1];
+    str += to_string(values[values.size() - 1]);
     return str;
 }
 
@@ -589,6 +589,15 @@ string write_newick(CloneTreeNode *node)
     return newick;
 }
 
+void fill_node_to_param(CloneTreeNode *node,
+                        unordered_map<string, EigenVector> &node2param) {
+    vector<CloneTreeNode *> all_nodes;
+    CloneTreeNode::breadth_first_traversal(node, all_nodes, false);
+    for (auto node : all_nodes) {
+        node2param[node->get_name()] = node->get_node_parameter().get_cellular_prevs();
+    }
+}
+
 void WriteLogLikToFile(string output_path, double val)
 {
     ofstream f;
@@ -613,28 +622,28 @@ void write_tree(string output_path,
 
     // cellular prevalence for each of the mutations: Nx2
     ofstream f;
-    f.open(output_path + "/cellular_prev.csv", ios::out);
+    f.open(output_path + "/cellular_prev.tsv", ios::out);
     auto params = state.get_param();
     for (size_t i = 0; i < n_muts; i++) {
         auto p = params[i];
         auto phi = p->get_cellular_prevs();
-        f << bulk[i]->GetId() << ", " << ConvertToCommaSeparatedValues(phi) << endl;
+        f << bulk[i]->GetId() << "\t" << ConvertToCommaSeparatedValues(phi) << endl;
     }
     f.close();
 
     // write datum to node string
-    f.open(output_path + "/datum2node.txt", ios::out);
+    f.open(output_path + "/datum2node.tsv", ios::out);
     auto datum2node = state.get_datum2node();
     for (size_t i = 0; i < datum2node.size(); i++) {
-        f << bulk[i]->GetId()  << "," << datum2node[i] << "\n";
+        f << bulk[i]->GetId()  << "\t" << datum2node[i] << "\n";
     }
     f.close();
     
     //write_vector(output_path + "/cluster_labels.txt", state.get_cluster_labels());
-    f.open(output_path + "/cluster_labels.txt", ios::out);
+    f.open(output_path + "/cluster_labels.tsv", ios::out);
     auto cluster_labels = state.get_cluster_labels();
     for (size_t i = 0; i < cluster_labels.size(); i++) {
-        f << bulk[i]->GetId() << "," << cluster_labels[i] << "\n";
+        f << bulk[i]->GetId() << "\t" << cluster_labels[i] << "\n";
     }
     f.close();
 
@@ -644,12 +653,12 @@ void write_tree(string output_path,
     f.open(output_path + "/tree.newick", ios::out);
     f << newick;
     f.close();
-    
+
     // Cellular prevalence for each of the nodes.
-    f.open(output_path + "/node2cellular_prev.csv", ios::out);
+    f.open(output_path + "/node2cellular_prev.tsv", ios::out);
     auto node2param = state.get_node2param();
     for (auto it = node2param.begin(); it != node2param.end(); ++it) {
-        f << it->first << ", " << it->second << "\n";
+        f << it->first << "\t" << ConvertToCommaSeparatedValues(it->second) << "\n";
     }
     f.close();
 }
@@ -757,7 +766,7 @@ void ProcessBulkWithTotalCopyNumber(ifstream &dat_file,
     string line;
     while ( getline (dat_file, line) )
     {
-        boost::split(results, line, boost::is_any_of("\t"));
+        boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
         string mut_id = results[0];
         string chr = results[1];
         size_t pos = stol(results[2]);
@@ -785,7 +794,7 @@ void ProcessBulkWithGenotype(ifstream &dat_file,
     string line;
     while ( getline (dat_file, line) )
     {
-        boost::split(results, line, boost::is_any_of("\t"));
+        boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
         string mut_id = results[0];
         string chr = results[1];
         size_t pos = stol(results[2]);

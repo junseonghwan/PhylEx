@@ -78,6 +78,8 @@ void write_vector(string path, const vector<double> &data);
 void write_matrix_as_csv(string path, const gsl_matrix &data);
 
 string write_newick(CloneTreeNode *node);
+void fill_node_to_param(CloneTreeNode *node,
+                        unordered_map<string, EigenVector> &node2param);
 void test_likelihood(string newick_path,
                      string bulk_data_path,
                      string bulk_assignment_path);
