@@ -191,7 +191,7 @@ void write_matrix_as_csv(string path, const gsl_matrix &data)
 }
 
 template <class T>
-string ConvertToCommaSeparatedValues(vector<T> values) {
+string ConvertToCommaSeparatedValues(const vector<T> values) {
     string str = "";
     for (size_t i = 0; i < values.size() - 1; i++) {
         str += to_string(values[i]);
@@ -201,31 +201,31 @@ string ConvertToCommaSeparatedValues(vector<T> values) {
     return str;
 }
 
-string ConvertToCommaSeparatedValues(EigenVectorRef values) {
-    string str = "";
-    for (size_t i = 0; i < values.size() - 1; i++) {
-        str += to_string(values[i]);
-        str += ",";
-    }
-    str += to_string(values[values.size() - 1]);
-    return str;
-}
+//string ConvertToCommaSeparatedValues(EigenVectorRef values) {
+//    string str = "";
+//    for (size_t i = 0; i < values.size() - 1; i++) {
+//        str += to_string(values[i]);
+//        str += ",";
+//    }
+//    str += to_string(values[values.size() - 1]);
+//    return str;
+//}
 
 void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool output_genotype)
 {
     ofstream f;
     f.open(output_path, ios::out);
     if (output_genotype) {
-        f << "ID\tCHR\tPOS\tGENE\tREF\tALT\tb\td\tmajor_cn\tminor_cn" << endl;
+        f << "ID\tCHR\tPOS\tREF\tALT\tb\td\tmajor_cn\tminor_cn" << endl;
     } else {
-        f << "ID\tCHR\tPOS\tGENE\tREF\tALT\tb\td\tcn" << endl;
+        f << "ID\tCHR\tPOS\tREF\tALT\tb\td\tcn" << endl;
     }
     for (unsigned int i = 0; i < bulk.size(); i++)
     {
         f << bulk[i]->GetId() << "\t";
         f << bulk[i]->GetLocus().get_chr() << "\t";
         f << bulk[i]->GetLocus().get_pos() << "\t";
-        f << "Gene" << "\t"; // Some generic gene name.
+        //f << "Gene" << "\t"; // Some generic gene name.
         f << "A" << "\t"; // Write arbitrary nucleotide base.
         f << "C" << "\t"; // Write arbitrary nucleotide base.
         f << ConvertToCommaSeparatedValues(bulk[i]->GetVariantReadCount()) << "\t";
@@ -272,7 +272,7 @@ void WriteBetaBinomHp(string output_path,
     f.open(output_path + "/beta_binom_hp.csv", ios::out);
     f << "ID\talpha\tbeta\n";
     for (auto bulk_datum : bulk_data) {
-        f << bulk_datum->GetLocus().get_mutation_id() << "\t";
+        f << bulk_datum->GetId() << "\t";
         f << bulk_datum->GetLocus().get_alpha() << "\t";
         f << bulk_datum->GetLocus().get_beta() << "\n";
     }
@@ -336,7 +336,7 @@ void WriteTreeToFile(string output_path,
     for (size_t i = 0; i < n_muts; i++) {
         node = datum2node[bulk[i]];
         string phi_str = ConvertToCommaSeparatedValues(node->get_node_parameter().get_cellular_prevs());
-        f << bulk[i]->GetId() << ", " << phi_str << endl;
+        f << bulk[i]->GetId() << "\t" << phi_str << endl;
     }
     f.close();
 
@@ -344,21 +344,21 @@ void WriteTreeToFile(string output_path,
     for (size_t i = 0; i < n_muts; i++) {
         node = datum2node[bulk[i]];
         string eta_str = ConvertToCommaSeparatedValues(node->get_node_parameter().get_clone_freqs());
-        f << bulk[i]->GetId() << ", " << eta_str << endl;
+        f << bulk[i]->GetId() << "\t" << eta_str << endl;
     }
     f.close();
     
     // output the tree using Newick format
-//    string newick = write_newick(root_node);
-//    newick += ";";
-//    f.open(output_path + "/tree.newick", ios::out);
-//    f << newick;
-//    f.close();
+    string newick = write_newick(root_node);
+    newick += ";";
+    f.open(output_path + "/tree.newick", ios::out);
+    f << newick;
+    f.close();
     
     // Cellular prevalence for each of the nodes.
     f.open(output_path + "/node2cellular_prev.csv", ios::out);
     for (auto node : all_nodes) {
-        f << node->get_name() << ", " << ConvertToCommaSeparatedValues(node->get_node_parameter().get_cellular_prevs()) << "\n";
+        f << node->get_name() << "\t" << ConvertToCommaSeparatedValues(node->get_node_parameter().get_cellular_prevs()) << "\n";
     }
     f.close();
 }
@@ -590,7 +590,7 @@ string write_newick(CloneTreeNode *node)
 }
 
 void fill_node_to_param(CloneTreeNode *node,
-                        unordered_map<string, EigenVector> &node2param) {
+                        unordered_map<string, vector<double> > &node2param) {
     vector<CloneTreeNode *> all_nodes;
     CloneTreeNode::breadth_first_traversal(node, all_nodes, false);
     for (auto node : all_nodes) {

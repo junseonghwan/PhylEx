@@ -20,7 +20,7 @@ class BulkDatum
 {
     string  id_;
 
-    Locus &locus_;
+    Locus locus_;
     
     vector<size_t> variant_reads_, total_reads_;
     vector<size_t> major_cns_, minor_cns_;
@@ -42,11 +42,18 @@ public:
               vector<size_t> major_cn, vector<size_t> minor_cn);
     
     string GetId() const { return id_; }
-    vector<size_t> GetVariantReadCount() const { return variant_reads_; }
-    vector<size_t> GetReadCount() const { return total_reads_; }
-    const vector<size_t> &GetMajorCN() const { return major_cns_; }
-    const vector<size_t> &GetMinorCN() const { return minor_cns_; }
-    const vector<size_t> &GetTotalCN() const { return total_cns_; }
+    inline const vector<size_t> &GetVariantReadCount() const { return variant_reads_; }
+    inline const vector<size_t> &GetReadCount() const { return total_reads_; }
+    inline const vector<size_t> &GetMajorCN() const { return major_cns_; }
+    inline const vector<size_t> &GetMinorCN() const { return minor_cns_; }
+    inline const vector<size_t> &GetTotalCN() const { return total_cns_; }
+    
+    inline size_t GetVariantReadCount(size_t region) const { return variant_reads_[region]; }
+    inline size_t GetReadCount(size_t region) const { return total_reads_[region]; }
+    inline const size_t GetMajorCN(size_t region) const { return major_cns_[region]; }
+    inline const size_t GetMinorCN(size_t region) const { return minor_cns_[region]; }
+    inline const size_t GetTotalCN(size_t region) const { return total_cns_[region]; }
+    
     const vector<double> &GetCNProbs(size_t idx) const { return cn_prob_matrix_[idx]; }
     const Locus &GetLocus() const { return locus_; }
 

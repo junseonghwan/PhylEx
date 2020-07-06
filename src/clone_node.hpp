@@ -33,16 +33,18 @@ using namespace std;
 
 class CloneTreeNodeParam
 {
-    EigenVector clone_freqs;
-    EigenVector cellular_prevs;
+    vector<double> clone_freqs;
+    vector<double> cellular_prevs;
 public:
     CloneTreeNodeParam(size_t region_count);
-    inline EigenVectorRef get_clone_freqs() const { return clone_freqs; }
-    inline EigenVectorRef get_cellular_prevs() const { return cellular_prevs; }
+    inline const vector<double> &get_clone_freqs() const { return clone_freqs; }
+    inline const vector<double> &get_cellular_prevs() const { return cellular_prevs; }
+    inline double get_clone_freqs(size_t region) const { return clone_freqs[region]; }
+    inline double get_cellular_prevs(size_t region) const { return cellular_prevs[region]; }
     void set_clone_freq(size_t idx, double val);
     void set_cellular_prev(size_t idx, double val);
-    void set_clone_freq(EigenVectorRef vec);
-    void set_cellular_prev(EigenVectorRef vec);
+    void set_clone_freq(vector<double> &vec);
+    void set_cellular_prev(vector<double> &vec);
     bool is_consistent();
     void SetRootParameters();
     size_t GetRegionCount() const {
@@ -158,11 +160,17 @@ public:
     friend bool operator<=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs > rhs); }
     friend bool operator>=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs < rhs); }
 
-    EigenVectorRef GetCellularPrevs() const {
-        return param.get_cellular_prevs();
+//    inline EigenVectorRef GetCellularPrevs() const {
+//        return param.get_cellular_prevs();
+//    }
+//    inline EigenVectorRef GetCloneFreqs() const {
+//        return param.get_clone_freqs();
+//    }
+    inline double GetCellularPrevs(size_t region) const {
+        return param.get_cellular_prevs(region);
     }
-    EigenVectorRef GetCloneFreqs() const {
-        return param.get_clone_freqs();
+    inline double GetCloneFreqs(size_t region) const {
+        return param.get_clone_freqs(region);
     }
     CloneTreeNodeParam &get_node_parameter();
     void sample_node_parameters(const gsl_rng *random,
@@ -173,8 +181,8 @@ public:
 
     void set_clone_freq(size_t idx, double new_val);
     void set_cellular_prev(size_t idx, double new_val);
-    void set_clone_freq(EigenVectorRef vec);
-    void set_cellular_prev(EigenVectorRef vec);
+    void set_clone_freq(vector<double> &vec);
+    void set_cellular_prev(vector<double> &vec);
 
     static CloneTreeNode *create_root_node(size_t region_count);
     static void get_snvs(CloneTreeNode *node, unordered_set<Locus> &ret);

@@ -26,13 +26,13 @@ void CloneTreeNodeParam::set_cellular_prev(size_t idx, double val)
 {
     this->cellular_prevs[idx] = val;
 }
-void CloneTreeNodeParam::set_clone_freq(EigenVectorRef vec)
+void CloneTreeNodeParam::set_clone_freq(vector<double> &vec)
 {
-    this->clone_freqs = vec;
+    this->clone_freqs.insert(clone_freqs.begin(), vec.begin(), vec.end());
 }
-void CloneTreeNodeParam::set_cellular_prev(EigenVectorRef vec)
+void CloneTreeNodeParam::set_cellular_prev(vector<double> &vec)
 {
-    this->cellular_prevs = vec;
+    this->cellular_prevs.insert(cellular_prevs.begin(), vec.begin(), vec.end());
 }
 
 bool CloneTreeNodeParam::is_consistent()
@@ -111,9 +111,8 @@ void CloneTreeNode::sample_node_parameters(const gsl_rng *random, const ModelPar
         this->param.SetRootParameters();
     } else {
         CloneTreeNode *parent_node = (CloneTreeNode *)parent;
-        auto parent_clone_freqs = parent_node->param.get_clone_freqs();
         for (size_t i = 0; i < param.GetRegionCount(); i++) {
-            double parent_clone_freq = parent_clone_freqs[i];
+            double parent_clone_freq = parent_node->param.get_clone_freqs(i);
             double curr_cellular_prev = uniform(random) * parent_clone_freq;
             this->param.set_cellular_prev(i, curr_cellular_prev);
             this->param.set_clone_freq(i, curr_cellular_prev);
@@ -398,11 +397,11 @@ void CloneTreeNode::reset_children_names()
     idx2child = new_map;
 }
 
-void CloneTreeNode::set_clone_freq(EigenVectorRef vec)
+void CloneTreeNode::set_clone_freq(vector<double> &vec)
 {
     param.set_clone_freq(vec);
 }
-void CloneTreeNode::set_cellular_prev(EigenVectorRef vec)
+void CloneTreeNode::set_cellular_prev(vector<double> &vec)
 {
     param.set_cellular_prev(vec);
 }
@@ -690,7 +689,6 @@ gsl_matrix *CloneTreeNode::GetAncestralMatrix(CloneTreeNode *root,
 double ScLikelihood(const BulkDatum *s, const SingleCellData *sc, bool has_snv, const ModelParams &model_params) {
     double log_lik = 0.0;
 
-    cout << s->GetId() << endl;
     // if sc has mutation s, then there are 3 cases
     // 1. non-bursty
     // 2. bursty for variant
@@ -778,17 +776,17 @@ double BulkLogLikWithTotalCopyNumber(size_t region,
                                      const BulkDatum *datum,
                                      const ModelParams &model_params)
 {
-    auto var_reads = datum->GetVariantReadCount();
-    auto total_reads = datum->GetReadCount();
-    auto total_cns = datum->GetTotalCN();
-    auto cell_prevs = node->GetCellularPrevs();
+    auto var_reads = datum->GetVariantReadCount(region);
+    auto total_reads = datum->GetReadCount(region);
+    auto total_cn = datum->GetTotalCN(region);
+    auto cell_prev = node->GetCellularPrevs(region);
     double log_lik = 0.0;
     log_lik += BulkLogLikWithTotalCopyNumberByRegion(node,
                                                      model_params,
-                                                     var_reads[region],
-                                                     total_reads[region],
-                                                     total_cns[region],
-                                                     cell_prevs[region]);
+                                                     var_reads,
+                                                     total_reads,
+                                                     total_cn,
+                                                     cell_prev);
     return log_lik;
 }
 
@@ -796,7 +794,7 @@ double BulkLogLikWithCopyNumberProfileByRegion(const CloneTreeNode *node,
                                                const ModelParams &model_params,
                                                size_t var_reads,
                                                size_t total_reads,
-                                               vector<double> cn_probs,
+                                               const vector<double> &cn_probs,
                                                double cell_prev) {
     if (total_reads == 0) {
         return 0.0;
@@ -850,17 +848,17 @@ double BulkLogLikWithCopyNumberProfile(size_t region,
                                        const BulkDatum *datum,
                                        const ModelParams &model_params)
 {
-    auto var_reads = datum->GetVariantReadCount();
-    auto total_reads = datum->GetReadCount();
-    auto cell_prevs = node->GetCellularPrevs();
+    auto var_reads = datum->GetVariantReadCount(region);
+    auto total_reads = datum->GetReadCount(region);
+    auto cell_prev = node->GetCellularPrevs(region);
     double log_lik = 0.0;
     auto cn_probs = datum->GetCNProbs(region);
     log_lik += BulkLogLikWithCopyNumberProfileByRegion(node,
                                                        model_params,
-                                                       var_reads[region],
-                                                       total_reads[region],
+                                                       var_reads,
+                                                       total_reads,
                                                        cn_probs,
-                                                       cell_prevs[region]);
+                                                       cell_prev);
     return log_lik;
 }
 
@@ -940,19 +938,18 @@ double BulkLogLikWithGenotype(size_t region,
                               const BulkDatum *datum,
                               const ModelParams &model_params)
 {
-    auto var_reads = datum->GetVariantReadCount();
-    auto total_reads = datum->GetReadCount();
-    auto cell_prevs = node->GetCellularPrevs();
-    auto major_cns = datum->GetMajorCN();
-    auto minor_cns = datum->GetMinorCN();
-    double log_lik = 0.0;
-    log_lik += BulkLogLikWithGenotypeByRegion(node,
-                                              model_params,
-                                              var_reads[region],
-                                              total_reads[region],
-                                              major_cns[region],
-                                              minor_cns[region],
-                                              cell_prevs[region]);
+    auto var_reads = datum->GetVariantReadCount(region);
+    auto total_reads = datum->GetReadCount(region);
+    auto cell_prevs = node->GetCellularPrevs(region);
+    auto major_cns = datum->GetMajorCN(region);
+    auto minor_cns = datum->GetMinorCN(region);
+    double log_lik = BulkLogLikWithGenotypeByRegion(node,
+                                                    model_params,
+                                                    var_reads,
+                                                    total_reads,
+                                                    major_cns,
+                                                    minor_cns,
+                                                    cell_prevs);
     return log_lik;
 }
 

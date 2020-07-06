@@ -1410,22 +1410,22 @@ double update_cellular_prev_recursive(size_t region, CloneTreeNode * node)
         CloneTreeNode *child = it->second.second;
         children_prev += update_cellular_prev_recursive(region, child);
     }
-    auto cell_prev = param.get_clone_freqs()[region] + children_prev;
+    auto cell_prev = param.get_clone_freqs(region) + children_prev;
     node->set_cellular_prev(region, cell_prev);
     return cell_prev;
 }
 
-EigenVectorRef get_children_cellular_prev(CloneTreeNode *node)
-{
-    EigenVector children_prev(node->GetCloneFreqs().size());
-    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
-    for (auto it = children.begin(); it != children.end(); ++it)
-    {
-        CloneTreeNode *child = it->second.second;
-        children_prev += child->GetCellularPrevs();
-    }
-    return children_prev;
-}
+//vector<double> get_children_cellular_prev(CloneTreeNode *node)
+//{
+//    vector<double> children_prev(node->GetCloneFreqs().size());
+//    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+//    for (auto it = children.begin(); it != children.end(); ++it)
+//    {
+//        CloneTreeNode *child = it->second.second;
+//        children_prev += child->GetCellularPrevs();
+//    }
+//    return children_prev;
+//}
 
 //void update_params(CloneTreeNode *node, double curr_cellular_prev, double new_cellular_prev)
 //{
@@ -1461,12 +1461,12 @@ void get_clone_freqs(size_t region,
     for (size_t i = 0; i < nodes.size(); i++)
     {
         node = nodes[i];
-        clone_freqs[i] = node->get_node_parameter().get_cellular_prevs()[region];
+        clone_freqs[i] = node->get_node_parameter().get_cellular_prevs(region);
         unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
         for (auto it = children.begin(); it != children.end(); ++it)
         {
             CloneTreeNode *child = it->second.second;
-            clone_freqs[i] -= child->get_node_parameter().get_cellular_prevs()[region];
+            clone_freqs[i] -= child->get_node_parameter().get_cellular_prevs(region);
         }
     }
 }
@@ -1526,7 +1526,7 @@ bool check_clone_freq(size_t region, CloneTreeNode *root)
     while (!q.empty()) {
         node = q.front();
         q.pop();
-        sum_of_freqs += node->GetCloneFreqs()[region];
+        sum_of_freqs += node->GetCloneFreqs(region);
         unordered_map<size_t, pair<double, CloneTreeNode *> > &idx2child = node->get_idx2child();
         for (size_t i = 0; i < idx2child.size(); i++) {
             q.push(idx2child[i].second);
@@ -1627,10 +1627,10 @@ void cull(CloneTreeNode *root)
             double children_cellular_prev = 0.0;
             for (size_t idx = 0; idx < idx2child.size(); idx++) {
                 CloneTreeNode *child_node = (CloneTreeNode *)idx2child[idx].second;
-                children_cellular_prev += child_node->GetCellularPrevs()[region];
+                children_cellular_prev += child_node->GetCellularPrevs(region);
             }
             // cull does not alter cellular prevalence but it does change the clone frequncy because some children gets removed
-            curr_node->set_clone_freq(region, curr_node->GetCellularPrevs()[region] - children_cellular_prev);
+            curr_node->set_clone_freq(region, curr_node->GetCellularPrevs(region) - children_cellular_prev);
         }
     }
 }

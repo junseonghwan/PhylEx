@@ -18,13 +18,14 @@
 #include "single_cell.hpp"
 #include "simul_config.hpp"
 
-CloneTreeNode *SampleFromTssbPrior(const gsl_rng *random,
-                                                        size_t n_data,
-                                                        ModelParams &model_params,
-                                                        vector<BulkDatum *> &data);
-void CreateSNVs(gsl_rng *random,
-                const SimulationConfig &simul_config,
-                vector<BulkDatum *> &data);
+CloneTreeNode *SampleFromTssbPrior(size_t region_count,
+                                   const gsl_rng *random,
+                                   size_t n_data,
+                                   ModelParams &model_params,
+                                   vector<BulkDatum *> &data);
+vector<Locus> CreateSNVs(gsl_rng *random,
+                         const SimulationConfig &simul_config,
+                         vector<BulkDatum *> &data);
 void GenerateLociPairs(gsl_rng *random,
                        const SimulationConfig &simul_config,
                        const unordered_set<Locus> &somatic_loci,

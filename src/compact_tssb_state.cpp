@@ -5,7 +5,7 @@ CompactTSSBState::CompactTSSBState(TSSBState &tssb_state)
 {
     newick = write_newick(tssb_state.get_root());
     fill_node_to_param(tssb_state.get_root(), node2param);
-    
+
     // construct ancestral matrix
     //ancestral_matrix = TSSBState::get_ancestral_matrix(tssb_state);
     

@@ -53,4 +53,5 @@ void BulkDatum::AddRegionData(size_t var_reads, size_t total_reads,
     total_reads_.push_back(total_reads);
     major_cns_.push_back(major_cn);
     minor_cns_.push_back(minor_cn);
+    total_cns_.push_back(major_cn + minor_cn);
 }
