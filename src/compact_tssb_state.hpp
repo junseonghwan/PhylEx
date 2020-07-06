@@ -20,7 +20,7 @@ class CompactTSSBState
     //vector<unordered_set<S*> > clustering;
     vector<string> datum2node;
     vector<CloneTreeNodeParam *> datum2param;
-    unordered_map<string, double> node2param;
+    unordered_map<string, vector<double> > node2param;
     vector<unsigned int> cluster_labels;
     string newick;
 public:
@@ -31,7 +31,7 @@ public:
     inline const vector<unsigned int> &get_cluster_labels() const { return cluster_labels; };
     inline const string get_newick() const { return newick; }
     inline const vector<string> &get_datum2node() const { return datum2node; }
-    inline const unordered_map<string, double> &get_node2param() const { return node2param; }
+    inline const unordered_map<string, vector<double> > &get_node2param() const { return node2param; }
 };
 
 #endif /* compact_tssb_state_hpp */

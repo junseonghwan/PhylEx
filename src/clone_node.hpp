@@ -25,6 +25,7 @@
 
 #include "bulk_datum.hpp"
 #include "model_params.hpp"
+#include "numerical_utils.hpp"
 #include "sampling_utils.hpp"
 #include "single_cell.hpp"
 
@@ -32,14 +33,25 @@ using namespace std;
 
 class CloneTreeNodeParam
 {
-    double clone_freq = 0.0;
-    double cellular_prev = 0.0;
+    vector<double> clone_freqs;
+    vector<double> cellular_prevs;
 public:
-    inline double get_clone_freq() const { return clone_freq; }
-    inline double get_cellular_prev() const { return cellular_prev; }
-    void set_clone_freq(double val);
-    void set_cellular_prev(double val);
+    CloneTreeNodeParam(size_t region_count);
+    inline const vector<double> &get_clone_freqs() const { return clone_freqs; }
+    inline const vector<double> &get_cellular_prevs() const { return cellular_prevs; }
+    inline double get_clone_freqs(size_t region) const { return clone_freqs[region]; }
+    inline double get_cellular_prevs(size_t region) const { return cellular_prevs[region]; }
+    void set_clone_freq(size_t idx, double val);
+    void set_cellular_prev(size_t idx, double val);
+    void set_clone_freq(vector<double> &vec);
+    void set_cellular_prev(vector<double> &vec);
     bool is_consistent();
+    void SetRootParameters();
+    size_t GetRegionCount() const {
+        return clone_freqs.size();
+    }
+    string GetCloneFreqsAsString();
+    string GetCellularPrevsAsString();
 };
 
 class CloneTreeNode
@@ -65,11 +77,15 @@ class CloneTreeNode
 
     // change the last part of the node's name to j -- used extensively by reorder_sticks
     void edit_name(size_t j);
-
-public:
-    CloneTreeNode(size_t child_idx, CloneTreeNode *parent);
-    ~CloneTreeNode();
     
+    // For creating the root node.
+    CloneTreeNode(size_t region_count);
+    // For creating non-root node.
+    // Assumption: parent != 0.
+    CloneTreeNode(size_t child_idx, CloneTreeNode *parent);
+public:
+    ~CloneTreeNode();
+
     string get_name() const;
     inline const vector<size_t> &get_name_vec() const { return name; };
     inline size_t get_depth() const { return name.size() - 1; }
@@ -144,18 +160,31 @@ public:
     friend bool operator<=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs > rhs); }
     friend bool operator>=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs < rhs); }
 
-    const CloneTreeNodeParam &get_node_parameter() const;
+//    inline EigenVectorRef GetCellularPrevs() const {
+//        return param.get_cellular_prevs();
+//    }
+//    inline EigenVectorRef GetCloneFreqs() const {
+//        return param.get_clone_freqs();
+//    }
+    inline double GetCellularPrevs(size_t region) const {
+        return param.get_cellular_prevs(region);
+    }
+    inline double GetCloneFreqs(size_t region) const {
+        return param.get_clone_freqs(region);
+    }
+    CloneTreeNodeParam &get_node_parameter();
     void sample_node_parameters(const gsl_rng *random,
                                 const ModelParams &params,
                                 CloneTreeNode *parent);
     CloneTreeNode *spawn_child(double psi);
     string print();
 
-    void change_clone_freq(double diff);
-    void set_clone_freq(double new_val);
-    void set_cellular_prev(double new_val);
+    void set_clone_freq(size_t idx, double new_val);
+    void set_cellular_prev(size_t idx, double new_val);
+    void set_clone_freq(vector<double> &vec);
+    void set_cellular_prev(vector<double> &vec);
 
-    static CloneTreeNode *create_root_node();
+    static CloneTreeNode *create_root_node(size_t region_count);
     static void get_snvs(CloneTreeNode *node, unordered_set<Locus> &ret);
 };
 
@@ -163,13 +192,16 @@ double ScLikelihood(const BulkDatum *s,
                      const SingleCellData *sc,
                      bool has_snv,
                      const ModelParams &model_params);
-double BulkLogLikWithTotalCopyNumber(const CloneTreeNode *node,
-                       const BulkDatum *s,
-                       const ModelParams &model_params);
-double BulkLogLikWithCopyNumberProfile(const CloneTreeNode *node,
+double BulkLogLikWithTotalCopyNumber(size_t region,
+                                     const CloneTreeNode *node,
+                                     const BulkDatum *s,
+                                     const ModelParams &model_params);
+double BulkLogLikWithCopyNumberProfile(size_t region,
+                                       const CloneTreeNode *node,
                                        const BulkDatum *datum,
                                        const ModelParams &model_params);
-double BulkLogLikWithGenotype(const CloneTreeNode *node,
+double BulkLogLikWithGenotype(size_t region,
+                              const CloneTreeNode *node,
                               const BulkDatum *datum,
                               const ModelParams &model_params);
 double ZeroBulkLikelihood(const CloneTreeNode *node,

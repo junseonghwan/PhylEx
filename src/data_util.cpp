@@ -190,59 +190,52 @@ void write_matrix_as_csv(string path, const gsl_matrix &data)
     }
 }
 
+template <class T>
+string ConvertToCommaSeparatedValues(const vector<T> values) {
+    string str = "";
+    for (size_t i = 0; i < values.size() - 1; i++) {
+        str += to_string(values[i]);
+        str += ",";
+    }
+    str += to_string(values.back());
+    return str;
+}
+
+//string ConvertToCommaSeparatedValues(EigenVectorRef values) {
+//    string str = "";
+//    for (size_t i = 0; i < values.size() - 1; i++) {
+//        str += to_string(values[i]);
+//        str += ",";
+//    }
+//    str += to_string(values[values.size() - 1]);
+//    return str;
+//}
+
 void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool output_genotype)
 {
     ofstream f;
     f.open(output_path, ios::out);
     if (output_genotype) {
-        f << "ID\tCHR\tPOS\tGENE\tREF\tALT\tb\td\tmajor_cn\tminor_cn" << endl;
+        f << "ID\tCHR\tPOS\tREF\tALT\tb\td\tmajor_cn\tminor_cn" << endl;
     } else {
-        f << "ID\tCHR\tPOS\tGENE\tREF\tALT\tb\td\tcn" << endl;
+        f << "ID\tCHR\tPOS\tREF\tALT\tb\td\tcn" << endl;
     }
     for (unsigned int i = 0; i < bulk.size(); i++)
     {
         f << bulk[i]->GetId() << "\t";
         f << bulk[i]->GetLocus().get_chr() << "\t";
         f << bulk[i]->GetLocus().get_pos() << "\t";
-        f << "Gene" << "\t"; // Some generic gene name.
+        //f << "Gene" << "\t"; // Some generic gene name.
         f << "A" << "\t"; // Write arbitrary nucleotide base.
         f << "C" << "\t"; // Write arbitrary nucleotide base.
-        f << bulk[i]->GetVariantReadCount() << "\t";
-        f << bulk[i]->GetReadCount() << "\t";
+        f << ConvertToCommaSeparatedValues(bulk[i]->GetVariantReadCount()) << "\t";
+        f << ConvertToCommaSeparatedValues(bulk[i]->GetReadCount()) << "\t";
         if (output_genotype) {
-            f << bulk[i]->GetMajorCN() << "\t";
-            f << bulk[i]->GetMinorCN() << "\n";
+            f << ConvertToCommaSeparatedValues(bulk[i]->GetMajorCN()) << "\t";
+            f << ConvertToCommaSeparatedValues(bulk[i]->GetMinorCN()) << "\n";
         } else {
-            f << bulk[i]->GetTotalCN() << "\n";
+            f << ConvertToCommaSeparatedValues(bulk[i]->GetTotalCN()) << "\n";
         }
-    }
-    f.close();
-}
-
-void WriteCNVForPhyloWGS(string output_path) {
-    ofstream f;
-    f.open(output_path, ios::out);
-    //cnv    a    d    ssms    physical_cnvs
-    f << "cnv\ta\td\tssms\tphysical_cnvs" << endl;
-    f.close();
-}
-
-void WriteBulkForPhyloWGS(string output_path, const vector<BulkDatum *> &bulk)
-{
-    ofstream f;
-    size_t n_ref_reads;
-    f.open(output_path, ios::out);
-    // id    gene    a    d    mu_r    mu_v
-    f << "id\tgene\ta\td\tmu_r\tmu_v" << endl;
-    for (unsigned int i = 0; i < bulk.size(); i++)
-    {
-        n_ref_reads = (bulk[i]->GetReadCount() - bulk[i]->GetVariantReadCount());
-        f << bulk[i]->GetId() << "\t";
-        f << ("gene" + to_string(i)) << "\t";
-        f << n_ref_reads << "\t";
-        f << bulk[i]->GetReadCount() << "\t";
-        f << "0.999" << "\t";
-        f << "0.5" << "\n";
     }
     f.close();
 }
@@ -279,7 +272,7 @@ void WriteBetaBinomHp(string output_path,
     f.open(output_path + "/beta_binom_hp.csv", ios::out);
     f << "ID\talpha\tbeta\n";
     for (auto bulk_datum : bulk_data) {
-        f << bulk_datum->GetLocus().get_mutation_id() << "\t";
+        f << bulk_datum->GetId() << "\t";
         f << bulk_datum->GetLocus().get_alpha() << "\t";
         f << bulk_datum->GetLocus().get_beta() << "\n";
     }
@@ -342,30 +335,30 @@ void WriteTreeToFile(string output_path,
     CloneTreeNode *node;
     for (size_t i = 0; i < n_muts; i++) {
         node = datum2node[bulk[i]];
-        double phi = node->get_node_parameter().get_cellular_prev();
-        f << bulk[i]->GetId() << ", " << phi << endl;
+        string phi_str = ConvertToCommaSeparatedValues(node->get_node_parameter().get_cellular_prevs());
+        f << bulk[i]->GetId() << "\t" << phi_str << endl;
     }
     f.close();
 
     f.open(output_path + "/clone_freq.csv", ios::out);
     for (size_t i = 0; i < n_muts; i++) {
         node = datum2node[bulk[i]];
-        double eta = node->get_node_parameter().get_clone_freq();
-        f << bulk[i]->GetId() << ", " << eta << endl;
+        string eta_str = ConvertToCommaSeparatedValues(node->get_node_parameter().get_clone_freqs());
+        f << bulk[i]->GetId() << "\t" << eta_str << endl;
     }
     f.close();
     
     // output the tree using Newick format
-//    string newick = write_newick(root_node);
-//    newick += ";";
-//    f.open(output_path + "/tree.newick", ios::out);
-//    f << newick;
-//    f.close();
+    string newick = write_newick(root_node);
+    newick += ";";
+    f.open(output_path + "/tree.newick", ios::out);
+    f << newick;
+    f.close();
     
     // Cellular prevalence for each of the nodes.
     f.open(output_path + "/node2cellular_prev.csv", ios::out);
     for (auto node : all_nodes) {
-        f << node->get_name() << ", " << node->get_node_parameter().get_cellular_prev() << "\n";
+        f << node->get_name() << "\t" << ConvertToCommaSeparatedValues(node->get_node_parameter().get_cellular_prevs()) << "\n";
     }
     f.close();
 }
@@ -442,52 +435,52 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
     // Initialize TSSBState
     // We need CloneTreeNode *root
     // vector<BulkDatum *> *bulk_data
-  CloneTreeNode *clone_root = CloneTreeNode::create_root_node();
-  clone_root->set_cellular_prev(1.0);
-  name2clone_node[root->name] = clone_root;
+    CloneTreeNode *clone_root = CloneTreeNode::create_root_node(1);
+    clone_root->get_node_parameter().SetRootParameters();
+    name2clone_node[root->name] = clone_root;
 
-  queue<NewickNode *> q1;
-  queue<CloneTreeNode *> q2;
-  q1.push(root);
-  q2.push(clone_root);
-  CloneTreeNode *parent;
-  vector<string> results;
-  while (q1.size() > 0) {
-    auto *node2 = q1.front();
-    parent = q2.front();
-    q1.pop();
-    q2.pop();
-    for (auto it = node2->children.rbegin(); it != node2->children.rend(); ++it) {
-//      boost::split(results, child->name, boost::is_any_of("_"));
-//      size_t child_idx = stoi(results[results.size()-1]);
-      auto *child = *it;
-      CloneTreeNode *child_node = (CloneTreeNode*)parent->spawn_child(0.0);
-      child_node->set_cellular_prev(child->cellular_prevalence);
-      q1.push(child);
-      q2.push(child_node);
-      name2clone_node[child->name] = child_node;
+    queue<NewickNode *> q1;
+    queue<CloneTreeNode *> q2;
+    q1.push(root);
+    q2.push(clone_root);
+    CloneTreeNode *parent;
+    vector<string> results;
+    while (q1.size() > 0) {
+        auto *node2 = q1.front();
+        parent = q2.front();
+        q1.pop();
+        q2.pop();
+        for (auto it = node2->children.rbegin(); it != node2->children.rend(); ++it) {
+            //      boost::split(results, child->name, boost::is_any_of("_"));
+            //      size_t child_idx = stoi(results[results.size()-1]);
+            auto *child = *it;
+            CloneTreeNode *child_node = (CloneTreeNode*)parent->spawn_child(0.0);
+            child_node->set_cellular_prev(0, child->cellular_prevalence);
+            q1.push(child);
+            q2.push(child_node);
+            name2clone_node[child->name] = child_node;
+        }
     }
-  }
-  if (q2.size() > 0) {
-    cerr << "Error in constructing the tree structure." << endl;
-    exit(-1);
-  }
-  vector<CloneTreeNode *> ret;
-  CloneTreeNode::breadth_first_traversal(clone_root, ret);
-  for (size_t i = 0; i < ret.size(); i++) {
-    cout << ret.at(i)->print() << endl;
-  }
+    if (q2.size() > 0) {
+        cerr << "Error in constructing the tree structure." << endl;
+        exit(-1);
+    }
+    vector<CloneTreeNode *> ret;
+    CloneTreeNode::breadth_first_traversal(clone_root, ret);
+    for (size_t i = 0; i < ret.size(); i++) {
+        cout << ret.at(i)->print() << endl;
+    }
   
-  gsl_rng *random = generate_random_object(1);
-  ModelParams model_params(1, 0.5, 0.5, 0.001);
+    gsl_rng *random = generate_random_object(1);
+    ModelParams model_params(1, 0.5, 0.5, 0.001);
 
-  auto *tssb = new TSSBState(random,
-                             clone_root,
-                             model_params,
-                             BulkLogLikWithTotalCopyNumber,
-                             ScLikelihood,
-                             data,
-                             0);
+    auto *tssb = new TSSBState(random,
+                               clone_root,
+                               model_params,
+                               BulkLogLikWithTotalCopyNumber,
+                               ScLikelihood,
+                               data,
+                               0);
 
     // convert data to map
     unordered_map<string, BulkDatum *> data_map;
@@ -495,25 +488,24 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
         data_map[datum->GetId()] = datum;
     }
 
-  vector<string> results1, results2;
-  boost::split(results1, data_assigment, boost::is_any_of(","));
-  for (size_t mut_idx = 0; mut_idx < results1.size(); mut_idx++) {
-    boost::split(results2, results1[mut_idx], boost::is_any_of(":"));
-    string datum_id = results2[0];
-    string node_name = results2[1];
-    // find node_name and assign bulk_data[idx] to it.
-    if (name2clone_node.count(node_name) > 0) {
-      CloneTreeNode *n = name2clone_node.at(node_name);
-      //tssb->move_datum(n, data_map.at(datum_id), model_params);
-        tssb->move_datum(n, mut_idx, model_params);
-      cout << datum_id << " assigned to " << node_name << ": " << n->print() << endl;
-    } else {
-      cerr << "Error!!!" << endl;
-      exit(-1);
+    vector<string> results1, results2;
+    boost::split(results1, data_assigment, boost::is_any_of(","));
+    for (size_t mut_idx = 0; mut_idx < results1.size(); mut_idx++) {
+        boost::split(results2, results1[mut_idx], boost::is_any_of(":"));
+        string datum_id = results2[0];
+        string node_name = results2[1];
+        // find node_name and assign bulk_data[idx] to it.
+        if (name2clone_node.count(node_name) > 0) {
+            CloneTreeNode *n = name2clone_node.at(node_name);
+            //tssb->move_datum(n, data_map.at(datum_id), model_params);
+            tssb->move_datum(n, mut_idx, model_params);
+            cout << datum_id << " assigned to " << node_name << ": " << n->print() << endl;
+        } else {
+            cerr << "Error!!!" << endl;
+            exit(-1);
+        }
     }
-  }
-
-  return tssb->compute_log_likelihood_bulk(model_params);
+    return tssb->compute_log_likelihood_bulk(model_params);
 }
 
 //void test_likelihood(string newick_path,
@@ -598,11 +590,11 @@ string write_newick(CloneTreeNode *node)
 }
 
 void fill_node_to_param(CloneTreeNode *node,
-                        unordered_map<string, double> &node2param) {
+                        unordered_map<string, vector<double> > &node2param) {
     vector<CloneTreeNode *> all_nodes;
     CloneTreeNode::breadth_first_traversal(node, all_nodes, false);
     for (auto node : all_nodes) {
-        node2param[node->get_name()] = node->get_node_parameter().get_cellular_prev();
+        node2param[node->get_name()] = node->get_node_parameter().get_cellular_prevs();
     }
 }
 
@@ -630,28 +622,28 @@ void write_tree(string output_path,
 
     // cellular prevalence for each of the mutations: Nx2
     ofstream f;
-    f.open(output_path + "/cellular_prev.csv", ios::out);
+    f.open(output_path + "/cellular_prev.tsv", ios::out);
     auto params = state.get_param();
     for (size_t i = 0; i < n_muts; i++) {
         auto p = params[i];
-        double phi = p->get_cellular_prev();
-        f << bulk[i]->GetId() << ", " << phi << endl;
+        auto phi = p->get_cellular_prevs();
+        f << bulk[i]->GetId() << "\t" << ConvertToCommaSeparatedValues(phi) << endl;
     }
     f.close();
 
     // write datum to node string
-    f.open(output_path + "/datum2node.txt", ios::out);
+    f.open(output_path + "/datum2node.tsv", ios::out);
     auto datum2node = state.get_datum2node();
     for (size_t i = 0; i < datum2node.size(); i++) {
-        f << bulk[i]->GetId()  << "," << datum2node[i] << "\n";
+        f << bulk[i]->GetId()  << "\t" << datum2node[i] << "\n";
     }
     f.close();
     
     //write_vector(output_path + "/cluster_labels.txt", state.get_cluster_labels());
-    f.open(output_path + "/cluster_labels.txt", ios::out);
+    f.open(output_path + "/cluster_labels.tsv", ios::out);
     auto cluster_labels = state.get_cluster_labels();
     for (size_t i = 0; i < cluster_labels.size(); i++) {
-        f << bulk[i]->GetId() << "," << cluster_labels[i] << "\n";
+        f << bulk[i]->GetId() << "\t" << cluster_labels[i] << "\n";
     }
     f.close();
 
@@ -661,12 +653,12 @@ void write_tree(string output_path,
     f.open(output_path + "/tree.newick", ios::out);
     f << newick;
     f.close();
-    
+
     // Cellular prevalence for each of the nodes.
-    f.open(output_path + "/node2cellular_prev.csv", ios::out);
+    f.open(output_path + "/node2cellular_prev.tsv", ios::out);
     auto node2param = state.get_node2param();
     for (auto it = node2param.begin(); it != node2param.end(); ++it) {
-        f << it->first << ", " << it->second << "\n";
+        f << it->first << "\t" << ConvertToCommaSeparatedValues(it->second) << "\n";
     }
     f.close();
 }
@@ -721,6 +713,26 @@ size_t convert_chr_to_int(string chr)
     }
 }
 
+vector<size_t> ParseRegionalData(string line) {
+    vector<string> result;
+    boost::split(result, line, boost::is_any_of(","));
+    vector<size_t> data(result.size());
+    for (size_t i = 0; i < result.size(); i++) {
+        data[i] = stoul(result[i]);
+    }
+    return data;
+}
+
+vector<double> ParseRegionalCNData(string line) {
+    vector<string> result;
+    vector<double> data;
+    boost::split(result, line, boost::is_any_of(","));
+    for (size_t i = 0; i < result.size(); i++) {
+        data[i] = stod(result[i]);
+    }
+    return data;
+}
+
 void ProcessBulkWithTotalCopyNumberProfile(ifstream &dat_file,
                                            vector<BulkDatum *> &bulk_data,
                                            unordered_map<string, Locus *> &somatic_loci) {
@@ -732,16 +744,15 @@ void ProcessBulkWithTotalCopyNumberProfile(ifstream &dat_file,
         string mut_id = results[0];
         string chr = results[1];
         size_t pos = stol(results[2]);
-        string gene = results[3];
-        size_t n_vars = stol(results[6]);
-        size_t n_reads = stol(results[7]);
+        auto n_vars = ParseRegionalData(results[6]);
+        auto n_reads = ParseRegionalData(results[7]);
         
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
             exit(-1);
         }
         
-        Locus *locus = new Locus(mut_id, chr, pos, gene);
+        Locus *locus = new Locus(mut_id, chr, pos, "");
         BulkDatum *datum = new BulkDatum(mut_id, *locus, n_vars, n_reads);
         bulk_data.push_back(datum);
         somatic_loci[mut_id] = locus;
@@ -755,13 +766,13 @@ void ProcessBulkWithTotalCopyNumber(ifstream &dat_file,
     string line;
     while ( getline (dat_file, line) )
     {
-        boost::split(results, line, boost::is_any_of("\t"));
+        boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
         string mut_id = results[0];
         string chr = results[1];
         size_t pos = stol(results[2]);
-        size_t n_vars = stol(results[5]);
-        size_t n_reads = stol(results[6]);
-        size_t total_cn = stol(results[7]);
+        auto n_vars = ParseRegionalData(results[5]);
+        auto n_reads = ParseRegionalData(results[6]);
+        auto total_cn = ParseRegionalData(results[7]);
 
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
@@ -783,24 +794,26 @@ void ProcessBulkWithGenotype(ifstream &dat_file,
     string line;
     while ( getline (dat_file, line) )
     {
-        boost::split(results, line, boost::is_any_of("\t"));
+        boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
         string mut_id = results[0];
         string chr = results[1];
         size_t pos = stol(results[2]);
-        //string gene = results[3];
-        size_t n_vars = stol(results[5]);
-        size_t n_reads = stol(results[6]);
-        size_t major_cn = stol(results[7]);
-        size_t minor_cn = stol(results[8]);
 
+        vector<size_t> var_reads = ParseRegionalData(results[5]);
+        vector<size_t> total_reads = ParseRegionalData(results[6]);
+        
+        vector<size_t> major_cns = ParseRegionalData(results[7]);
+        vector<size_t> minor_cns = ParseRegionalData(results[8]);
+        
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
             exit(-1);
         }
 
         Locus *locus = new Locus(mut_id, chr, pos, "");
-        BulkDatum *datum = new BulkDatum(mut_id, *locus, n_vars, n_reads,
-                                         major_cn, minor_cn);
+        BulkDatum *datum = new BulkDatum(mut_id, *locus,
+                                         var_reads, total_reads,
+                                         major_cns, minor_cns);
         bulk_data.push_back(datum);
         somatic_loci[mut_id] = locus;
     }
@@ -844,44 +857,11 @@ CopyNumberInputType ReadBulkData(string bulk_data_path,
     return cn_input_type;
 }
 
-unordered_set<Locus> read_bulk_data_phyloWGS(string bulk_data_path, vector<BulkDatum *> &bulk_data)
-{
-    // first column is header
-    string line;
-    ifstream dat_file (bulk_data_path);
-    if (!dat_file.is_open())
-    {
-        cerr << "Could not open the file: " << bulk_data_path << endl;
-        exit(-1);
-    }
-
-    vector<string> results;
-    vector<string> cnv_ret;
-    vector<double> dat;
-    
-    // skip the first line
-    getline(dat_file, line);
-    unordered_set<Locus> somatic_loci;
-    while ( getline (dat_file, line) )
-    {
-        boost::split(results, line, boost::is_any_of("\t"));
-        string mut_id = results[0];
-        //size_t chr = convert_to_int(results[1]);
-        size_t n_refs = stol(results[2]);
-        size_t n_total = stol(results[3]);
-        Locus locus(mut_id, "0", 0, "");
-        BulkDatum *datum = new BulkDatum(mut_id, locus, n_total - n_refs, n_total);
-        size_t total_cn = 2;
-        //size_t var_cn = 1;
-        datum->SetTotalCopyNumber(total_cn);
-        bulk_data.push_back(datum);
-        somatic_loci.insert(locus);
-    }
-    dat_file.close();
-
-    return somatic_loci;
-}
-
+// cn_prior_path points to a file with the following format:
+// First column is the mutation ID used to look up BulkDatum from bulk_data.
+// Each of the following column is comma separated, one for each region.
+// The second column denotes the probability of copy number being 0.
+// The third column denotes the probability of copy number being 1 and so on.
 void ReadCnPrior(string cn_prior_path, vector<BulkDatum *> &bulk_data)
 {
     ifstream dat_file (cn_prior_path);
@@ -905,16 +885,13 @@ void ReadCnPrior(string cn_prior_path, vector<BulkDatum *> &bulk_data)
             continue;
         }
         auto bulk_datum = id2bulk[results[0]];
-        
-        double sum = 0.0;
-        vector<double> cn_profile;
+
+        vector<vector<double> > cn_profile;
         for (size_t i = 1; i < results.size(); i++) {
-            double prob = stod(results[i]);
-            cn_profile.push_back(prob);
-            sum += prob;
+            auto cn_probs = ParseRegionalCNData(results[i]);
+            cn_profile.push_back(cn_probs);
         }
-        assert(abs(1 - sum) < 1e-6);
-        bulk_datum->SetCopyNumberPrior(cn_profile);
+        bulk_datum->SetCopyNumberProbs(cn_profile);
     }
 
     dat_file.close();

@@ -12,35 +12,95 @@
 
 #include "numerical_utils.hpp"
 
-void CloneTreeNodeParam::set_clone_freq(double val)
+CloneTreeNodeParam::CloneTreeNodeParam(size_t region_count)
 {
-    this->clone_freq = val;
+    clone_freqs.resize(region_count);
+    cellular_prevs.resize(region_count);
 }
-void CloneTreeNodeParam::set_cellular_prev(double val)
+
+void CloneTreeNodeParam::set_clone_freq(size_t idx, double val)
 {
-    this->cellular_prev = val;
+    this->clone_freqs[idx] = val;
+}
+void CloneTreeNodeParam::set_cellular_prev(size_t idx, double val)
+{
+    this->cellular_prevs[idx] = val;
+}
+void CloneTreeNodeParam::set_clone_freq(vector<double> &vec)
+{
+    this->clone_freqs.insert(clone_freqs.begin(), vec.begin(), vec.end());
+}
+void CloneTreeNodeParam::set_cellular_prev(vector<double> &vec)
+{
+    this->cellular_prevs.insert(cellular_prevs.begin(), vec.begin(), vec.end());
 }
 
 bool CloneTreeNodeParam::is_consistent()
 {
-    return (clone_freq <= cellular_prev);
+    for (size_t i = 0; i < clone_freqs.size(); i++) {
+        if (clone_freqs[i] > cellular_prevs[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void CloneTreeNodeParam::SetRootParameters()
+{
+    for (size_t i = 0; i < GetRegionCount(); i++) {
+        clone_freqs[i] = 1.0;
+        cellular_prevs[i] = 1.0;
+    }
+}
+
+string CloneTreeNodeParam::GetCloneFreqsAsString()
+{
+    string str = "(";
+    for (size_t i = 0; i < clone_freqs.size() - 1; i++) {
+        str += to_string(clone_freqs[i]);
+        str += ",";
+    }
+    str += to_string(clone_freqs[clone_freqs.size() - 1]);
+    str += ")";
+    return str;
+}
+
+string CloneTreeNodeParam::GetCellularPrevsAsString()
+{
+    string str = "(";
+    for (size_t i = 0; i < cellular_prevs.size() - 1; i++) {
+        str += to_string(cellular_prevs[i]);
+        str += ",";
+    }
+    str += to_string(cellular_prevs[cellular_prevs.size() - 1]);
+    str += ")";
+    return str;
+}
+
+CloneTreeNode::CloneTreeNode(size_t region_count) :
+param(region_count)
+{
+    parent_node = 0;
+    this->name.push_back(0);
 }
 
 CloneTreeNode::CloneTreeNode(size_t child_idx,
                              CloneTreeNode *parent) :
+param(parent->param.GetRegionCount()),
 parent_node(parent)
 {
-    if (parent != 0) {
-        this->name = parent->name; // copy the name vector
+    if (parent == 0) {
+        cerr << "Error: parent node cannot be null.\n";
+        exit(-1);
     }
+    this->name = parent->name; // copy the name vector
     this->name.push_back(child_idx);
 }
 
 CloneTreeNode::~CloneTreeNode() {
-    
 }
 
-const CloneTreeNodeParam &CloneTreeNode::get_node_parameter() const
+CloneTreeNodeParam &CloneTreeNode::get_node_parameter()
 {
     return param;
 }
@@ -48,15 +108,16 @@ const CloneTreeNodeParam &CloneTreeNode::get_node_parameter() const
 void CloneTreeNode::sample_node_parameters(const gsl_rng *random, const ModelParams &params,  CloneTreeNode *parent)
 {
     if (parent_node == 0) {
-        this->param.set_cellular_prev(1.0);
-        this->param.set_clone_freq(1.0);
+        this->param.SetRootParameters();
     } else {
         CloneTreeNode *parent_node = (CloneTreeNode *)parent;
-        double parent_clone_freq = parent_node->get_node_parameter().get_clone_freq();
-        double curr_cellular_prev = uniform(random) * parent_clone_freq;
-        this->param.set_cellular_prev(curr_cellular_prev);
-        this->param.set_clone_freq(curr_cellular_prev);
-        parent_node->param.set_clone_freq(parent_clone_freq - param.get_cellular_prev());
+        for (size_t i = 0; i < param.GetRegionCount(); i++) {
+            double parent_clone_freq = parent_node->param.get_clone_freqs(i);
+            double curr_cellular_prev = uniform(random) * parent_clone_freq;
+            this->param.set_cellular_prev(i, curr_cellular_prev);
+            this->param.set_clone_freq(i, curr_cellular_prev);
+            parent_node->param.set_clone_freq(i, parent_clone_freq - curr_cellular_prev);
+        }
     }
 }
 
@@ -110,8 +171,8 @@ string CloneTreeNode::print()
     psi_stick_str += ")";
     // print the CloneTreeNode name, nu-stick, CloneTreeNode params
     string ret = "[" + (parent_node == 0 ? "root" : this->get_name()) + ", ";
-    ret += "phi=" + to_string(get_node_parameter().get_cellular_prev()) + ", ";
-    ret += "eta=" + to_string(get_node_parameter().get_clone_freq()) + ", ";
+    ret += "phi=" + param.GetCellularPrevsAsString() + ", ";
+    ret += "eta=" + param.GetCloneFreqsAsString() + ", ";
     ret += "nu=" + to_string(nu) + ", ";
     ret += "psi=" + psi_stick_str + ", ";
     
@@ -125,29 +186,20 @@ string CloneTreeNode::print()
     return ret;
 }
 
-CloneTreeNode *CloneTreeNode::create_root_node()
+CloneTreeNode *CloneTreeNode::create_root_node(size_t region_count)
 {
-    auto node = new CloneTreeNode(0, 0);
+    auto node = new CloneTreeNode(region_count);
     return node;
 }
 
-void CloneTreeNode::change_clone_freq(double change)
+void CloneTreeNode::set_clone_freq(size_t idx, double new_val)
 {
-    double new_val = param.get_clone_freq() + change;
-    param.set_clone_freq(new_val);
-    
-    new_val = param.get_cellular_prev() + change;
-    param.set_cellular_prev(new_val);
+    param.set_clone_freq(idx, new_val);
 }
 
-void CloneTreeNode::set_clone_freq(double new_val)
+void CloneTreeNode::set_cellular_prev(size_t idx, double new_val)
 {
-    param.set_clone_freq(new_val);
-}
-
-void CloneTreeNode::set_cellular_prev(double new_val)
-{
-    param.set_cellular_prev(new_val);
+    param.set_cellular_prev(idx, new_val);
 }
 
 string CloneTreeNode::get_parent_string(string curr_node_str)
@@ -343,6 +395,15 @@ void CloneTreeNode::reset_children_names()
         }
     }
     idx2child = new_map;
+}
+
+void CloneTreeNode::set_clone_freq(vector<double> &vec)
+{
+    param.set_clone_freq(vec);
+}
+void CloneTreeNode::set_cellular_prev(vector<double> &vec)
+{
+    param.set_cellular_prev(vec);
 }
 
 
@@ -628,7 +689,6 @@ gsl_matrix *CloneTreeNode::GetAncestralMatrix(CloneTreeNode *root,
 double ScLikelihood(const BulkDatum *s, const SingleCellData *sc, bool has_snv, const ModelParams &model_params) {
     double log_lik = 0.0;
 
-    cout << s->GetId() << endl;
     // if sc has mutation s, then there are 3 cases
     // 1. non-bursty
     // 2. bursty for variant
@@ -663,41 +723,34 @@ double ScLikelihood(const BulkDatum *s, const SingleCellData *sc, bool has_snv, 
     return log_lik;
 }
 
-double BulkLogLikWithTotalCopyNumber(const CloneTreeNode *node,
-                                     const BulkDatum *datum,
-                                     const ModelParams &model_params)
-{
-    if (datum->GetReadCount() == 0) {
-        if (datum->GetVariantReadCount() > 0) {
-            cerr << "Error in the data.\n";
-            cerr << "Num reads: " << datum->GetReadCount() << ".\n";
-            cerr << "Num variants: " << datum->GetVariantReadCount() << ".\n";
-            exit(-1);
-        } else {
-            return 0.0;
-        }
+double BulkLogLikWithTotalCopyNumberByRegion(const CloneTreeNode *node,
+                                             const ModelParams &model_params,
+                                             size_t var_reads,
+                                             size_t total_reads,
+                                             size_t total_cn,
+                                             double cell_prev) {
+    if (total_reads == 0) {
+        return 0.0;
     }
-
+    
     double seq_err = model_params.get_seq_error();
     if (node->get_parent_node() == 0) {
         // this node is the root, represents the healthy population
-        return log(gsl_ran_binomial_pdf(datum->GetVariantReadCount(),
+        return log(gsl_ran_binomial_pdf(var_reads,
                                         seq_err,
-                                        datum->GetReadCount()));
+                                        total_reads));
     }
     
-    const CloneTreeNodeParam &param = node->get_node_parameter();
-    double phi = param.get_cellular_prev();
-    size_t total_cn = datum->GetTotalCN();
+    double phi = cell_prev;
     double xi = 0.0;
-
+    
     if (total_cn == 0) {
         xi = seq_err;
-        return log(gsl_ran_binomial_pdf(datum->GetVariantReadCount(),
+        return log(gsl_ran_binomial_pdf(var_reads,
                                         xi,
-                                        datum->GetReadCount()));
+                                        total_reads));
     }
-
+    
     double log_val;
     double log_prior_genotype;
     double log_lik = DOUBLE_NEG_INF;
@@ -710,7 +763,7 @@ double BulkLogLikWithTotalCopyNumber(const CloneTreeNode *node,
         } else {
             xi += phi * var_cn / total_cn;
         }
-        log_val = log_binomial_pdf(datum->GetVariantReadCount(), xi, datum->GetReadCount());
+        log_val = log_binomial_pdf(var_reads, xi, total_reads);
         log_prior_genotype = log_binomial_pdf(var_cn, model_params.get_var_cp_prob(), total_cn);
         log_prior_genotype -= log_prior_norm;
         log_lik = log_add(log_lik, log_val + log_prior_genotype);
@@ -718,77 +771,114 @@ double BulkLogLikWithTotalCopyNumber(const CloneTreeNode *node,
     return log_lik;
 }
 
-double BulkLogLikWithCopyNumberProfile(const CloneTreeNode *node,
-                                       const BulkDatum *datum,
-                                       const ModelParams &model_params)
+double BulkLogLikWithTotalCopyNumber(size_t region,
+                                     const CloneTreeNode *node,
+                                     const BulkDatum *datum,
+                                     const ModelParams &model_params)
 {
-    if (datum->GetReadCount() == 0) {
-        if (datum->GetVariantReadCount() > 0) {
-            cerr << "Error in the data. Num reads: " << datum->GetReadCount() << ". Num variants: " << datum->GetVariantReadCount() << endl;
-            exit(-1);
-        } else {
-            return 0.0;
-        }
-    }
+    auto var_reads = datum->GetVariantReadCount(region);
+    auto total_reads = datum->GetReadCount(region);
+    auto total_cn = datum->GetTotalCN(region);
+    auto cell_prev = node->GetCellularPrevs(region);
+    double log_lik = 0.0;
+    log_lik += BulkLogLikWithTotalCopyNumberByRegion(node,
+                                                     model_params,
+                                                     var_reads,
+                                                     total_reads,
+                                                     total_cn,
+                                                     cell_prev);
+    return log_lik;
+}
 
+double BulkLogLikWithCopyNumberProfileByRegion(const CloneTreeNode *node,
+                                               const ModelParams &model_params,
+                                               size_t var_reads,
+                                               size_t total_reads,
+                                               const vector<double> &cn_probs,
+                                               double cell_prev) {
+    if (total_reads == 0) {
+        return 0.0;
+    }
+    
     double seq_err = model_params.get_seq_error();
     if (node->get_parent_node() == 0) {
         // this node is the root, represents the healthy population
-        return log(gsl_ran_binomial_pdf(datum->GetVariantReadCount(), seq_err, datum->GetReadCount()));
+        return log(gsl_ran_binomial_pdf(var_reads, seq_err, total_reads));
     }
     
-    const CloneTreeNodeParam &param = node->get_node_parameter();
-    auto cn_profile = datum->GetCopyNumberProfile();
-    double phi = param.get_cellular_prev();
     double xi = 0.0;
     double log_val;
     double log_prior_genotype;
-
+    
     // Initialize log_lik for total_cn = 0.
     // When total_cn = 0, variant is only seen (1 - phi) of the cells as a result
     // of sequencing error.
-    xi = (1 - phi) * seq_err;
-    double log_lik = log_binomial_pdf(datum->GetVariantReadCount(),
+    xi = (1 - cell_prev) * seq_err;
+    double log_lik = log_binomial_pdf(var_reads,
                                       xi,
-                                      datum->GetReadCount());
-
-    for (size_t total_cn = 1; total_cn < cn_profile.size(); total_cn++) {
+                                      total_reads);
+    
+    for (size_t total_cn = 0; total_cn < cn_probs.size(); total_cn++) {
         double log_prior_norm = log(1 - gsl_ran_binomial_pdf(0, model_params.get_var_cp_prob(), total_cn));
         double log_lik_cn = DOUBLE_NEG_INF;
         for (size_t var_cn = 1; var_cn <= total_cn; var_cn++) {
-            xi = (1 - phi) * seq_err;
+            xi = (1 - cell_prev) * seq_err;
             if (var_cn == total_cn) {
-                xi += phi * (1 - seq_err);
+                xi += cell_prev * (1 - seq_err);
             } else if (var_cn == 0) {
-                xi += phi * seq_err;
+                xi += cell_prev * seq_err;
             } else {
-                xi += phi * var_cn / total_cn;
+                xi += cell_prev * var_cn / total_cn;
             }
-            log_val = log_binomial_pdf(datum->GetVariantReadCount(),
+            log_val = log_binomial_pdf(var_reads,
                                        xi,
-                                       datum->GetReadCount());
+                                       total_reads);
             log_prior_genotype = log(gsl_ran_binomial_pdf(var_cn,
-                  model_params.get_var_cp_prob(), total_cn)) - log_prior_norm;
+                                                          model_params.get_var_cp_prob(), total_cn));
+            log_prior_genotype -= log_prior_norm;
             log_lik_cn = log_add(log_lik_cn, log_val + log_prior_genotype);
         }
-        log_lik = log_add(log_lik, log_lik_cn + log(cn_profile[total_cn]));
+        log_lik = log_add(log_lik, log_lik_cn + log(cn_probs[total_cn]));
     }
     return log_lik;
 }
 
-double BulkLogLikWithGenotype(const CloneTreeNode *node,
-                              const BulkDatum *datum,
-                              const ModelParams &model_params)
+double BulkLogLikWithCopyNumberProfile(size_t region,
+                                       const CloneTreeNode *node,
+                                       const BulkDatum *datum,
+                                       const ModelParams &model_params)
 {
-    if (datum->GetMajorCN() < datum->GetMinorCN()) {
+    auto var_reads = datum->GetVariantReadCount(region);
+    auto total_reads = datum->GetReadCount(region);
+    auto cell_prev = node->GetCellularPrevs(region);
+    double log_lik = 0.0;
+    auto cn_probs = datum->GetCNProbs(region);
+    log_lik += BulkLogLikWithCopyNumberProfileByRegion(node,
+                                                       model_params,
+                                                       var_reads,
+                                                       total_reads,
+                                                       cn_probs,
+                                                       cell_prev);
+    return log_lik;
+}
+
+double BulkLogLikWithGenotypeByRegion(const CloneTreeNode *node,
+                                      const ModelParams &model_params,
+                                      size_t var_reads,
+                                      size_t total_reads,
+                                      size_t major_cn,
+                                      size_t minor_cn,
+                                      double cell_prev)
+{
+    if (major_cn < minor_cn) {
         cerr << "Error: major copy number < minor copy number.\n";
         exit(-1);
     }
-    if (datum->GetReadCount() == 0) {
-        if (datum->GetVariantReadCount() > 0) {
+    if (total_reads == 0) {
+        if (var_reads > 0) {
             cerr << "Error in the data.\n";
-            cerr << "Num reads: " << datum->GetReadCount() << ".\n";
-            cerr << "Num variants: " << datum->GetVariantReadCount() << ".\n";
+            cerr << "Num reads: " << total_reads << ".\n";
+            cerr << "Num variants: " << var_reads << ".\n";
             exit(-1);
         } else {
             return 0.0;
@@ -797,52 +887,69 @@ double BulkLogLikWithGenotype(const CloneTreeNode *node,
 
     double seq_err = model_params.get_seq_error();
     if (node->get_parent_node() == 0) {
-        // this node is the root, represents the healthy population
-        return log(gsl_ran_binomial_pdf(datum->GetVariantReadCount(),
+        // This node is the root, represents the healthy population.
+        return log(gsl_ran_binomial_pdf(var_reads,
                                         seq_err,
-                                        datum->GetReadCount()));
+                                        total_reads));
     }
 
-    const CloneTreeNodeParam &param = node->get_node_parameter();
-    double phi = param.get_cellular_prev();
-    size_t major_cn = datum->GetMajorCN();
-    size_t minor_cn = datum->GetMinorCN();
     size_t total_cn = major_cn + minor_cn;
     double xi = 0.0;
     
     if (total_cn == 0) {
         xi = seq_err;
-        return log(gsl_ran_binomial_pdf(datum->GetVariantReadCount(),
+        return log(gsl_ran_binomial_pdf(var_reads,
                                         xi,
-                                        datum->GetReadCount()));
+                                        total_reads));
     }
-    
+
     double log_val;
     double log_lik = DOUBLE_NEG_INF;
     
     // Marginalize over the var_cn over minor_cn.
     for (size_t var_cn = 1; var_cn <= minor_cn; var_cn++) {
-        xi = (1 - phi) * seq_err;
+        xi = (1 - cell_prev) * seq_err;
         if (var_cn == total_cn) {
-            xi += phi * (1 - seq_err);
+            xi += cell_prev * (1 - seq_err);
         } else {
-            xi += phi * var_cn / total_cn;
+            xi += cell_prev * var_cn / total_cn;
         }
-        log_val = log_binomial_pdf(datum->GetVariantReadCount(), xi, datum->GetReadCount());
+        log_val = log_binomial_pdf(var_reads, xi, total_reads);
         log_lik = log_add(log_lik, log_val);
     }
     // Marginalize over the var_cn over major_cn.
     for (size_t var_cn = 1; var_cn <= major_cn; var_cn++) {
-        xi = (1 - phi) * seq_err;
+        xi = (1 - cell_prev) * seq_err;
         if (var_cn == total_cn) {
-            xi += phi * (1 - seq_err);
+            xi += cell_prev * (1 - seq_err);
         } else {
-            xi += phi * var_cn / total_cn;
+            xi += cell_prev * var_cn / total_cn;
         }
-        log_val = log_binomial_pdf(datum->GetVariantReadCount(), xi, datum->GetReadCount());
+        log_val = log_binomial_pdf(var_reads, xi, total_reads);
         log_lik = log_add(log_lik, log_val);
     }
     log_lik -= log(total_cn);
+
+    return log_lik;
+}
+
+double BulkLogLikWithGenotype(size_t region,
+                              const CloneTreeNode *node,
+                              const BulkDatum *datum,
+                              const ModelParams &model_params)
+{
+    auto var_reads = datum->GetVariantReadCount(region);
+    auto total_reads = datum->GetReadCount(region);
+    auto cell_prevs = node->GetCellularPrevs(region);
+    auto major_cns = datum->GetMajorCN(region);
+    auto minor_cns = datum->GetMinorCN(region);
+    double log_lik = BulkLogLikWithGenotypeByRegion(node,
+                                                    model_params,
+                                                    var_reads,
+                                                    total_reads,
+                                                    major_cns,
+                                                    minor_cns,
+                                                    cell_prevs);
     return log_lik;
 }
 

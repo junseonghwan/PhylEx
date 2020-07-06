@@ -47,7 +47,10 @@ class TSSBState
     vector<unordered_map<CloneTreeNode *, double> > sc_cache;
 
     // function pointer to compute likelihood of assigning bulk datum to node
-    double (*log_lik_datum)(const CloneTreeNode *v, const BulkDatum *s, const ModelParams &params) = 0;
+    double (*log_lik_datum)(size_t region,
+                            const CloneTreeNode *v,
+                            const BulkDatum *s,
+                            const ModelParams &params) = 0;
     // function pointer to compute likelihood of single cell at site s if it has the variant given by has_snv
     double (*log_lik_sc_at_site)(const BulkDatum *s, const SingleCellData *c, bool has_snv, const ModelParams &params) = 0;
 
@@ -76,12 +79,21 @@ class TSSBState
     EigenMatrix sc_presence_matrix_, sc_absence_matrix_;
     void PreComputeScLikelihood(const ModelParams &model_params);
 
+    double LogLikDatum(CloneTreeNode *node,
+                       BulkDatum *datum,
+                       const ModelParams &model_params);
 public:
     TSSBState(const gsl_rng *random,
               CloneTreeNode *root,
               const ModelParams &params,
-              double (*log_lik_datum)(const CloneTreeNode *node, const BulkDatum *datum, const ModelParams &params),
-              double (*log_lik_sc_at_site)(const BulkDatum *s, const SingleCellData *c, bool has_snv, const ModelParams &params),
+              double (*log_lik_datum)(size_t region,
+                                      const CloneTreeNode *node,
+                                      const BulkDatum *datum,
+                                      const ModelParams &params),
+              double (*log_lik_sc_at_site)(const BulkDatum *s,
+                                           const SingleCellData *c,
+                                           bool has_snv,
+                                           const ModelParams &params),
               vector<BulkDatum *> *bulk_data,
               vector<SingleCellData *> *sc_data);
 
@@ -109,6 +121,8 @@ const vector<BulkDatum *> &get_data() const;
     //void move_datum(CloneTreeNode *node, BulkDatum *datum, const ModelParams &model_params);
     void move_datum(CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params);
     
+    double compute_log_likelihood_bulk(size_t region,
+                                       const ModelParams &model_params);
     double compute_log_likelihood_bulk(const ModelParams &params);
     double compute_log_likelihood_sc_cached(const ModelParams &params, bool verbose=false);
 
@@ -124,8 +138,14 @@ const vector<BulkDatum *> &get_data() const;
     // static functions
     static gsl_matrix *get_ancestral_matrix(TSSBState &state);
     static TSSBState *construct_trivial_state(CloneTreeNode *root,
-                                                     double (*log_lik_datum)(const CloneTreeNode *v, const BulkDatum *s, const ModelParams &params),
-                                                     double (*log_lik_sc_at_site)(const BulkDatum *s, const SingleCellData *c, bool has_snv, const ModelParams &params));
+                            double (*log_lik_datum)(size_t region,
+                                                    const CloneTreeNode *v,
+                                                    const BulkDatum *s,
+                                                    const ModelParams &params),
+                            double (*log_lik_sc_at_site)(const BulkDatum *s,
+                                                         const SingleCellData *c,
+                                                         bool has_snv,
+                                                         const ModelParams &params));
     static double compute_loglik_sc(const vector<BulkDatum *> &bulk_data,
                                     unordered_set<const BulkDatum *> &snvs,
                                     SingleCellData *cell,
@@ -151,9 +171,12 @@ const vector<BulkDatum *> &get_data() const;
     void clear_cache();
 };
 
-void update_params(vector<CloneTreeNode *> &nodes, double *new_clone_freq);
-double update_cellular_prev_recursive(CloneTreeNode *node);
-void get_clone_freqs(TSSBState &state,
+void update_params(size_t region,
+                   vector<CloneTreeNode *> &nodes,
+                   double *new_clone_freq);
+double update_cellular_prev_recursive(size_t region, CloneTreeNode *node);
+void get_clone_freqs(size_t region,
+                     TSSBState &state,
                      double *clone_freqs);
 void sample_params_bottom_up(const gsl_rng *random,
                              size_t n_mh_iter,
@@ -164,5 +187,6 @@ double sample_params_dirichlet(const gsl_rng *random,
                                TSSBState &tree,
                                const ModelParams &params);
 void cull(CloneTreeNode *root);
+bool check_clone_freq(size_t region, CloneTreeNode *root);
 
 #endif /* tssb_state_hpp */

@@ -90,12 +90,13 @@ EigenMatrix ExponentiateMatrix(EigenMatrixRef M)
     return expM;
 }
 
-void CreateSNVs(gsl_rng *random,
-                const SimulationConfig &simul_config,
-                vector<BulkDatum *> &data)
+vector<Locus> CreateSNVs(gsl_rng *random,
+                         const SimulationConfig &simul_config,
+                         vector<BulkDatum *> &data)
 {
     string chr;
     size_t pos;
+    vector<Locus> loci;
     for (size_t i = 0; i < simul_config.n_sites; i++)
     {
         chr = convert_chr_to_string(gsl_rng_uniform_int(random, 23) + 1);
@@ -105,17 +106,20 @@ void CreateSNVs(gsl_rng *random,
         size_t beta = gsl_rng_uniform_int(random, simul_config.beta_binomial_hp_max - 1) + 1;
         locus.set_alpha(alpha);
         locus.set_beta(beta);
+        loci.push_back(locus);
         BulkDatum *datum = new BulkDatum("s" + to_string(i), locus);
         data.push_back(datum);
     }
+    return loci;
 }
 
-CloneTreeNode *SampleFromTssbPrior(const gsl_rng *random,
+CloneTreeNode *SampleFromTssbPrior(size_t region_count,
+                                   const gsl_rng *random,
                                    size_t n_data,
                                    ModelParams &model_params,
                                    vector<BulkDatum *> &data)
 {
-    CloneTreeNode *root = CloneTreeNode::create_root_node();
+    CloneTreeNode *root = CloneTreeNode::create_root_node(region_count);
     root->set_nu_stick(0.0);
     root->sample_node_parameters(random, model_params, 0);
 
@@ -150,184 +154,186 @@ void GenerateBulkData(gsl_rng *random,
         auto node = all_nodes[node_id];
         datum = data[i];
         node->add_datum(datum);
-        double xi = 0.0;
-        double total_cn = 2;
-        size_t total_allele_count, var_allele_count, ref_allele_count, var_cn;
+        
+        // Generate bulk data for each region.
+        for (size_t region = 0; region < simul_config.n_regions; region++) {
+            double xi = 0.0;
+            double total_cn = 2;
+            size_t total_allele_count, var_allele_count, ref_allele_count, var_cn;
 
-        if (node->get_parent_node() == 0) {
-            // this node is the root, represents the healthy population so B allele is observed due to seq err
-            cerr << "Error: sampled then root node." << endl;
-            exit(-1);
-        } else {
-            // Sample clonal copy number.
-            var_allele_count = discrete(random, simul_config.var_allele_copy_prob);
-            ref_allele_count = discrete(random, simul_config.ref_allele_copy_prob);
-            total_allele_count = var_allele_count + ref_allele_count;
-            double phi = node->get_node_parameter().get_cellular_prev();
-            total_cn = phi * total_allele_count + (1 - phi) * 2;
-            depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
-            // Ensure var_cn >= 1.
-            var_cn = gsl_ran_binomial(random, simul_config.var_cp_prob, var_allele_count - 1) + 1;
-            if (var_cn == total_allele_count) {
-                xi = (1 - phi) * seq_err + phi * (1 - seq_err);
+            if (node->get_parent_node() == 0) {
+                // This is an error b/c,
+                // We ensured when sampling node_id to not choose the root.
+                cerr << "Error: we sampled the root node." << endl;
+                exit(-1);
             } else {
-                xi = (1 - phi) * seq_err + phi * (double)var_cn/total_allele_count;
+                // Sample clonal copy number.
+                var_allele_count = discrete(random, simul_config.var_allele_copy_prob);
+                ref_allele_count = discrete(random, simul_config.ref_allele_copy_prob);
+                total_allele_count = var_allele_count + ref_allele_count;
+                double phi = node->get_node_parameter().get_cellular_prevs()[region];
+                total_cn = phi * total_allele_count + (1 - phi) * 2;
+                depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
+                // Ensure var_cn >= 1.
+                var_cn = gsl_ran_binomial(random, simul_config.var_cp_prob, var_allele_count - 1) + 1;
+                if (var_cn == total_allele_count) {
+                    xi = (1 - phi) * seq_err + phi * (1 - seq_err);
+                } else {
+                    xi = (1 - phi) * seq_err + phi * (double)var_cn/total_allele_count;
+                }
             }
+            b_alleles = gsl_ran_binomial(random, xi, depth);
+            if (ref_allele_count > var_allele_count) {
+                datum->AddRegionData(b_alleles, depth, ref_allele_count, var_allele_count);
+            } else {
+                datum->AddRegionData(b_alleles, depth, var_allele_count, ref_allele_count);
+            }
+            cout << "======" << endl;
+            cout << "Datum " << i << endl;
+            cout << datum->GetVariantReadCount()[region] << "/" << datum->GetReadCount()[region] << endl;
+            cout << "xi: " << xi << endl;
+            cout << "======" << endl;
         }
-        b_alleles = gsl_ran_binomial(random, xi, depth);
-        datum->SetReadCount(depth);
-        datum->SetVariantReadCount(b_alleles);
-        datum->SetTotalCopyNumber((size_t)round(total_cn));
-        if (ref_allele_count >= var_allele_count) {
-            datum->SetGenotype(make_pair(ref_allele_count, var_allele_count));
-        } else {
-            datum->SetGenotype(make_pair(var_allele_count, ref_allele_count));
-        }
-        cout << "======" << endl;
-        cout << "Datum " << i << endl;
-        cout << datum->GetVariantReadCount() << "/" << datum->GetReadCount() << endl;
-        cout << "xi: " << xi << endl;
-        cout << "======" << endl;
     }
 }
 
 // Assumes nodes are in breadth first traversal order.
-EigenMatrix EvolveCn(gsl_rng *random,
-                     vector<CloneTreeNode *> &nodes,
-                     unordered_map<CloneTreeNode *, size_t> &node2idx,
-                     CloneTreeNode *assigned_node,
-                     const SimulationConfig &config,
-                     EigenMatrix P0,
-                     EigenMatrix P1)
-{
-    size_t n_nodes = nodes.size();
-    
-    // Indexing:
-    // Rows -> nodes.
-    // First column -> ref_cn.
-    // Second column -> var_cn.
-    EigenMatrix cn_profile(n_nodes, 2);
+//EigenMatrix EvolveCn(gsl_rng *random,
+//                     vector<CloneTreeNode *> &nodes,
+//                     unordered_map<CloneTreeNode *, size_t> &node2idx,
+//                     CloneTreeNode *assigned_node,
+//                     const SimulationConfig &config,
+//                     EigenMatrix P0,
+//                     EigenMatrix P1)
+//{
+//    size_t n_nodes = nodes.size();
+//
+//    // Indexing:
+//    // Rows -> nodes.
+//    // First column -> ref_cn.
+//    // Second column -> var_cn.
+//    EigenMatrix cn_profile(n_nodes, 2);
+//
+//    // Get ancestor nodes.
+//    unordered_set<CloneTreeNode *> ancestors;
+//    auto node = assigned_node;
+//    while (true) {
+//        if (node->is_root()) {
+//            break;
+//        }
+//        ancestors.insert(node);
+//        node = node->get_parent_node();
+//    }
+//
+//    size_t ref_cn = 0, var_cn = 0;
+//    for (size_t i = 0; i < nodes.size(); i++) {
+//        auto node = nodes[i];
+//        auto parent_node = node->get_parent_node();
+//        if (node->is_root()) {
+//            cn_profile(i, 0) = 2;
+//            cn_profile(i, 1) = 0;
+//            continue;
+//        }
+//
+//        // Retrieve the copy number profile of the parent
+//        auto parent_idx = node2idx[parent_node];
+//        ref_cn = cn_profile(parent_idx, 0);
+//        var_cn = cn_profile(parent_idx, 1);
+//        if (node == assigned_node) {
+//            assert(var_cn == 0 && ref_cn >= 1);
+//            // Evolve ref_cn using P1.
+//            SampleCnProfile(random, ref_cn, P1);
+//            // Sample var_cn, ensure that it is at least 1.
+//            var_cn = gsl_ran_binomial(random, config.var_cp_prob, ref_cn - 1) + 1;
+//            assert(var_cn >= 1);
+//            ref_cn -= var_cn;
+//        } else if (ancestors.count(node)) {
+//            ref_cn = SampleCnProfile(random, ref_cn, P1);
+//            assert(var_cn == 0 && ref_cn >= 1);
+//        } else {
+//            ref_cn = SampleCnProfile(random, ref_cn, P0);
+//            var_cn = SampleCnProfile(random, var_cn, P0);
+//        }
+//        assert(ref_cn <= config.max_cn && var_cn <= config.max_cn);
+//
+//        cn_profile(i, 0) = ref_cn;
+//        cn_profile(i, 1) = var_cn;
+//    }
+//
+//    return cn_profile;
+//}
 
-    // Get ancestor nodes.
-    unordered_set<CloneTreeNode *> ancestors;
-    auto node = assigned_node;
-    while (true) {
-        if (node->is_root()) {
-            break;
-        }
-        ancestors.insert(node);
-        node = node->get_parent_node();
-    }
-
-    size_t ref_cn = 0, var_cn = 0;
-    for (size_t i = 0; i < nodes.size(); i++) {
-        auto node = nodes[i];
-        auto parent_node = node->get_parent_node();
-        if (node->is_root()) {
-            cn_profile(i, 0) = 2;
-            cn_profile(i, 1) = 0;
-            continue;
-        }
-
-        // Retrieve the copy number profile of the parent
-        auto parent_idx = node2idx[parent_node];
-        ref_cn = cn_profile(parent_idx, 0);
-        var_cn = cn_profile(parent_idx, 1);
-        if (node == assigned_node) {
-            assert(var_cn == 0 && ref_cn >= 1);
-            // Evolve ref_cn using P1.
-            SampleCnProfile(random, ref_cn, P1);
-            // Sample var_cn, ensure that it is at least 1.
-            var_cn = gsl_ran_binomial(random, config.var_cp_prob, ref_cn - 1) + 1;
-            assert(var_cn >= 1);
-            ref_cn -= var_cn;
-        } else if (ancestors.count(node)) {
-            ref_cn = SampleCnProfile(random, ref_cn, P1);
-            assert(var_cn == 0 && ref_cn >= 1);
-        } else {
-            ref_cn = SampleCnProfile(random, ref_cn, P0);
-            var_cn = SampleCnProfile(random, var_cn, P0);
-        }
-        assert(ref_cn <= config.max_cn && var_cn <= config.max_cn);
-            
-        cn_profile(i, 0) = ref_cn;
-        cn_profile(i, 1) = var_cn;
-    }
-    
-    return cn_profile;
-}
-
-void GenerateBulkDataWithBDProcess(gsl_rng *random,
-                                   const SimulationConfig &simul_config,
-                                   vector<BulkDatum *> &data,
-                                   CloneTreeNode *root_node)
-{
-    unordered_map<CloneTreeNode*, vector<pair<size_t, size_t> > > cn_profile;
-
-    size_t n_data = data.size();
-    double birth_rate = simul_config.birth_rate;
-    double death_rate = simul_config.death_rate;
-
-    // Construct rate matrix for copy number profile and perform uniformization.
-    auto Q1 = GetCnRateMatrix(birth_rate, death_rate, 1, simul_config.max_cn);
-    auto P1 = ExponentiateMatrix(Q1);
-
-    auto Q0 = GetCnRateMatrix(birth_rate, death_rate, 0, simul_config.max_cn);
-    auto P0 = ExponentiateMatrix(Q0);
-
-    vector<CloneTreeNode *> nodes;
-    CloneTreeNode::breadth_first_traversal(root_node, nodes, false);
-    unordered_map<CloneTreeNode *, size_t> node2idx;
-    for (size_t i = 0; i < nodes.size(); i++) {
-        auto node = nodes[i];
-        node2idx[node] = i;
-    }
-    
-    // Assign data to nodes.
-    size_t b_alleles, depth;
-    BulkDatum *datum;
-    for (size_t i = 0; i < n_data; i++) {
-        // Sample a node -- +1 so that we don't sample the root node
-        size_t node_id = discrete_uniform(random, nodes.size()-1) + 1;
-        auto assigned_node = nodes[node_id];
-        datum = data[i];
-        assigned_node->add_datum(datum);
-
-        // Evolve copy number.
-        auto cn_profile = EvolveCn(random,
-                                   nodes,
-                                   node2idx,
-                                   assigned_node,
-                                   simul_config,
-                                   P0,
-                                   P1);
-
-        auto node_cns = cn_profile.rowwise().sum();
-        double total_cn = 0.0;
-        double xi = 0.0;
-        double sum = 0.0;
-        // TODO: Incorporate sequencing error.
-        for (size_t j = 0; j < nodes.size(); j++) {
-            double eta = nodes[j]->get_node_parameter().get_clone_freq();
-            total_cn += eta * node_cns(j);
-            if (node_cns(j) > 0) {
-                xi += eta * (double)cn_profile(j,1)/node_cns(j);
-            }
-            sum += eta;
-        }
-        depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
-        cout << xi << ", " << depth << endl;
-        b_alleles = gsl_ran_binomial(random, xi, depth);
-        datum->SetReadCount(depth);
-        datum->SetVariantReadCount(b_alleles);
-        datum->SetTotalCopyNumber((size_t)round(total_cn));
-        cout << "======" << endl;
-        cout << "Datum " << i << endl;
-        cout << datum->GetVariantReadCount() << "/" << datum->GetReadCount() << endl;
-        cout << "xi: " << xi << endl;
-        cout << "======" << endl;
-    }
-}
+//void GenerateBulkDataWithBDProcess(gsl_rng *random,
+//                                   const SimulationConfig &simul_config,
+//                                   vector<BulkDatum *> &data,
+//                                   CloneTreeNode *root_node)
+//{
+//    unordered_map<CloneTreeNode*, vector<pair<size_t, size_t> > > cn_profile;
+//
+//    size_t n_data = data.size();
+//    double birth_rate = simul_config.birth_rate;
+//    double death_rate = simul_config.death_rate;
+//
+//    // Construct rate matrix for copy number profile and perform uniformization.
+//    auto Q1 = GetCnRateMatrix(birth_rate, death_rate, 1, simul_config.max_cn);
+//    auto P1 = ExponentiateMatrix(Q1);
+//
+//    auto Q0 = GetCnRateMatrix(birth_rate, death_rate, 0, simul_config.max_cn);
+//    auto P0 = ExponentiateMatrix(Q0);
+//
+//    vector<CloneTreeNode *> nodes;
+//    CloneTreeNode::breadth_first_traversal(root_node, nodes, false);
+//    unordered_map<CloneTreeNode *, size_t> node2idx;
+//    for (size_t i = 0; i < nodes.size(); i++) {
+//        auto node = nodes[i];
+//        node2idx[node] = i;
+//    }
+//
+//    // Assign data to nodes.
+//    size_t b_alleles, depth;
+//    BulkDatum *datum;
+//    for (size_t i = 0; i < n_data; i++) {
+//        // Sample a node -- +1 so that we don't sample the root node
+//        size_t node_id = discrete_uniform(random, nodes.size()-1) + 1;
+//        auto assigned_node = nodes[node_id];
+//        datum = data[i];
+//        assigned_node->add_datum(datum);
+//
+//        // Evolve copy number.
+//        auto cn_profile = EvolveCn(random,
+//                                   nodes,
+//                                   node2idx,
+//                                   assigned_node,
+//                                   simul_config,
+//                                   P0,
+//                                   P1);
+//
+//        auto node_cns = cn_profile.rowwise().sum();
+//        double total_cn = 0.0;
+//        double xi = 0.0;
+//        double sum = 0.0;
+//        // TODO: Incorporate sequencing error.
+//        for (size_t j = 0; j < nodes.size(); j++) {
+//            double eta = nodes[j]->get_node_parameter().get_clone_freq();
+//            total_cn += eta * node_cns(j);
+//            if (node_cns(j) > 0) {
+//                xi += eta * (double)cn_profile(j,1)/node_cns(j);
+//            }
+//            sum += eta;
+//        }
+//        depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
+//        cout << xi << ", " << depth << endl;
+//        b_alleles = gsl_ran_binomial(random, xi, depth);
+//        datum->SetReadCount(depth);
+//        datum->AddRegion(b_alleles);
+//        datum->SetTotalCopyNumber((size_t)round(total_cn));
+//        cout << "======" << endl;
+//        cout << "Datum " << i << endl;
+//        cout << datum->GetVariantReadCount() << "/" << datum->GetReadCount() << endl;
+//        cout << "xi: " << xi << endl;
+//        cout << "======" << endl;
+//    }
+//}
 
 void GenerateScRnaData(gsl_rng *random,
                        CloneTreeNode *root_node,

@@ -19,6 +19,7 @@
 using namespace std;
 
 using EigenVector = Eigen::VectorXd;
+using EigenVectorRef = Eigen::Ref<const EigenVector>;
 using EigenMatrix = Eigen::MatrixXd;
 using EigenMatrixXcd = Eigen::MatrixXcd;
 using EigenMatrixRef = Eigen::Ref<const EigenMatrix>;

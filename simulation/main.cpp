@@ -41,7 +41,10 @@ void parse_config_file(string config_file_path, SimulationConfig &config)
     config_file.close();
 }
 
-void CreateLinearTree(gsl_rng *random, CloneTreeNode *root, size_t max_depth) {
+void CreateLinearTree(size_t region_count,
+                      gsl_rng *random,
+                      CloneTreeNode *root,
+                      size_t max_depth) {
     vector<CloneTreeNode *> nodes;
     nodes.push_back(root);
     auto node = root;
@@ -49,19 +52,21 @@ void CreateLinearTree(gsl_rng *random, CloneTreeNode *root, size_t max_depth) {
         node = (CloneTreeNode*)node->spawn_child(1);
         nodes.push_back(node);
     }
-    // Set clone frequency.
     size_t n_nodes = max_depth + 1;
-    double *cell_prev = new double[n_nodes];
-    double *clone_freq = new double[n_nodes];
-    cell_prev[0] = 1.0;
-    cell_prev[1] = gsl_ran_flat(random, 0.5, 1.0);
-    for (size_t i = 2; i < n_nodes; i++) {
-        cell_prev[i] = cell_prev[i-1]/2;
-    }
-    for (size_t i = 0; i < n_nodes; i++) {
-        clone_freq[i] = cell_prev[i] - cell_prev[i+1];
-        ((CloneTreeNode *)nodes[i])->set_cellular_prev(cell_prev[i]);
-        ((CloneTreeNode *)nodes[i])->set_clone_freq(clone_freq[i]);
+    for (size_t region = 0; region < region_count; region++) {
+        // Sample cellular prevalences.
+        double *cell_prev = new double[n_nodes];
+        double *clone_freq = new double[n_nodes];
+        cell_prev[0] = 1.0;
+        cell_prev[1] = gsl_ran_flat(random, 0.5, 1.0);
+        for (size_t i = 2; i < n_nodes; i++) {
+            cell_prev[i] = cell_prev[i-1]/2;
+        }
+        for (size_t i = 0; i < n_nodes; i++) {
+            clone_freq[i] = cell_prev[i] - cell_prev[i+1];
+            nodes[i]->set_cellular_prev(region, cell_prev[i]);
+            nodes[i]->set_clone_freq(region, clone_freq[i]);
+        }
     }
 
     for (size_t i = 0; i < n_nodes; i++) {
@@ -69,41 +74,57 @@ void CreateLinearTree(gsl_rng *random, CloneTreeNode *root, size_t max_depth) {
     }
 }
 
-void CreateNaryTree(gsl_rng *random,
+bool BelowMinimumCellFraction(CloneTreeNode *node, double min) {
+    auto cell_fractions = node->get_node_parameter().get_clone_freqs();
+    for (auto cf : cell_fractions) {
+        if (cf <= min) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void CreateNaryTree(size_t region_count,
+                    gsl_rng *random,
                     CloneTreeNode *root,
                     size_t max_depth,
                     size_t num_branches,
-                    double min_cell_prev) {
+                    bool randomize_branching,
+                    double min_cell_fraction) {
     deque<CloneTreeNode *> queue;
     queue.push_back(root);
-    root->set_clone_freq(1.0);
-    root->set_cellular_prev(1.0);
+    root->get_node_parameter().SetRootParameters();
     while (!queue.empty()) {
         auto node = queue.front();
         queue.pop_front();
-        if (node->get_node_parameter().get_cellular_prev() < min_cell_prev ||
-            node->get_depth() >= max_depth) {
+        if (node->get_depth() >= max_depth ||
+            BelowMinimumCellFraction(node, min_cell_fraction)) {
             continue;
         }
 
-        for (size_t i = 0; i < num_branches; i++) {
+        size_t branch_count = num_branches;
+        if (randomize_branching) {
+            branch_count = gsl_rng_uniform_int(random, num_branches - 1) + 1;
+        }
+        for (size_t i = 0; i < branch_count; i++) {
             auto child_node = (CloneTreeNode*)node->spawn_child(0.5);
             // Set cellular prevalence.
-            double parent_clone_freq = node->get_node_parameter().get_clone_freq();
-            double u = 0.5;
-            if (random != 0) {
-                u = gsl_ran_flat(random, 0, 1);
+            for (size_t region = 0; region < region_count; region++) {
+                double parent_clone_freq = node->get_node_parameter().get_clone_freqs()[region];
+                double u = 0.5;
+                if (random != 0) {
+                    u = gsl_ran_flat(random, 0, 1);
+                }
+                double cell_prev = u * parent_clone_freq;
+                child_node->set_clone_freq(region, cell_prev);
+                child_node->set_cellular_prev(region, cell_prev);
+                node->set_clone_freq(region, parent_clone_freq - cell_prev);
             }
-            double cell_prev = u * parent_clone_freq;
-            child_node->set_clone_freq(cell_prev);
-            child_node->set_cellular_prev(cell_prev);
-            node->set_clone_freq(parent_clone_freq - cell_prev);
             queue.push_back(child_node);
         }
     }
     vector<CloneTreeNode *> nodes;
-    CloneTreeNode::breadth_first_traversal(root,
-                                                                 nodes);
+    CloneTreeNode::breadth_first_traversal(root, nodes);
     for (size_t i = 0; i < nodes.size(); i++) {
         cout << nodes[i]->print() << endl;
     }
@@ -112,7 +133,7 @@ void CreateNaryTree(gsl_rng *random,
 int main(int argc, char *argv[])
 {
     string config_file_path;
-    
+
     namespace po = boost::program_options;
     po::options_description desc("Program options");
     desc.add_options()
@@ -132,64 +153,66 @@ int main(int argc, char *argv[])
     // Parse the config file.
     SimulationConfig simul_config;
     parse_config_file(config_file_path, simul_config);
-
+    
     gsl_rng *rand = generate_random_object(simul_config.seed);
     auto model_params = ModelParams::RandomInit(rand, 10, 1, 10, simul_config.seq_err);
     model_params.set_var_cp_prob(simul_config.var_cp_prob);
-    
-    bool bd_process = false;
-    if (simul_config.birth_rate > 0 && simul_config.max_cn > 2) {
-        bd_process = true;
-        model_params.set_birth_rate(simul_config.birth_rate);
-        model_params.set_death_rate(simul_config.death_rate);
-    } else if (simul_config.ref_allele_copy_prob.size() >= 1 &&
-               simul_config.var_allele_copy_prob.size() >= 2) {
-        bd_process = false;
-    } else {
-        cerr << "Error in copy number simulation configuration." << endl;
-        cerr << "For BD simulation, specify birth, death rates, and max_cn." << endl;
-        cerr << "For clonal copy number, specify prior over copy number with at least 3 entries." << endl;
-    }
+
+//    bool bd_process = false;
+//    if (simul_config.birth_rate > 0 && simul_config.max_cn > 2) {
+//        bd_process = true;
+//        model_params.set_birth_rate(simul_config.birth_rate);
+//        model_params.set_death_rate(simul_config.death_rate);
+//    } else if (simul_config.ref_allele_copy_prob.size() >= 1 &&
+//               simul_config.var_allele_copy_prob.size() >= 2) {
+//        bd_process = false;
+//    } else {
+//        cerr << "Error in copy number simulation configuration." << endl;
+//        cerr << "For BD simulation, specify birth, death rates, and max_cn." << endl;
+//        cerr << "For clonal copy number, specify prior over copy number with at least 3 entries." << endl;
+//    }
     
     for (size_t n = 0; n < simul_config.n_sims; n++) {
         string sim_path = simul_config.output_path + "/sim" + to_string(n);
         gsl_rng *random = generate_random_object(gsl_rng_get(rand));
 
-        auto root_node = CloneTreeNode::create_root_node();
+        auto root_node = CloneTreeNode::create_root_node(simul_config.n_regions);
         if (simul_config.num_branches == 1) {
-            CreateLinearTree(rand, root_node, simul_config.max_depth);
+            CreateLinearTree(simul_config.n_regions, rand, root_node, simul_config.max_depth);
         } else {
-            if (simul_config.test_branching) {
-                CreateNaryTree(0,
-                               root_node,
-                               simul_config.max_depth,
-                               simul_config.num_branches,
-                               simul_config.min_cell_prev);
-            } else {
-                CreateNaryTree(rand,
-                               root_node,
-                               simul_config.max_depth,
-                               simul_config.num_branches,
-                               simul_config.min_cell_prev);
-            }
+            CreateNaryTree(simul_config.n_regions,
+                           simul_config.randomize_cf ? rand : 0,
+                           root_node,
+                           simul_config.max_depth,
+                           simul_config.num_branches,
+                           simul_config.randomize_branching,
+                           simul_config.min_cf);
         }
-        
+
         vector<BulkDatum *> data;
-        
+
         // Create somatic SNVs: chr and pos.
-        CreateSNVs(random, simul_config, data);
+        // Each BulkDatum instance has a reference to the Locus instance.
+        // We need to keep these alive in the memory during the simulation.
+        // TODO: Consider a different approach? Shared pointer?
+        // Note that the inference program depends on Locus being a reference
+        // in the BulkDatum to update the hyper parameters for each locus from file.
+        // So changing it to a copy of Locus for each BulkDatum is not an option.
+        auto loci = CreateSNVs(random, simul_config, data);
         // Incorporate copy number variation using BD (non-clonal) or genotype (clonal).
-        if (bd_process) {
-            GenerateBulkDataWithBDProcess(random,
-                                          simul_config,
-                                          data,
-                                          root_node);
-        } else {
-            GenerateBulkData(random,
-                             simul_config,
-                             data,
-                             root_node);
-        }
+//        if (bd_process) {
+//            GenerateBulkDataWithBDProcess(random,
+//                                          simul_config,
+//                                          data,
+//                                          root_node);
+//        } else {
+//            GenerateBulkData(random,
+//                             simul_config,
+//                             data,
+//                             root_node);
+//        }
+        
+        GenerateBulkData(random, simul_config, data, root_node);
 
         // Generate single cells data.
         // Output all simulation data.
@@ -218,26 +241,31 @@ int main(int argc, char *argv[])
             // Output information needed for evaluation.
             vector<CloneTreeNode *> all_nodes;
             CloneTreeNode::breadth_first_traversal(root_node,
-                                                                        all_nodes,
-                                                                        false);
+                                                   all_nodes,
+                                                   false);
             unordered_map<BulkDatum *, CloneTreeNode *> datum2node;
             CloneTreeNode::construct_datum2node(all_nodes, datum2node);
             double bulk_log_lik = 0.0;
-            for (size_t i = 0; i < simul_config.n_sites; i++) {
-                bulk_log_lik += BulkLogLikWithGenotype(datum2node[data[i]], data[i], model_params);
+            for (size_t region = 0; region < simul_config.n_regions; region++) {
+                for (size_t i = 0; i < simul_config.n_sites; i++) {
+                    bulk_log_lik += BulkLogLikWithGenotype(region,
+                                                           datum2node[data[i]],
+                                                           data[i],
+                                                           model_params);
+                }
             }
-            double sc_log_lik =
-                TSSBState::compute_log_likelihood_sc(
-                          root_node, data, sc_data, ScLikelihood, model_params);
+            double sc_log_lik = TSSBState::compute_log_likelihood_sc(root_node,
+                                                                     data,
+                                                                     sc_data,
+                                                                     ScLikelihood,
+                                                                     model_params);
             WriteTreeToFile(output_path, data, root_node);
             WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
             WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);
 
             // output cluster labels
             vector<unsigned int> cluster_labels;
-            CloneTreeNode::get_cluster_labels(root_node,
-                                                                   data,
-                                                                   cluster_labels);
+            CloneTreeNode::get_cluster_labels(root_node, data, cluster_labels);
             ofstream f;
             f.open(output_path + "/cluster_labels.txt", ios::out);
             for (size_t i = 0; i < cluster_labels.size(); i++) {

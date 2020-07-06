@@ -18,24 +18,25 @@ class SimulationConfig
 {
 public:
     size_t seed;
-    
+
     // Tree simulation.
     size_t num_branches;
     size_t max_depth;
-    double min_cell_prev;
-    
+
     // Copy number using genotype.
     vector<double> var_allele_copy_prob;
     vector<double> ref_allele_copy_prob;
     double var_cp_prob;
     
-    // Copy numbers using birth and death rates.
-    double birth_rate;
-    double death_rate;
-    size_t max_cn;
+    // Note: We are going to comment this out for now.
+    // Working with birth death process is left as future work.
+//    double birth_rate;
+//    double death_rate;
+//    size_t max_cn;
 
     // Bulk data configuration.
     size_t n_sites;
+    size_t n_regions;
     size_t bulk_mean_depth;
     double seq_err;
 
@@ -53,7 +54,9 @@ public:
     string output_path;
     
     bool randomize_dropout = false;
-    bool test_branching = false;
+    bool randomize_branching = false;
+    bool randomize_cf = true;
+    double min_cf = 0.01;
 
     void insert_option(string key, string val);
 };

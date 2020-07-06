@@ -23,69 +23,73 @@ void InitializeTestSetup() {
 
 BOOST_AUTO_TEST_CASE( TestBulkLogLikWithTotalCopyNumber )
 {
-    size_t total_cn = 2;
-    size_t var_read_count = 10;
-    size_t total_read_count = 20;
+    vector<size_t> total_cn(1, 2);
+    vector<size_t> var_read_count(1, 10);
+    vector<size_t> total_read_count(1, 20);
     Locus locus("", "", 0, "");
     
-    auto root = CloneTreeNode::create_root_node();
+    auto root = CloneTreeNode::create_root_node(1);
     auto child = (CloneTreeNode *)root->spawn_child(0.5);
-    child->set_cellular_prev(0.5);
-    child->set_clone_freq(0.5);
+    child->set_cellular_prev(0, 0.5);
+    child->set_clone_freq(0, 0.5);
 
-    BulkDatum datum1("s1", locus, 0, 0, total_cn);
-    double realized = BulkLogLikWithTotalCopyNumber(child, &datum1, model_params);
+    BulkDatum datum1("s1", locus);
+    datum1.AddRegionData(0, 0, 1, 1);
+    double realized = BulkLogLikWithTotalCopyNumber(0, child, &datum1, model_params);
     std::cout << realized << std::endl;
     BOOST_TEST(realized == 0.0);
 
     BulkDatum datum2("s2", locus, var_read_count, total_read_count, total_cn);
-    realized = BulkLogLikWithTotalCopyNumber(child, &datum2, model_params);
+    realized = BulkLogLikWithTotalCopyNumber(0, child, &datum2, model_params);
     std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -2.726685148) < 1e-6);
     
     // Change total_cn to 8.
-    total_cn = 8;
-    datum2.SetTotalCopyNumber(total_cn);
-    realized = BulkLogLikWithTotalCopyNumber(child, &datum2, model_params);
+    total_cn[0] = 8;
+    BulkDatum datum3("s3", locus, var_read_count, total_read_count, total_cn);
+    realized = BulkLogLikWithTotalCopyNumber(0, child, &datum3, model_params);
     std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -3.602852362) < 1e-6);
     
-    total_cn = 0;
-    BulkDatum datum3("s1", locus, var_read_count, total_read_count, total_cn);
-    realized = BulkLogLikWithTotalCopyNumber(child, &datum3, model_params);
+    total_cn[0] = 0;
+    BulkDatum datum4("s4", locus, var_read_count, total_read_count, total_cn);
+    realized = BulkLogLikWithTotalCopyNumber(0, child, &datum4, model_params);
     std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -56.96076648) < 1e-6);
 }
 
 BOOST_AUTO_TEST_CASE( TestBulkLogLikWithGenotype )
 {
-    size_t major_cn = 3;
-    size_t minor_cn = 1;
-    size_t var_read_count = 10;
-    size_t total_read_count = 20;
+    vector<size_t> major_cn(1, 3);
+    vector<size_t> minor_cn(1, 1);
+    vector<size_t> var_read_count(1, 10);
+    vector<size_t> total_read_count(1, 20);
     Locus locus("", "", 0, "");
 
-    auto root = CloneTreeNode::create_root_node();
+    auto root = CloneTreeNode::create_root_node(1);
     auto child = (CloneTreeNode *)root->spawn_child(0.5);
-    child->set_cellular_prev(0.5);
-    child->set_clone_freq(0.5);
+    child->set_cellular_prev(0, 0.5);
+    child->set_clone_freq(0, 0.5);
     
     BulkDatum datum1("s1", locus, var_read_count, total_read_count,
                      major_cn, minor_cn);
-    double realized = BulkLogLikWithGenotype(child, &datum1, model_params);
+    double realized = BulkLogLikWithGenotype(0, child, &datum1, model_params);
     std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -3.658831964) < 1e-6);
-    
-    major_cn = 2;
-    minor_cn = 0;
-    datum1.SetGenotype(make_pair(major_cn, minor_cn));
-    realized = BulkLogLikWithGenotype(child, &datum1, model_params);
+
+    major_cn[0] = 2;
+    minor_cn[0] = 0;
+    BulkDatum datum2("s2", locus, var_read_count, total_read_count,
+                     major_cn, minor_cn);
+    realized = BulkLogLikWithGenotype(0, child, &datum2, model_params);
     std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -2.373800323) < 1e-6);
-    
-    BulkDatum datum2("s2", locus, 0, 0,
+
+    var_read_count[0] = 0;
+    total_read_count[0] = 0;
+    BulkDatum datum3("s3", locus, var_read_count, total_read_count,
                      major_cn, minor_cn);
-    realized = BulkLogLikWithGenotype(child, &datum2, model_params);
+    realized = BulkLogLikWithGenotype(0, child, &datum3, model_params);
     std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - 0) < 1e-6);
 }
