@@ -15,7 +15,7 @@ id_(name), locus_(locus)
 }
 
 BulkDatum::BulkDatum(string name, Locus &locus,
-                     vector<size_t> n_variants, vector<size_t> n_reads) :
+                     vector<size_t> &n_variants, vector<size_t> &n_reads) :
 id_(name), locus_(locus),
 variant_reads_(n_variants), total_reads_(n_reads)
 {
@@ -24,8 +24,8 @@ variant_reads_(n_variants), total_reads_(n_reads)
 
 
 BulkDatum::BulkDatum(string name, Locus &locus,
-                     vector<size_t> n_variants, vector<size_t> n_reads,
-                     vector<size_t> total_cns) :
+                     vector<size_t> &n_variants, vector<size_t> &n_reads,
+                     vector<size_t> &total_cns) :
 id_(name), locus_(locus),
 variant_reads_(n_variants), total_reads_(n_reads),
 total_cns_(total_cns)
@@ -34,8 +34,8 @@ total_cns_(total_cns)
 }
 
 BulkDatum::BulkDatum(string name, Locus &locus,
-                     vector<size_t> variant_reads, vector<size_t> total_reads,
-                     vector<size_t> major_cns, vector<size_t> minor_cns) :
+                     vector<size_t> &variant_reads, vector<size_t> &total_reads,
+                     vector<size_t> &major_cns, vector<size_t> &minor_cns) :
 id_(name),
 locus_(locus),
 variant_reads_(variant_reads),

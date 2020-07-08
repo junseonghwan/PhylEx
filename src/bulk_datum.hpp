@@ -33,14 +33,14 @@ class BulkDatum
 public:
     BulkDatum(string name, Locus &locus);
     BulkDatum(string name, Locus &locus,
-              vector<size_t> n_variants, vector<size_t> n_reads);
+              vector<size_t> &n_variants, vector<size_t> &n_reads);
     BulkDatum(string name, Locus &locus,
-              vector<size_t> n_variants, vector<size_t> n_reads,
-              vector<size_t> total_cns);
+              vector<size_t> &n_variants, vector<size_t> &n_reads,
+              vector<size_t> &total_cns);
     BulkDatum(string name, Locus &locus,
-              vector<size_t> n_variants, vector<size_t> n_reads,
-              vector<size_t> major_cn, vector<size_t> minor_cn);
-    
+              vector<size_t> &n_variants, vector<size_t> &n_reads,
+              vector<size_t> &major_cn, vector<size_t> &minor_cn);
+
     string GetId() const { return id_; }
     inline const vector<size_t> &GetVariantReadCount() const { return variant_reads_; }
     inline const vector<size_t> &GetReadCount() const { return total_reads_; }
