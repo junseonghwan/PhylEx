@@ -99,8 +99,8 @@ public:
 
     //void insert_datum(const gsl_rng *random, BulkDatum * datum, const ModelParams &params);
     void set_sc_data(vector<SingleCellData *> *sc_data, const ModelParams &model_params);
-    
-const vector<BulkDatum *> &get_data() const;
+
+    const vector<BulkDatum *> &get_data() const;
 
     // getters
     size_t get_num_nodes();
@@ -130,7 +130,6 @@ const vector<BulkDatum *> &get_data() const;
     static double get_log_prior_assignment(CloneTreeNode *root);
     inline double get_log_lik_bulk() { return log_lik_bulk; }
     inline double get_log_lik_sc() { return log_lik_sc; }
-    //double compute_log_likelihood_sc_subset(const gsl_rng *random, const ModelParams &params);
 
     // for output and debugging
     string print();

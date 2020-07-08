@@ -61,7 +61,7 @@ class CloneTreeNode
     vector<size_t> name;
     double nu = 0.0;
     CloneTreeNode *parent_node = 0;
-    unordered_set<BulkDatum *> data;
+    unordered_set<const BulkDatum *> data;
     
     // map: child branch idx -> pair<psi_stick, Node *>
     unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child;
@@ -92,7 +92,7 @@ public:
     size_t get_num_data() const;
     double get_nu_stick() const;
     CloneTreeNode *get_parent_node() const;
-    const unordered_set<BulkDatum *> &get_data() const;
+    const unordered_set<const BulkDatum *> &get_data() const;
     const pair<double, CloneTreeNode *> &get_child(size_t child_idx) const;
     size_t get_num_children() const;
     bool is_root() const;
@@ -129,11 +129,11 @@ public:
                                    const vector<BulkDatum *> &data,
                                    vector<unsigned int> &cluster_labels);
     static void construct_datum2node(vector<CloneTreeNode *> &all_nodes,
-                                     unordered_map<BulkDatum *, CloneTreeNode *> &datum2node);
+                                     unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node);
     static gsl_matrix *GetAncestralMatrix(CloneTreeNode *root,
                                           const vector<BulkDatum *> &bulk_data,
-                                          const unordered_map<BulkDatum *, CloneTreeNode *> &datum2node);
-    
+                                          const unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node);
+
     static bool less(CloneTreeNode *l, CloneTreeNode *r);
     friend bool operator<(const CloneTreeNode& lhs, const CloneTreeNode& rhs) {
         vector<string> lhs_arr, rhs_arr;

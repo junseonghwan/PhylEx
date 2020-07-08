@@ -126,8 +126,8 @@ void CloneTreeNode::get_snvs(CloneTreeNode *node, unordered_set<Locus> &ret)
     // traverse to the root to retrieve all SNVs
     CloneTreeNode *v = node;
     while (v != 0) {
-        unordered_set<BulkDatum *> data = v->get_data();
-        for (BulkDatum *datum : data) {
+        unordered_set<const BulkDatum *> data = v->get_data();
+        for (const BulkDatum *datum : data) {
             ret.insert(datum->GetLocus());
         }
         v = v->get_parent_node();
@@ -177,7 +177,7 @@ string CloneTreeNode::print()
     ret += "psi=" + psi_stick_str + ", ";
     
     ret += "data=( ";
-    for (BulkDatum *datum : get_data()) {
+    for (const BulkDatum *datum : get_data()) {
         ret += datum->GetId() + " ";
     }
     ret += ")";
@@ -278,7 +278,7 @@ CloneTreeNode *CloneTreeNode::get_parent_node() const
     return parent_node;
 }
 
-const unordered_set<BulkDatum *> &CloneTreeNode::get_data() const
+const unordered_set<const BulkDatum *> &CloneTreeNode::get_data() const
 {
     return data;
 }
@@ -626,7 +626,7 @@ void CloneTreeNode::get_cluster_labels(CloneTreeNode *root,
 {
     vector<CloneTreeNode *> all_nodes;
     CloneTreeNode::breadth_first_traversal(root, all_nodes, false);
-    unordered_map<BulkDatum *, CloneTreeNode *> datum2node;
+    unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
     construct_datum2node(all_nodes, datum2node);
     
     // determine the classes and clusters
@@ -644,10 +644,10 @@ void CloneTreeNode::get_cluster_labels(CloneTreeNode *root,
 }
 
 void CloneTreeNode::construct_datum2node(vector<CloneTreeNode *> &all_nodes,
-                                     unordered_map<BulkDatum *, CloneTreeNode *> &datum2node)
+                                     unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node)
 {
     for (auto it = all_nodes.begin(); it != all_nodes.end(); ++it) {
-        for (BulkDatum *datum : (*it)->get_data())
+        for (const BulkDatum *datum : (*it)->get_data())
         {
             datum2node[datum] = (*it);
         }
@@ -656,17 +656,17 @@ void CloneTreeNode::construct_datum2node(vector<CloneTreeNode *> &all_nodes,
 
 gsl_matrix *CloneTreeNode::GetAncestralMatrix(CloneTreeNode *root,
                                           const vector<BulkDatum *> &data,
-                                          const unordered_map<BulkDatum *, CloneTreeNode *> &datum2node)
+                                          const unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node)
 {
     size_t N = data.size();
-    vector<unordered_set<BulkDatum *> > ancestors(N);
+    vector<unordered_set<const BulkDatum *> > ancestors(N);
     for (size_t i = 0; i < N; i++) {
         BulkDatum *datum = data.at(i);
         CloneTreeNode *v = datum2node.at(datum);
         // trace up to the root and set the row of A
         while (v != root) {
             v = v->get_parent_node();
-            unordered_set<BulkDatum *> d = v->get_data();
+            unordered_set<const BulkDatum *> d = v->get_data();
             ancestors[i].insert(d.begin(), d.end());
         }
     }

@@ -322,7 +322,7 @@ void WriteTreeToFile(string output_path,
     // construct datum2node mapping
     vector<CloneTreeNode *> all_nodes;
     CloneTreeNode::breadth_first_traversal(root_node, all_nodes, false);
-    unordered_map<BulkDatum *, CloneTreeNode *> datum2node;
+    unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
     CloneTreeNode::construct_datum2node(all_nodes, datum2node);
 
     // ancestral matrix for mutations for computing accuracy on the ordering

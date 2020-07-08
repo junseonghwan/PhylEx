@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
             CloneTreeNode::breadth_first_traversal(root_node,
                                                    all_nodes,
                                                    false);
-            unordered_map<BulkDatum *, CloneTreeNode *> datum2node;
+            unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
             CloneTreeNode::construct_datum2node(all_nodes, datum2node);
             double bulk_log_lik = 0.0;
             for (size_t region = 0; region < simul_config.n_regions; region++) {
