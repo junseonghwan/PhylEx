@@ -240,31 +240,6 @@ void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool out
     f.close();
 }
 
-void write_scDNA_data(string output_path,
-                       const vector<SingleCellData *> &sc_data,
-                       const vector<BulkDatum *> &bulk)
-{
-    ofstream f;
-    f.open(output_path, ios::out);
-    // header: ID\tChromosome\tPosition\tMutantCount\tReferenceCount\tINFO
-    for (unsigned int i = 0; i < sc_data.size(); i++)
-    {
-        SingleCellData *sc = (SingleCellData *)sc_data[i];
-        //auto mut_map = sc->get_mutation_map();
-        for (size_t j = 0; j < bulk.size(); j++)
-        {
-            //size_t mut_status = mut_map[bulk[j]->get_locus()];
-            size_t mut_status = sc->get_mutation(bulk[j]->GetLocus());
-            f << mut_status;
-            if (j < bulk.size() - 1) {
-                f << " ";
-            }
-        }
-        f << "\n";
-    }
-    f.close();
-}
-
 void WriteBetaBinomHp(string output_path,
                       const vector<BulkDatum*> &bulk_data)
 {
@@ -897,120 +872,6 @@ void ReadCnPrior(string cn_prior_path, vector<BulkDatum *> &bulk_data)
     dat_file.close();
 }
 
-//void read_scDNA_data(string sc_data_path, vector<BulkDatum *> &bulk_data, vector<SingleCellData *> &sc_data)
-//{
-//    // matrix of {0, 1, 3}
-//    // first column is header
-//    string line;
-//    ifstream dat_file (sc_data_path);
-//    if (!dat_file.is_open())
-//    {
-//        cerr << "Could not open the file: " << sc_data_path << endl;
-//        exit(-1);
-//    }
-//
-//    vector<string> results;
-//    vector<double> dat;
-//
-//    size_t line_idx = 0;
-//    while ( getline (dat_file, line) )
-//    {
-//        boost::split(results, line, boost::is_any_of(" "));
-//        if (results.size() != bulk_data.size()) {
-//            cerr << "Num mutations for single cell must match the number of mutations in bulk." << endl;
-//            exit(-1);
-//        }
-//        unordered_map<Locus, size_t> mutation_map;
-//        for (size_t i = 0; i < results.size(); i++) {
-//            size_t mut = stoi(results[i]);
-//            const Locus &locus = bulk_data[i]->get_locus();
-//            mutation_map[locus] = mut;
-//        }
-//        SingleCellData *sc = new SingleCellData("c" + to_string(line_idx), mutation_map);
-//        line_idx++;
-//        sc_data.push_back(sc);
-//    }
-//    dat_file.close();
-//}
-
-//void read_scRNA_data(string scRNA_data_path,
-//                     unordered_set<Locus> &somatic_loci,
-//                     vector<SingleCellData *> &sc_data)
-//{
-//    // first column is header
-//    // file contains 12 columns:
-//    // cell name, somatic chr, somatic pos, germline chr, germline pos,
-//    // n_var, n_reads, var_var, var_ref, ref_var, ref_ref, expression level
-//    string line;
-//    ifstream dat_file (scRNA_data_path);
-//    if (!dat_file.is_open())
-//    {
-//        cerr << "Could not open the file: " << scRNA_data_path << endl;
-//        exit(-1);
-//    }
-//
-//    unordered_map<string, SingleCellData *> dat;
-//    vector<string> cell_name_orders;
-//
-//    vector<string> results;
-//    size_t line_idx = 0;
-//    SingleCellData *sc = 0;
-//    while ( getline (dat_file, line) )
-//    {
-//        if (line_idx == 0) {
-//            line_idx++;
-//            continue;
-//        }
-//        boost::split(results, line, boost::is_any_of(","));
-//        for (size_t i = 0; i < results.size(); i++) {
-//            boost::algorithm::trim(results[i]);
-//        }
-//        if (dat.count(results[0]) > 0) {
-//            sc = dat[results[0]];
-//        } else {
-//            sc = new SingleCellData(results[0]);
-//            sc->set_data_type(SC_DATA_TYPE::RNA);
-//            dat[results[0]] = sc;
-//            cell_name_orders.push_back(results[0]);
-//        }
-//
-//        Locus somatic_locus(results[1], stoul(results[2]));
-//        // check that locus is also found in the bulk data
-//        if (somatic_loci.count(somatic_locus) == 0) {
-//            cerr << "Single cell RNA data contains loci that is not found in the bulk." << endl;
-//            exit(-1);
-//        }
-//
-//        Locus germline_locus(results[3], stoul(results[4]));
-//        LociPair *loci_pair = new LociPair(germline_locus, somatic_locus, VariantsPhased::UNKNOWN);
-//        size_t n_var_reads = stoul(results[5]);
-//        size_t n_reads = stoul(results[6]);
-//        LocusDatum *locus_datum = new LocusDatum(n_reads, n_var_reads);
-//        size_t var_var = stoul(results[7]);
-//        size_t var_ref = stoul(results[8]);
-//        size_t ref_var = stoul(results[9]);
-//        size_t ref_ref = stoul(results[10]);
-//        vector<size_t> paired_reads;
-//        paired_reads.push_back(var_var);
-//        paired_reads.push_back(var_ref);
-//        paired_reads.push_back(ref_var);
-//        paired_reads.push_back(ref_ref);
-//        LociPairDatum *loci_pair_datum = new LociPairDatum(loci_pair, paired_reads);
-//
-//        double expr_level = stod(results[11]);
-//        sc->insert_read(somatic_locus, locus_datum);
-//        sc->set_paired_read(somatic_locus, loci_pair_datum);
-//        sc->set_expr_level(somatic_locus, expr_level);
-//
-//        line_idx++;
-//    }
-//    dat_file.close();
-//
-//    for (string cell_name : cell_name_orders) {
-//        sc_data.push_back(dat[cell_name]);
-//    }
-//}
-
 void ReadScRnaData(string scRNA_data_path,
                      unordered_map<string, Locus *> &id2locus,
                      vector<SingleCellData *> &sc_data)
@@ -1053,7 +914,6 @@ void ReadScRnaData(string scRNA_data_path,
             sc = dat[cell_name];
         } else {
             sc = new SingleCellData(cell_name);
-            sc->set_data_type(SC_DATA_TYPE::RNA);
             dat[cell_name] = sc;
             cell_name_order.push_back(cell_name);
         }
