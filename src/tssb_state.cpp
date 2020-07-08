@@ -597,9 +597,7 @@ double TSSBState::compute_log_likelihood_sc(CloneTreeNode *root,
     for (CloneTreeNode *v : all_nodes)
     {
         unordered_set<const BulkDatum *> snvs;
-        auto snv_set = v->get_data();
-        auto ancestral_snvs = node2snvs[v->get_parent_node()];
-        snv_set.insert(ancestral_snvs.begin(), ancestral_snvs.end());
+        CloneTreeNode::get_dataset(v, snvs);
         node2snvs[v] = snvs;
     }
     

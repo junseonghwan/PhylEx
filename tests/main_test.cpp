@@ -6,6 +6,7 @@
 
 #include "clone_node.hpp"
 #include "single_cell.hpp"
+#include "tssb_state.hpp"
 
 const double ALPHA0 = 1.5;
 const double GAMMA = 0.5;
@@ -117,4 +118,77 @@ BOOST_AUTO_TEST_CASE( TestScLikelihood )
     realized = ScLikelihood(&bulk, &c0, false, model_params);
     std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -9.210441917) < 1e-6);
+}
+
+BOOST_AUTO_TEST_CASE( TestScCache )
+{
+    gsl_rng *random = generate_random_object(3);
+    ModelParams model_params(3, 1, 0.8, 0.01);
+    size_t region_count = 1;
+    size_t single_cell_count = 10;
+    size_t bulk_data_count = 20;
+
+    // Generate some bulk data.
+    vector<BulkDatum *> bulk_data;
+    unordered_set<Locus> somatic_loci;
+    string mutation_id;
+    for (size_t i = 0; i < bulk_data_count; i++)
+    {
+        vector<size_t> total_reads(1, gsl_rng_uniform_int(random, 1000));
+        vector<size_t> var_reads(1, gsl_rng_uniform_int(random, total_reads[0]));
+        vector<size_t> major_cns(1, 1);
+        vector<size_t> minor_cns(1, 1);
+
+        mutation_id = "s" + to_string(i);
+        Locus *loci = new Locus(mutation_id, "chr", i, "gene");
+        BulkDatum *datum = new BulkDatum(mutation_id, *loci,
+                                         var_reads, total_reads,
+                                         major_cns, minor_cns);
+        bulk_data.push_back(datum);
+        somatic_loci.insert(*loci);
+    }
+    
+    // Generate single cell data.
+    vector<SingleCellData *> sc_data;
+    for (size_t c = 0; c < single_cell_count; c++) {
+        unordered_map<Locus, LocusDatum*> reads;
+        for (Locus locus : somatic_loci) {
+            size_t total_read_count = gsl_rng_uniform_int(random, 20);
+            size_t var_read_count = 0;
+            if (total_read_count > 0) {
+                var_read_count = gsl_rng_uniform_int(random, total_read_count);
+            }
+            reads[locus] = new LocusDatum(total_read_count, var_read_count);
+        }
+        SingleCellData *sc = new SingleCellData("c" + to_string(c),
+                                                reads);
+        sc_data.push_back(sc);
+    }
+
+    CloneTreeNode *root = CloneTreeNode::create_root_node(region_count);
+    TSSBState tree(random, root, model_params,
+                   BulkLogLikWithGenotype, ScLikelihood,
+                   &bulk_data, &sc_data);
+    cout << tree.print() << endl;
+
+    double sc_log_lik = TSSBState::compute_log_likelihood_sc(root,
+                                                             bulk_data,
+                                                             sc_data,
+                                                             ScLikelihood,
+                                                             model_params);
+    double sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params);
+    cout << "At init: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
+    BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
+    
+    // Resample assignment of bulk data.
+    tree.resample_data_assignment(random, model_params);
+    cout << tree.print() << endl;
+    sc_log_lik = TSSBState::compute_log_likelihood_sc(root,
+                                                      bulk_data,
+                                                      sc_data,
+                                                      ScLikelihood,
+                                                      model_params);
+    sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params);
+    cout << "After move: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
+    BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
 }
