@@ -339,6 +339,14 @@ void GenerateScRnaData(gsl_rng *random,
                        const SimulationConfig &simul_config,
                        vector<SingleCellData *> &sc_data)
 {
+    vector<size_t> bulk_sc_coverage(data.size(), 0);
+    // We subselect bulk to have single cell coverage.
+    for (size_t i = 0; i < data.size(); i++) {
+        if (gsl_ran_flat(random, 0, 1) < simul_config.snv_sc_sparsity) {
+            bulk_sc_coverage[i] = 1;
+        }
+    }
+
     // Retrieve all nodes/clones with at least one SNV assigned.
     vector<CloneTreeNode *> non_empty_nodes;
     CloneTreeNode::breadth_first_traversal(root_node, non_empty_nodes, true);
@@ -350,10 +358,11 @@ void GenerateScRnaData(gsl_rng *random,
 
         cout << "Cell " << c << " assigned to " << node->get_name() << endl;
         SingleCellData *sc = new SingleCellData("c" + to_string(c), data.size());
-        GenerateScRnaReads2(random,
+        GenerateScRnaReads(random,
                             simul_config,
                             node,
                             data,
+                            bulk_sc_coverage,
                             *sc);
         
         sc_data.push_back(sc);
@@ -361,11 +370,12 @@ void GenerateScRnaData(gsl_rng *random,
     }
 }
 
-void GenerateScRnaReads2(const gsl_rng *random,
-                         const SimulationConfig &simul_config,
-                         CloneTreeNode *node,
-                         const vector<BulkDatum*> &somatic_loci,
-                         SingleCellData &sc)
+void GenerateScRnaReads(const gsl_rng *random,
+                        const SimulationConfig &simul_config,
+                        CloneTreeNode *node,
+                        const vector<BulkDatum*> &somatic_loci,
+                        vector<size_t> &bulk_sc_coverage,
+                        SingleCellData &sc)
 {
     size_t n_expr_loci = 0;
     if (simul_config.randomize_dropout) {
@@ -381,9 +391,11 @@ void GenerateScRnaReads2(const gsl_rng *random,
 
     // Randomly select n_expr_loci to be expressed.
     vector<size_t> sampled_loci_idx;
-    while (sampled_loci_idx.size() < n_expr_loci) {
+    for (size_t i = 0; i < n_expr_loci; i++) {
         size_t locus_idx = discrete_uniform(random, somatic_loci.size());
-        sampled_loci_idx.push_back(locus_idx);
+        if (bulk_sc_coverage[locus_idx] == 1) {
+            sampled_loci_idx.push_back(locus_idx);
+        }
     }
     
     cout << "Number of sites expressed: " << sampled_loci_idx.size() << "\n";
@@ -425,3 +437,4 @@ void GenerateScRnaReads2(const gsl_rng *random,
     cout << var_loci_expr_count << "/" << snvs.size() << " variants expressed.\n";
     cout << var_read_observed_count << "/" << var_loci_expr_count << " sites with variant reads observed.\n";
 }
+

@@ -46,6 +46,7 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
     sc_presence_matrix_ = EigenMatrix::Zero(cell_count, mutation_count);
     sc_absence_matrix_ = EigenMatrix::Zero(cell_count, mutation_count);
     // Evaluate single cell log likelihoods.
+    size_t snv_sc_coverage_count = 0;
     for (size_t n = 0; n < mutation_count; n++) {
         size_t sc_coverage_count = 0;
         for (size_t c = 0; c < cell_count; c++) {
@@ -56,8 +57,10 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
         }
         if (sc_coverage_count > 0) {
             has_sc_coverage_.push_back(true);
+            snv_sc_coverage_count++;
         }
     }
+    cout << "SNV with single cell coverage: " << snv_sc_coverage_count << "\n";
 }
 
 /*******************
@@ -101,16 +104,17 @@ void TSSBState::initialize_data_assignment(const gsl_rng *random, size_t mut_id,
     // assign the datum to the first child of root
     assert(root->get_num_children() > 0);
     CloneTreeNode *first_child_node = root->get_child(0).second;
-    assign_data_point(0, first_child_node, mut_id, params);
+    assign_data_point(0, first_child_node, mut_id, params, false);
 }
 
 
-void TSSBState::initialize_sc_cache(size_t c, CloneTreeNode *v, unordered_set<const BulkDatum *> &snvs, const ModelParams &model_params)
+//void TSSBState::initialize_sc_cache(size_t c, CloneTreeNode *v, unordered_set<const BulkDatum *> &snvs, const ModelParams &model_params)
+void TSSBState::initialize_sc_cache(size_t c, CloneTreeNode *v, const ModelParams &model_params)
 {
     unordered_map<CloneTreeNode *, double> &cache_c = sc_cache[c];
     //cache_c[v] = v->compute_log_likelihood_of_sc(sc_data->at(c), snas, model_params);
     //cache_c[v] = compute_loglik_sc(snvs, sc_data->at(c), model_params);
-    cache_c[v] = compute_loglik_sc(snvs, c);
+    cache_c[v] = compute_loglik_sc(v, c);
 }
 
 ////void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &params)
@@ -217,29 +221,6 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
     vector<CloneTreeNode *> subtree_new;
     get_all_nodes(false, curr_node, subtree_curr);
     get_all_nodes(false, new_node, subtree_new);
-    unordered_set<CloneTreeNode *> subtree_curr_set;
-    subtree_curr_set.insert(subtree_curr.begin(), subtree_curr.end());
-    unordered_set<CloneTreeNode *> subtree_new_set;
-    subtree_new_set.insert(subtree_new.begin(), subtree_new.end());
-    
-    // retrieve set of SNVs for each node in subtree_curr and subtree_new
-    unordered_map<CloneTreeNode *, unordered_set<const BulkDatum *> *> node2snvs;
-    for (CloneTreeNode *v : subtree_curr)
-    {
-        unordered_set<const BulkDatum *> *snvs = new unordered_set<const BulkDatum *>();
-        // This loops until it reaches the root.
-        // We can write better code for getting the mutations without traversing to the root each time.
-        CloneTreeNode::GetDataset(v, *snvs);
-        node2snvs[v] = snvs;
-    }
-    for (CloneTreeNode *v : subtree_new)
-    {
-        if (node2snvs.count(v) == 0) {
-            unordered_set<const BulkDatum *> *snvs = new unordered_set<const BulkDatum *>();
-            CloneTreeNode::GetDataset(v, *snvs);
-            node2snvs[v] = snvs;
-        }
-    }
     
     bool exp_mut_status;
     for (size_t c = 0; c < sc_data->size(); c++) {
@@ -249,39 +230,25 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
         //cout << "Updating subtree of current node: " << curr_node->get_name() << endl;
         for (CloneTreeNode *v : subtree_curr) {
             if (sc_cache[c].count(v) == 0) {
-                initialize_sc_cache(c, v, *node2snvs[v], params);
-                //cout << "New init: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
+                initialize_sc_cache(c, v, params);
                 continue;
             }
-            
-            //cout << "Before: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
-            //double x = (*log_lik_sc_at_site)(datum, sc_data->at(c), true, params);
+
             double x = sc_presence_matrix_(c, mut_id);
             sc_cache[c][v] -= x;
-            exp_mut_status = (subtree_new_set.count(v) > 0) ? true : false; // check if v is expected to have the mutation or not
-            //double y = (*log_lik_sc_at_site)(datum, sc_data->at(c), exp_mut_status, params);
+            exp_mut_status = v->IsDescendantOf(new_node) ? true : false;
             double y = exp_mut_status ? sc_presence_matrix_(c, mut_id) : sc_absence_matrix_(c, mut_id);
             sc_cache[c][v] += y;
-            //            cout << "After: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
-            //            cout << "x: " << x << ", y: " << y << ", has mutation: " << exp_mut_status << endl;
-            // check sc_cache[c][v] is correct
-            //            double exp_val = compute_loglik_sc(*node2snvs[v], sc_data->at(c), params);
-            //            double sanity_check = sc_cache[c][v];
-            //            assert(abs(sanity_check - exp_val) < 1e-3);
-            //            if (abs(sanity_check - exp_val) > 1e-3) {
-            //                cout << "sanity check failed." << endl;
-            //            }
-            
         }
         
         //cout << "Updating subtree of new node: " << new_node->get_name() << endl;
         for (CloneTreeNode *v : subtree_new) {
             if (sc_cache[c].count(v) == 0) {
-                initialize_sc_cache(c, v, *node2snvs[v], params);
+                initialize_sc_cache(c, v, params);
                 //cout << "New init: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
                 continue;
             }
-            exp_mut_status = (subtree_curr_set.count(v) > 0) ? true : false; // check if v had the mutation or not
+            exp_mut_status = v->IsDescendantOf(curr_node) ? true : false; // check if v had the mutation or not
             //cout << "Before: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
             //double x = (*log_lik_sc_at_site)(datum, sc_data->at(c), exp_mut_status, params);
             double x = exp_mut_status ? sc_presence_matrix_(c, mut_id) : sc_absence_matrix_(c, mut_id);
@@ -301,10 +268,107 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
         }
     }
     
-    for (auto it = node2snvs.begin(); it != node2snvs.end(); ++it) {
-        delete it->second;
-    }
 }
+
+//void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params)
+//{
+//    //cout << "===== Update sc cache =====" << endl;
+//    if (sc_data == 0) {
+//        return;
+//    }
+//
+//    vector<CloneTreeNode *> subtree_curr;
+//    vector<CloneTreeNode *> subtree_new;
+//    get_all_nodes(false, curr_node, subtree_curr);
+//    get_all_nodes(false, new_node, subtree_new);
+//    unordered_set<CloneTreeNode *> subtree_curr_set;
+//    subtree_curr_set.insert(subtree_curr.begin(), subtree_curr.end());
+//    unordered_set<CloneTreeNode *> subtree_new_set;
+//    subtree_new_set.insert(subtree_new.begin(), subtree_new.end());
+//
+//    // retrieve set of SNVs for each node in subtree_curr and subtree_new
+//    unordered_map<CloneTreeNode *, unordered_set<const BulkDatum *> *> node2snvs;
+//    for (CloneTreeNode *v : subtree_curr)
+//    {
+//        unordered_set<const BulkDatum *> *snvs = new unordered_set<const BulkDatum *>();
+//        // This loops until it reaches the root.
+//        // We can write better code for getting the mutations without traversing to the root each time.
+//        CloneTreeNode::GetDataset(v, *snvs);
+//        node2snvs[v] = snvs;
+//    }
+//    for (CloneTreeNode *v : subtree_new)
+//    {
+//        if (node2snvs.count(v) == 0) {
+//            unordered_set<const BulkDatum *> *snvs = new unordered_set<const BulkDatum *>();
+//            CloneTreeNode::GetDataset(v, *snvs);
+//            node2snvs[v] = snvs;
+//        }
+//    }
+//
+//    bool exp_mut_status;
+//    for (size_t c = 0; c < sc_data->size(); c++) {
+//
+//        // update the entries that belong to subtrees of curr_node and new_node
+//        // TODO: code is being repeated: facor this out
+//        //cout << "Updating subtree of current node: " << curr_node->get_name() << endl;
+//        for (CloneTreeNode *v : subtree_curr) {
+//            if (sc_cache[c].count(v) == 0) {
+//                initialize_sc_cache(c, v, *node2snvs[v], params);
+//                //cout << "New init: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
+//                continue;
+//            }
+//
+//            //cout << "Before: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
+//            //double x = (*log_lik_sc_at_site)(datum, sc_data->at(c), true, params);
+//            double x = sc_presence_matrix_(c, mut_id);
+//            sc_cache[c][v] -= x;
+//            exp_mut_status = (subtree_new_set.count(v) > 0) ? true : false; // check if v is expected to have the mutation or not
+//            //double y = (*log_lik_sc_at_site)(datum, sc_data->at(c), exp_mut_status, params);
+//            double y = exp_mut_status ? sc_presence_matrix_(c, mut_id) : sc_absence_matrix_(c, mut_id);
+//            sc_cache[c][v] += y;
+//            //            cout << "After: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
+//            //            cout << "x: " << x << ", y: " << y << ", has mutation: " << exp_mut_status << endl;
+//            // check sc_cache[c][v] is correct
+//            //            double exp_val = compute_loglik_sc(*node2snvs[v], sc_data->at(c), params);
+//            //            double sanity_check = sc_cache[c][v];
+//            //            assert(abs(sanity_check - exp_val) < 1e-3);
+//            //            if (abs(sanity_check - exp_val) > 1e-3) {
+//            //                cout << "sanity check failed." << endl;
+//            //            }
+//
+//        }
+//
+//        //cout << "Updating subtree of new node: " << new_node->get_name() << endl;
+//        for (CloneTreeNode *v : subtree_new) {
+//            if (sc_cache[c].count(v) == 0) {
+//                initialize_sc_cache(c, v, *node2snvs[v], params);
+//                //cout << "New init: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
+//                continue;
+//            }
+//            exp_mut_status = (subtree_curr_set.count(v) > 0) ? true : false; // check if v had the mutation or not
+//            //cout << "Before: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
+//            //double x = (*log_lik_sc_at_site)(datum, sc_data->at(c), exp_mut_status, params);
+//            double x = exp_mut_status ? sc_presence_matrix_(c, mut_id) : sc_absence_matrix_(c, mut_id);
+//            sc_cache[c][v] -= x;
+//            //double y = (*log_lik_sc_at_site)(datum, sc_data->at(c), true, params);
+//            double y = sc_presence_matrix_(c, mut_id);
+//            sc_cache[c][v] += y;
+//            //            cout << "After: l[" << c << ", " << v << "] = " << sc_cache[c][v] << endl;
+//            //            cout << "x: " << x << ", y: " << y << ", has mutation: " << exp_mut_status << endl;
+//            // check sc_cache[c][v] is correct
+//            //            double exp_val = compute_loglik_sc(*node2snvs[v], sc_data->at(c), params);
+//            //            double sanity_check = sc_cache[c][v];
+//            //            assert(abs(sanity_check - exp_val) < 1e-3);
+//            //            if (abs(sanity_check - exp_val) > 1e-3) {
+//            //                cout << "sanity check failed." << endl;
+//            //            }
+//        }
+//    }
+//
+//    for (auto it = node2snvs.begin(); it != node2snvs.end(); ++it) {
+//        delete it->second;
+//    }
+//}
 
 
 void TSSBState::print_cache()
@@ -570,7 +634,7 @@ const vector<BulkDatum *> &TSSBState::get_data() const
 //        update_sc_cache(curr_node, new_node, datum, model_params);
 //}
 
-void TSSBState::assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params)
+void TSSBState::assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache)
 {
     auto datum = bulk_data_->at(mut_id);
     if (curr_node != 0) {
@@ -584,7 +648,7 @@ void TSSBState::assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_n
     
     // update single cell cache.
     // TODO: do it only if mut_id has single cell coverage.
-    if (sc_data != 0 && sc_data->size() > 0)
+    if (update_cache && sc_data != 0 && sc_data->size() > 0)
         update_sc_cache(curr_node, new_node, mut_id, model_params);
 }
 
@@ -695,7 +759,7 @@ double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bo
         for (size_t i = 0; i < all_nodes.size(); i++) {
             CloneTreeNode *v = all_nodes[i];
             if (cache_c.count(v) == 0) {
-                initialize_sc_cache(c, v, *node2snvs[v], params);
+                initialize_sc_cache(c, v, params);
             }
             log_val = cache_c[v];
             if (verbose) {
@@ -717,15 +781,15 @@ double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bo
     return log_lik_sc;
 }
 
-double TSSBState::compute_loglik_sc(unordered_set<const BulkDatum *> &snvs, size_t cell_id)
+double TSSBState::compute_loglik_sc(CloneTreeNode *v, size_t cell_id)
 {
     double log_lik = 0.0;
     bool has_snv;
-    // TODO: This loop can be made faster by looping over only the sites with reads.
     auto loci_idxs = sc_data->at(cell_id)->GetLoci();
     for (size_t loci_idx : loci_idxs) {
         const BulkDatum *snv = bulk_data_->at(loci_idx);
-        has_snv = (snvs.count(snv) > 0);
+        auto u = datum2node[snv];
+        has_snv = u->IsAncestorOf(v);
         double log_val = has_snv ? sc_presence_matrix_(cell_id, loci_idx) :
         sc_absence_matrix_(cell_id, loci_idx);
         log_lik += log_val;
@@ -1065,7 +1129,7 @@ void TSSBState::initialize_sc_cache(const ModelParams &model_params)
     }
     for (size_t c = 0; c < sc_data->size(); c++) {
         for (auto v : all_nodes) {
-            initialize_sc_cache(c, v, node2snvs[v], model_params);
+            initialize_sc_cache(c, v, model_params);
         }
     }
 }

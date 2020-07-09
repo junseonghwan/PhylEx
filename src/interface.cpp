@@ -236,7 +236,6 @@ void ProcessConfigFile(string config_file_path, Config &config)
         }
     }
     config_file.close();
-    return config;
 }
 
 vector<size_t> ParseRegionalData(string line) {

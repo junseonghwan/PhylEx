@@ -57,6 +57,8 @@ public:
     bool randomize_branching = false;
     bool randomize_cf = true;
     double min_cf = 0.01;
+    
+    double snv_sc_sparsity = 1;
 
     void insert_option(string key, string val);
 };

@@ -76,6 +76,8 @@ void SimulationConfig::insert_option(string key, string val)
             this->randomize_cf = stoi(val) == 0? false : true;
         } else if (key == "min_cf") {
             this->min_cf = stod(val);
+        } else if (key == "snv_sc_sparsity") {
+            this->snv_sc_sparsity = stod(val);
         } else if (key == "output_path") {
             this->output_path = val;
         } else {

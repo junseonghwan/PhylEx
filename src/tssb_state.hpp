@@ -44,7 +44,7 @@ class TSSBState
     unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
 
     // vector index for sc_cache is the same as the sc_data idx
-    // for eaach cell, store the mapping from node to double (log likelihood of being assigned to that node)
+    // for each cell, store the mapping from node to double (log likelihood of being assigned to that node)
     vector<unordered_map<CloneTreeNode *, double> > sc_cache;
 
     // function pointer to compute likelihood of assigning bulk datum to node
@@ -70,16 +70,15 @@ class TSSBState
                                               const ModelParams &model_params);
     // assign data to a node
     //void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &model_params);
-    void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params);
+    void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache = true);
 
     void initialize_sc_cache(const ModelParams &model_params);
-    void initialize_sc_cache(size_t c, CloneTreeNode *v, unordered_set<const BulkDatum *> &snvs, const ModelParams &model_params);
+    void initialize_sc_cache(size_t c, CloneTreeNode *v, const ModelParams &model_params);
     //void update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &params);
     void update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params);
     void print_cache();
 
-    //double compute_loglik_sc(unordered_set<const BulkDatum *> &snvs, SingleCellData *cell, const ModelParams &params);
-    double compute_loglik_sc(unordered_set<const BulkDatum *> &snvs, size_t cell_id);
+    double compute_loglik_sc(CloneTreeNode *v, size_t cell_id);
     
     EigenMatrix sc_presence_matrix_, sc_absence_matrix_;
     // Pre-compute single cell likelihoods and determine SNVs that don't have

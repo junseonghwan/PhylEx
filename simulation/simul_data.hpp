@@ -44,11 +44,13 @@ void GenerateScRnaData(gsl_rng *random,
                        const ModelParams &model_params,
                        const SimulationConfig &simul_config,
                        vector<SingleCellData *> &sc_data);
-void GenerateScRnaReads2(const gsl_rng *random,
-                         const SimulationConfig &simul_config,
-                         CloneTreeNode *node,
-                         const vector<BulkDatum*> &somatic_loci,
-                         SingleCellData &sc);
+void GenerateScRnaReads(const gsl_rng *random,
+                        const SimulationConfig &simul_config,
+                        CloneTreeNode *node,
+                        const vector<BulkDatum*> &somatic_loci,
+                        vector<size_t> &bulk_sc_coverage,
+                        SingleCellData &sc);
+
 //void GenerateScRnaReads(const gsl_rng *random,
 //                        const SimulationConfig &simul_config,
 //                        const ModelParams &model_params,

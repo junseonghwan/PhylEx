@@ -643,6 +643,30 @@ void CloneTreeNode::get_cluster_labels(CloneTreeNode *root,
     }
 }
 
+bool CloneTreeNode::IsAncestorOf(CloneTreeNode *other) {
+    if (this->name.size() > other->name.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < name.size(); i++) {
+        if (name.at(i) != other->name.at(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool CloneTreeNode::IsDescendantOf(CloneTreeNode *other) {
+    if (this->name.size() < other->name.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < other->name.size(); i++) {
+        if (name.at(i) != other->name.at(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void CloneTreeNode::construct_datum2node(vector<CloneTreeNode *> &all_nodes,
                                      unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node)
 {

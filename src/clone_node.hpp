@@ -113,6 +113,10 @@ public:
     void reorder_sticks(const gsl_rng *random, const ModelParams &params);
     void reset_children_names();
     
+    // Returns true if this node is ancestor of other or other == this.
+    bool IsAncestorOf(CloneTreeNode *other);
+    bool IsDescendantOf(CloneTreeNode *other);
+    
     // identify the branch that contains u, return the corresponding child Node
     CloneTreeNode *locate_child(const gsl_rng *random, double &u, const ModelParams &hyper_params);
     void InitializeChild(const gsl_rng *random,
