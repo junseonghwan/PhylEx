@@ -31,13 +31,13 @@ class BulkDatum
     // number is 0, cn_prob_matrix[0][n], where n is the total possible copy number.
     vector<vector<double> > cn_prob_matrix_;
 public:
-    BulkDatum(string name, Locus &locus);
-    BulkDatum(string name, Locus &locus,
+    BulkDatum(string name, string chr, size_t pos);
+    BulkDatum(string name, string chr, size_t pos,
               vector<size_t> &n_variants, vector<size_t> &n_reads);
-    BulkDatum(string name, Locus &locus,
+    BulkDatum(string name, string chr, size_t pos,
               vector<size_t> &n_variants, vector<size_t> &n_reads,
               vector<size_t> &total_cns);
-    BulkDatum(string name, Locus &locus,
+    BulkDatum(string name, string chr, size_t pos,
               vector<size_t> &n_variants, vector<size_t> &n_reads,
               vector<size_t> &major_cn, vector<size_t> &minor_cn);
 
@@ -53,7 +53,7 @@ public:
     inline const size_t GetMajorCN(size_t region) const { return major_cns_[region]; }
     inline const size_t GetMinorCN(size_t region) const { return minor_cns_[region]; }
     inline const size_t GetTotalCN(size_t region) const { return total_cns_[region]; }
-    
+
     const vector<double> &GetCNProbs(size_t idx) const { return cn_prob_matrix_[idx]; }
     const Locus &GetLocus() const { return locus_; }
 
@@ -62,6 +62,7 @@ public:
     void SetCopyNumberProbs(vector<vector<double> > cn_prob_matrix) {
         cn_prob_matrix_ = cn_prob_matrix;
     }
+    void SetLocuHyperParameters(double alpha, double beta, double delta0);
     size_t GetRegionCount() const {
         return variant_reads_.size();
     }

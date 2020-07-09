@@ -8,7 +8,8 @@ TSSBState::TSSBState(const gsl_rng *random,
                                              const CloneTreeNode *v,
                                              const BulkDatum *s,
                                              const ModelParams &params),
-                     double (*log_lik_sc_at_site)(const BulkDatum *s,
+                     double (*log_lik_sc_at_site)(size_t loci_idx,
+                                                  const BulkDatum *s,
                                                   const SingleCellData *c,
                                                   bool has_snv,
                                                   const ModelParams &params),
@@ -18,7 +19,8 @@ root(root),
 bulk_data_(bulk_data),
 has_sc_coverage_(bulk_data_->size(), false),
 sc_data(sc_data),
-log_lik_datum(log_lik_datum), log_lik_sc_at_site(log_lik_sc_at_site)
+log_lik_datum(log_lik_datum),
+log_lik_sc_at_site(log_lik_sc_at_site)
 {
     if (sc_data != 0) {
         sc_cache.resize(sc_data->size());
@@ -47,23 +49,15 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
     for (size_t n = 0; n < mutation_count; n++) {
         size_t sc_coverage_count = 0;
         for (size_t c = 0; c < cell_count; c++) {
-            sc_presence_matrix_(c,n) = log_lik_sc_at_site(bulk_data_->at(n), sc_data->at(c), true, model_params);
-            sc_absence_matrix_(c,n) = log_lik_sc_at_site(bulk_data_->at(n), sc_data->at(c), false, model_params);
-            auto locus_datum = sc_data->at(c)->get_locus_datum(bulk_data_->at(n)->GetLocus());
-            sc_coverage_count += (locus_datum->get_n_total_reads() > 0) ? 1 : 0;
+            sc_presence_matrix_(c,n) = log_lik_sc_at_site(n, bulk_data_->at(n), sc_data->at(c), true, model_params);
+            sc_absence_matrix_(c,n) = log_lik_sc_at_site(n, bulk_data_->at(n), sc_data->at(c), false, model_params);
+            auto total_reads = sc_data->at(c)->GetTotalReads(n);
+            sc_coverage_count += (total_reads > 0) ? 1 : 0;
         }
         if (sc_coverage_count > 0) {
             has_sc_coverage_.push_back(true);
         }
     }
-}
-
-// the nu stick for the root node will have been sampled or set to 0 depending on the use case
-TSSBState::TSSBState(CloneTreeNode *root)
-{
-    sc_data = 0;
-    bulk_data_ = new vector<BulkDatum *>();
-    this->root = root;
 }
 
 /*******************
@@ -625,7 +619,11 @@ double TSSBState::get_log_lik()
 double TSSBState::compute_log_likelihood_sc(CloneTreeNode *root,
                                                    const vector<BulkDatum *> &bulk_data,
                                                    const vector<SingleCellData *> &sc_data,
-                                                   double (*log_lik_sc_at_site)(const BulkDatum *s, const SingleCellData *c, bool has_snv, const ModelParams &params),
+                                                   double (*log_lik_sc_at_site)(size_t loci_idx,
+                                                                                const BulkDatum *s,
+                                                                                const SingleCellData *c,
+                                                                                bool has_snv,
+                                                                                const ModelParams &params),
                                                    const ModelParams &params,
                                                    bool verbose)
 {
@@ -724,11 +722,12 @@ double TSSBState::compute_loglik_sc(unordered_set<const BulkDatum *> &snvs, size
     double log_lik = 0.0;
     bool has_snv;
     // TODO: This loop can be made faster by looping over only the sites with reads.
-    for (size_t i = 0; i < bulk_data_->size(); i++) {
-        const BulkDatum *snv = bulk_data_->at(i);
+    auto loci_idxs = sc_data->at(cell_id)->GetLoci();
+    for (size_t loci_idx : loci_idxs) {
+        const BulkDatum *snv = bulk_data_->at(loci_idx);
         has_snv = (snvs.count(snv) > 0);
-        double log_val = has_snv ? sc_presence_matrix_(cell_id, i) :
-        sc_absence_matrix_(cell_id, i);
+        double log_val = has_snv ? sc_presence_matrix_(cell_id, loci_idx) :
+        sc_absence_matrix_(cell_id, loci_idx);
         log_lik += log_val;
         //cout << "Has SNV: " << has_snv << ", " << log_val << endl;
     }
@@ -740,14 +739,18 @@ double TSSBState::compute_loglik_sc(const vector<BulkDatum *> &bulk_data,
                                            unordered_set<const BulkDatum *> &snvs,
                                            SingleCellData *cell,
                                            const ModelParams &params,
-                                           double (*log_lik_sc_at_site)(const BulkDatum *s, const SingleCellData *c, bool has_snv, const ModelParams &params))
+                                           double (*log_lik_sc_at_site)(size_t loci_idx,
+                                                                        const BulkDatum *s,
+                                                                        const SingleCellData *c,
+                                                                        bool has_snv,
+                                                                        const ModelParams &params))
 {
     double log_lik = 0.0;
     bool has_snv;
     for (size_t i = 0; i < bulk_data.size(); i++) {
         const BulkDatum *snv = bulk_data.at(i);
         has_snv = (snvs.count(snv) > 0);
-        log_lik += log_lik_sc_at_site(snv, cell, has_snv, params);
+        log_lik += log_lik_sc_at_site(i, snv, cell, has_snv, params);
     }
     
     return log_lik;
@@ -1355,22 +1358,6 @@ string TSSBState::print()
     //    }
     //    ret += "Complete data log lik: " + to_string(log_lik) + "\n";
     return ret;
-}
-
-TSSBState *TSSBState::construct_trivial_state(CloneTreeNode *root,
-                            double (*log_lik_datum)(size_t region,
-                                                    const CloneTreeNode *v,
-                                                    const BulkDatum *s,
-                                                    const ModelParams &params),
-                            double (*log_lik_sc_at_site)(const BulkDatum *s,
-                                                         const SingleCellData *c,
-                                                         bool has_snv,
-                                                         const ModelParams &params))
-{
-    auto state = new TSSBState(root);
-    state->log_lik_datum = log_lik_datum;
-    state->log_lik_sc_at_site = log_lik_sc_at_site;
-    return state;
 }
 
 void TSSBState::clear_cache()

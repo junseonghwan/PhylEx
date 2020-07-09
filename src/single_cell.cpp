@@ -10,56 +10,44 @@
 #include <iostream>
 
 // SingleCellData class definitions
-SingleCellData::SingleCellData(string cell_name) :
-cell_name(cell_name)
+SingleCellData::SingleCellData(string cell_name, size_t loci_count) :
+cell_name(cell_name), var_reads_(loci_count), total_reads_(loci_count)
 {
 }
 
 SingleCellData::SingleCellData(string cell_name,
-                               unordered_map<Locus, LocusDatum*> &reads) :
-cell_name(cell_name), reads(reads)
+                               vector<size_t> &var_reads,
+                               vector<size_t> &total_reads) :
+cell_name(cell_name), var_reads_(var_reads), total_reads_(total_reads)
 {
+    size_t loci_count = total_reads.size();
+    for (size_t i = 0; i < loci_count; i++) {
+        if (total_reads[i] > 0) {
+            loci_idxs_.push_back(i);
+        }
+    }
 }
 
 SingleCellData::~SingleCellData()
 {
 }
 
-string SingleCellData::get_name() const
+string SingleCellData::GetName() const
 {
     return cell_name;
 }
 
-void SingleCellData::insert_read(const Locus &locus, LocusDatum *locus_datum)
-{
-    if (reads.count(locus) == 0)
-        reads[locus] = locus_datum;
-}
-
-string SingleCellData::print() const
+string SingleCellData::Print() const
 {
     string ret = cell_name + "\n";
     return ret;
 }
 
-void SingleCellData::remove_locus(const Locus &locus)
+void SingleCellData::InsertDatum(size_t loci_idx,
+                                 size_t var_reads,
+                                 size_t total_reads)
 {
-    reads.erase(locus);
-    mutation_map.erase(locus);
-    //paired_reads.erase(locus);
-    expression_levels.erase(locus);
-}
-
-const LocusDatum *SingleCellData::get_locus_datum(const Locus &locus) const
-{
-    if (reads.count(locus) == 0) {
-        return 0;
-    }
-    return reads.at(locus);
-
-}
-
-const bool SingleCellData::has_locus_datum(const Locus &locus) const
-{
-    return reads.count(locus) > 0;
+    loci_idxs_.push_back(loci_idx);
+    var_reads_[loci_idx] = var_reads;
+    total_reads_[loci_idx] = total_reads;
 }

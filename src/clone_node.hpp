@@ -188,10 +188,11 @@ public:
     static void get_snvs(CloneTreeNode *node, unordered_set<Locus> &ret);
 };
 
-double ScLikelihood(const BulkDatum *s,
-                     const SingleCellData *sc,
-                     bool has_snv,
-                     const ModelParams &model_params);
+double ScLikelihood(size_t loci_idx,
+                    const BulkDatum *s,
+                    const SingleCellData *sc,
+                    bool has_snv,
+                    const ModelParams &model_params);
 double BulkLogLikWithTotalCopyNumber(size_t region,
                                      const CloneTreeNode *node,
                                      const BulkDatum *s,

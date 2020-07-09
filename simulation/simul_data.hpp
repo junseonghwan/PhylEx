@@ -48,7 +48,7 @@ void GenerateScRnaReads2(const gsl_rng *random,
                          const SimulationConfig &simul_config,
                          CloneTreeNode *node,
                          const vector<BulkDatum*> &somatic_loci,
-                         unordered_map<Locus, LocusDatum *> &single_site_reads);
+                         SingleCellData &sc);
 //void GenerateScRnaReads(const gsl_rng *random,
 //                        const SimulationConfig &simul_config,
 //                        const ModelParams &model_params,

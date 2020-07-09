@@ -25,11 +25,6 @@
 #include "tssb_state.hpp"
 #include "utils.hpp"
 
-const size_t BULK_WITH_GENOTYPE_COLUMN_COUNT = 9;
-// Not supporting it for now.
-const size_t BULK_WITH_TOTAL_CN_COLUMN_COUNT = 8;
-const size_t BULK_WITH_TOTAL_CN_PRIOR_COLUMN_COUNT = -1;
-
 NewickNode::NewickNode(string str) {
   // split the string and set name and cellular prevalence
   vector<string> results;
@@ -264,19 +259,19 @@ void WriteScRnaData(string output_path,
     for (unsigned int i = 0; i < sc_data.size(); i++)
     {
         SingleCellData *sc = (SingleCellData *)sc_data[i];
-        for (auto bulk_datum : bulk_data)
+        for (size_t loci_idx = 0; loci_idx < bulk_data.size(); loci_idx++)
         {
-            const LocusDatum *locus_datum = sc->get_locus_datum(bulk_datum->GetLocus());
+            auto bulk_datum = bulk_data[loci_idx];
+            size_t b = sc_data[i]->GetVariantReads(loci_idx);
+            size_t d = sc_data[i]->GetTotalReads(loci_idx);
 
             // write to file only if it contains non-zero reads.
-            if (locus_datum == 0 || locus_datum->get_n_total_reads() == 0) {
+            if (d == 0) {
                 continue;
             }
-            size_t b = locus_datum->get_n_var_reads();
-            size_t d = locus_datum->get_n_total_reads();
 
             f << bulk_datum->GetLocus().get_mutation_id() << "\t";
-            f << sc->get_name() << "\t";
+            f << sc->GetName() << "\t";
             f << (d - b) << "\t" << d << "\tNA\n";
         }
     }
@@ -323,6 +318,13 @@ void WriteTreeToFile(string output_path,
     }
     f.close();
     
+    // write datum to node string
+    f.open(output_path + "/datum2node.tsv", ios::out);
+    for (size_t i = 0; i < datum2node.size(); i++) {
+        f << bulk[i]->GetId()  << "\t" << datum2node[bulk[i]]->get_name() << "\n";
+    }
+    f.close();
+
     // output the tree using Newick format
     string newick = write_newick(root_node);
     newick += ";";
@@ -688,302 +690,3 @@ size_t convert_chr_to_int(string chr)
     }
 }
 
-vector<size_t> ParseRegionalData(string line) {
-    vector<string> result;
-    boost::split(result, line, boost::is_any_of(","));
-    vector<size_t> data(result.size());
-    for (size_t i = 0; i < result.size(); i++) {
-        data[i] = stoul(result[i]);
-    }
-    return data;
-}
-
-vector<double> ParseRegionalCNData(string line) {
-    vector<string> result;
-    vector<double> data;
-    boost::split(result, line, boost::is_any_of(","));
-    for (size_t i = 0; i < result.size(); i++) {
-        data[i] = stod(result[i]);
-    }
-    return data;
-}
-
-void ProcessBulkWithTotalCopyNumberProfile(ifstream &dat_file,
-                                           vector<BulkDatum *> &bulk_data,
-                                           unordered_map<string, Locus *> &somatic_loci) {
-    vector<string> results;
-    string line;
-    while ( getline (dat_file, line) )
-    {
-        boost::split(results, line, boost::is_any_of("\t"));
-        string mut_id = results[0];
-        string chr = results[1];
-        size_t pos = stol(results[2]);
-        auto n_vars = ParseRegionalData(results[6]);
-        auto n_reads = ParseRegionalData(results[7]);
-        
-        if (somatic_loci.count(mut_id) > 0) {
-            cerr << "Error: " << mut_id << " already exists!" << endl;
-            exit(-1);
-        }
-        
-        Locus *locus = new Locus(mut_id, chr, pos, "");
-        BulkDatum *datum = new BulkDatum(mut_id, *locus, n_vars, n_reads);
-        bulk_data.push_back(datum);
-        somatic_loci[mut_id] = locus;
-    }
-}
-
-void ProcessBulkWithTotalCopyNumber(ifstream &dat_file,
-                                    vector<BulkDatum *> &bulk_data,
-                                    unordered_map<string, Locus *> &somatic_loci) {
-    vector<string> results;
-    string line;
-    while ( getline (dat_file, line) )
-    {
-        boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
-        string mut_id = results[0];
-        string chr = results[1];
-        size_t pos = stol(results[2]);
-        auto n_vars = ParseRegionalData(results[5]);
-        auto n_reads = ParseRegionalData(results[6]);
-        auto total_cn = ParseRegionalData(results[7]);
-
-        if (somatic_loci.count(mut_id) > 0) {
-            cerr << "Error: " << mut_id << " already exists!" << endl;
-            exit(-1);
-        }
-        
-        Locus *locus = new Locus(mut_id, chr, pos, "");
-        BulkDatum *datum = new BulkDatum(mut_id, *locus, n_vars, n_reads, total_cn);
-        bulk_data.push_back(datum);
-        somatic_loci[mut_id] = locus;
-    }
-}
-
-void ProcessBulkWithGenotype(ifstream &dat_file,
-                             vector<BulkDatum *> &bulk_data,
-                             unordered_map<string, Locus *> &somatic_loci)
-{
-    vector<string> results;
-    string line;
-    while ( getline (dat_file, line) )
-    {
-        boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
-        string mut_id = results[0];
-        string chr = results[1];
-        size_t pos = stol(results[2]);
-
-        vector<size_t> var_reads = ParseRegionalData(results[5]);
-        vector<size_t> total_reads = ParseRegionalData(results[6]);
-        
-        vector<size_t> major_cns = ParseRegionalData(results[7]);
-        vector<size_t> minor_cns = ParseRegionalData(results[8]);
-        
-        if (somatic_loci.count(mut_id) > 0) {
-            cerr << "Error: " << mut_id << " already exists!" << endl;
-            exit(-1);
-        }
-
-        Locus *locus = new Locus(mut_id, chr, pos, "");
-        BulkDatum *datum = new BulkDatum(mut_id, *locus,
-                                         var_reads, total_reads,
-                                         major_cns, minor_cns);
-        bulk_data.push_back(datum);
-        somatic_loci[mut_id] = locus;
-    }
-}
-
-CopyNumberInputType ReadBulkData(string bulk_data_path,
-                                 vector<BulkDatum *> &bulk_data,
-                                 unordered_map<string, Locus *> &somatic_loci)
-{
-    string line;
-    ifstream dat_file (bulk_data_path);
-    if (!dat_file.is_open())
-    {
-        cerr << "Could not open the file: " << bulk_data_path << endl;
-        exit(-1);
-    }
-
-    CopyNumberInputType cn_input_type;
-    vector<string> results;
-
-    // Retrieve the first line to determine the input format.
-    getline(dat_file, line);
-    boost::split(results, line, boost::is_any_of("\t"));
-
-    if (results.size() == BULK_WITH_GENOTYPE_COLUMN_COUNT) {
-        ProcessBulkWithGenotype(dat_file, bulk_data, somatic_loci);
-        cn_input_type = CopyNumberInputType::GENOTYPE;
-    } else if (results.size() == BULK_WITH_TOTAL_CN_COLUMN_COUNT) {
-        ProcessBulkWithTotalCopyNumber(dat_file, bulk_data, somatic_loci);
-        cn_input_type = CopyNumberInputType::TOTAL_CN;
-    } else if (results.size() == BULK_WITH_TOTAL_CN_PRIOR_COLUMN_COUNT) {
-        ProcessBulkWithTotalCopyNumberProfile(dat_file, bulk_data, somatic_loci);
-        cn_input_type = CopyNumberInputType::UNDETERMINED;
-    } else {
-        cerr << "Error: invalid bulk input format.\n";
-        exit(-1);
-    }
-    
-    dat_file.close();
-
-    return cn_input_type;
-}
-
-// cn_prior_path points to a file with the following format:
-// First column is the mutation ID used to look up BulkDatum from bulk_data.
-// Each of the following column is comma separated, one for each region.
-// The second column denotes the probability of copy number being 0.
-// The third column denotes the probability of copy number being 1 and so on.
-void ReadCnPrior(string cn_prior_path, vector<BulkDatum *> &bulk_data)
-{
-    ifstream dat_file (cn_prior_path);
-    if (!dat_file.is_open())
-    {
-        cerr << "Could not open the file: " << cn_prior_path << endl;
-        exit(-1);
-    }
-
-    unordered_map<string, BulkDatum *> id2bulk;
-    for (auto bulk_datum : bulk_data) {
-        id2bulk[bulk_datum->GetId()] = bulk_datum;
-    }
-
-    vector<string> results;
-    string line;
-    while ( getline (dat_file, line) )
-    {
-        boost::split(results, line, boost::is_any_of(" "));
-        if (!id2bulk.count(results[0])) {
-            continue;
-        }
-        auto bulk_datum = id2bulk[results[0]];
-
-        vector<vector<double> > cn_profile;
-        for (size_t i = 1; i < results.size(); i++) {
-            auto cn_probs = ParseRegionalCNData(results[i]);
-            cn_profile.push_back(cn_probs);
-        }
-        bulk_datum->SetCopyNumberProbs(cn_profile);
-    }
-
-    dat_file.close();
-}
-
-void ReadScRnaData(string scRNA_data_path,
-                     unordered_map<string, Locus *> &id2locus,
-                     vector<SingleCellData *> &sc_data)
-{
-    // first column is header
-    // file contains 4 columns:
-    // mutation id, cell name, a, d
-    string line;
-    ifstream dat_file (scRNA_data_path);
-    if (!dat_file.is_open())
-    {
-        cerr << "Could not open the file: " << scRNA_data_path << endl;
-        exit(-1);
-    }
-    
-    vector<string> cell_name_order;
-    unordered_map<string, SingleCellData *> dat;
-    
-    vector<string> results;
-    size_t line_idx = 0;
-    SingleCellData *sc = 0;
-    string mutation_id, cell_name;
-    size_t ref_reads, total_reads;
-    while ( getline (dat_file, line) )
-    {
-        if (line_idx == 0) {
-            line_idx++;
-            continue;
-        }
-        boost::split(results, line, boost::is_any_of("\t"));
-        for (size_t i = 0; i < results.size(); i++) {
-            boost::algorithm::trim(results[i]);
-        }
-        mutation_id = results[0];
-        cell_name = results[1];
-        ref_reads = stol(results[2]);
-        total_reads = stol(results[3]);
-
-        if (dat.count(cell_name) > 0) {
-            sc = dat[cell_name];
-        } else {
-            sc = new SingleCellData(cell_name);
-            dat[cell_name] = sc;
-            cell_name_order.push_back(cell_name);
-        }
-
-        // Find locus
-        if (id2locus.count(mutation_id) == 0) {
-            cerr << "Single cell RNA data contains loci " << mutation_id << " not found in the bulk." << endl;
-            exit(-1);
-        }
-        const Locus &locus = *id2locus[mutation_id];
-        LocusDatum *locus_datum = new LocusDatum(total_reads, total_reads - ref_reads);
-        sc->insert_read(locus, locus_datum);
-        
-        line_idx++;
-    }
-    dat_file.close();
-
-    for (string cell_name : cell_name_order) {
-        sc_data.push_back(dat[cell_name]);
-    }
-}
-
-void ReadScRnaHyperparams(string sc_hyperparam_file, unordered_map<string, Locus *> &id2locus)
-{
-    // first column is header
-    // file contains 3 columns:
-    // mutation id, alpha, beta
-    string line;
-    ifstream dat_file (sc_hyperparam_file);
-    if (!dat_file.is_open())
-    {
-        cerr << "Could not open the file: " << sc_hyperparam_file << endl;
-        exit(-1);
-    }
-    
-    vector<string> results;
-    size_t line_idx = 0;
-    string mutation_id;
-    double alpha, beta, delta0;
-    while ( getline (dat_file, line) )
-    {
-        if (line_idx == 0) {
-            line_idx++;
-            continue;
-        }
-        boost::split(results, line, boost::is_any_of("\t"));
-        for (size_t i = 0; i < results.size(); i++) {
-            boost::algorithm::trim(results[i]);
-        }
-        mutation_id = results[0];
-        alpha = stod(results[1]);
-        beta = stod(results[2]);
-        delta0 = stod(results[3]);
-        if (fabs(delta0 - 1.0) < 1e-9) {
-            delta0 = 0.999;
-        } else if (fabs(delta0) < 1e-9) {
-            delta0 = 0.001;
-        }
-        // Find locus
-        if (id2locus.count(mutation_id) == 0) {
-            cerr << "Hyper parameter contains loci that is not found in the bulk." << endl;
-            exit(-1);
-        }
-        Locus &locus = *id2locus[mutation_id];
-        locus.set_alpha(alpha);
-        locus.set_beta(beta);
-        locus.set_dropout_prob(delta0);
-        
-        line_idx++;
-    }
-    dat_file.close();
-
-}

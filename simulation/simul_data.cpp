@@ -101,13 +101,10 @@ vector<Locus> CreateSNVs(gsl_rng *random,
     {
         chr = convert_chr_to_string(gsl_rng_uniform_int(random, 23) + 1);
         pos = gsl_rng_uniform_int(random, 10000000);
-        Locus locus("s" + to_string(i), chr, pos, "");
         size_t alpha = gsl_rng_uniform_int(random, simul_config.beta_binomial_hp_max - 1) + 1;
         size_t beta = gsl_rng_uniform_int(random, simul_config.beta_binomial_hp_max - 1) + 1;
-        locus.set_alpha(alpha);
-        locus.set_beta(beta);
-        loci.push_back(locus);
-        BulkDatum *datum = new BulkDatum("s" + to_string(i), locus);
+        BulkDatum *datum = new BulkDatum("s" + to_string(i), chr, pos);
+        datum->SetLocuHyperParameters(alpha, beta, 0.5);
         data.push_back(datum);
     }
     return loci;
@@ -352,14 +349,13 @@ void GenerateScRnaData(gsl_rng *random,
         node = non_empty_nodes[idx];
 
         cout << "Cell " << c << " assigned to " << node->get_name() << endl;
-        unordered_map<Locus, LocusDatum *> single_site_reads;
+        SingleCellData *sc = new SingleCellData("c" + to_string(c), data.size());
         GenerateScRnaReads2(random,
                             simul_config,
                             node,
                             data,
-                            single_site_reads);
-        SingleCellData *sc = new SingleCellData("c" + to_string(c),
-                                                single_site_reads);
+                            *sc);
+        
         sc_data.push_back(sc);
         cout << "=====" << endl;
     }
@@ -369,7 +365,7 @@ void GenerateScRnaReads2(const gsl_rng *random,
                          const SimulationConfig &simul_config,
                          CloneTreeNode *node,
                          const vector<BulkDatum*> &somatic_loci,
-                         unordered_map<Locus, LocusDatum *> &single_site_reads)
+                         SingleCellData &sc)
 {
     size_t n_expr_loci = 0;
     if (simul_config.randomize_dropout) {
@@ -384,47 +380,48 @@ void GenerateScRnaReads2(const gsl_rng *random,
     }
 
     // Randomly select n_expr_loci to be expressed.
-    unordered_set<Locus> sampled_loci;
-    while (sampled_loci.size() < n_expr_loci) {
-        size_t locus_id = discrete_uniform(random, somatic_loci.size());
-        auto locus = somatic_loci[locus_id]->GetLocus();
-        if (!sampled_loci.count(locus)) {
-            sampled_loci.insert(locus);
-        }
+    vector<size_t> sampled_loci_idx;
+    while (sampled_loci_idx.size() < n_expr_loci) {
+        size_t locus_idx = discrete_uniform(random, somatic_loci.size());
+        sampled_loci_idx.push_back(locus_idx);
     }
     
-    cout << "Number of sites expressed: " << sampled_loci.size() << "\n";
+    cout << "Number of sites expressed: " << sampled_loci_idx.size() << "\n";
 
     unordered_set<Locus> snvs;
     CloneTreeNode::get_snvs(node, snvs);
-    for (auto locus : sampled_loci) {
-        size_t n_total_reads = gsl_ran_poisson(random, simul_config.sc_mean_depth);
-        size_t n_vars = 0;
+    size_t var_loci_expr_count = 0;
+    size_t var_read_observed_count = 0;
+    for (auto locus_idx : sampled_loci_idx) {
+        size_t total_read_count = gsl_ran_poisson(random, simul_config.sc_mean_depth);
+        size_t var_read_count = 0;
+        auto locus = somatic_loci[locus_idx]->GetLocus();
         bool carries_snv = (snvs.count(locus) > 0);
         double var_expr_prob;
         if (carries_snv) {
+            var_loci_expr_count++;
             // Sample the number of variants by first sampling either bursty or non-bursty distn.
             bool bursty = gsl_ran_bernoulli(random, simul_config.bursty_prob);
             if (bursty) {
-                cout << "Bursty." << endl;
+                //cout << "Bursty." << endl;
                 var_expr_prob = gsl_ran_beta(random,
                                              simul_config.sc_dropout_alpha0,
                                              simul_config.sc_dropout_beta0);
             } else {
-                cout << "Not Bursty." << endl;
+                //cout << "Not Bursty." << endl;
                 double alpha = locus.get_alpha();
                 double beta = locus.get_beta();
                 var_expr_prob = gsl_ran_beta(random, alpha, beta);
             }
         } else {
             // We expect to see variant read only in error.
-            cout << "SNV absent." << endl;
+            //cout << "SNV absent." << endl;
             var_expr_prob = gsl_ran_beta(random, simul_config.seq_err, 1 - simul_config.seq_err);
         }
-        cout << var_expr_prob << endl;
-        n_vars = gsl_ran_binomial(random, var_expr_prob, n_total_reads);
-
-        auto locus_datum = new LocusDatum(n_total_reads, n_vars);
-        single_site_reads[locus] = locus_datum;
+        var_read_count = gsl_ran_binomial(random, var_expr_prob, total_read_count);
+        var_read_observed_count += var_read_count > 0 ? 1 : 0;
+        sc.InsertDatum(locus_idx, var_read_count, total_read_count);
     }
+    cout << var_loci_expr_count << "/" << snvs.size() << " variants expressed.\n";
+    cout << var_read_observed_count << "/" << var_loci_expr_count << " sites with variant reads observed.\n";
 }

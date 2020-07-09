@@ -20,10 +20,6 @@
 
 using namespace std;
 
-enum CopyNumberInputType {
-    TOTAL_CN, GENOTYPE, TOTAL_CN_PROFILE, UNDETERMINED
-};
-
 class CompactTSSBState;
 
 class NewickNode
@@ -57,15 +53,6 @@ void WriteCopyNumberProfileToFile(string output_path,
                       const vector<BulkDatum *> &bulk_data,
                       CloneTreeNode *root_node,
                       unordered_map<CloneTreeNode *, vector<pair<size_t, size_t> > > &cn_profile);
-
-CopyNumberInputType ReadBulkData(string bulk_data_path,
-                                 vector<BulkDatum *> &bulk_data,
-                                 unordered_map<string, Locus *> &somatic_loci);
-void ReadCnPrior(string cn_prior_path, vector<BulkDatum *> &bulk_data);
-void ReadScRnaData(string scRNA_data_path,
-                     unordered_map<string, Locus *> &id2locus,
-                     vector<SingleCellData *> &sc_data);
-void ReadScRnaHyperparams(string sc_hyperparam_file, unordered_map<string, Locus *> &id2locus);
 
 // output related functions
 void write_vector(string path, const vector<unsigned int> &data);

@@ -9,6 +9,7 @@
 #define interface_hpp
 
 #include <string>
+#include <unordered_map>
 
 #include "bulk_datum.hpp"
 #include "clone_node.hpp"
@@ -19,10 +20,18 @@ const double DEFAULT_ALPHA0_MAX = 10.0;
 const double DEFAULT_LAMBDA_MAX = 1;
 const double DEFAULT_GAMMA_MAX = 5.0;
 
+const size_t BULK_WITH_GENOTYPE_COLUMN_COUNT = 9;
+const size_t BULK_WITH_TOTAL_CN_COLUMN_COUNT = 8;
+// Not supporting it for now.
+const size_t BULK_WITH_TOTAL_CN_PRIOR_COLUMN_COUNT = -1;
+
+enum CopyNumberInputType {
+    TOTAL_CN, GENOTYPE, TOTAL_CN_PROFILE, UNDETERMINED
+};
+
 using namespace std;
 
 class Config {
-    
 public:
     size_t seed;
     string bulk_file = "";
@@ -44,15 +53,25 @@ public:
     double sc_dropout_beta0 = 0.01;
 };
 
-TSSBState *RunSliceSampler(
-    const gsl_rng *random,
-    ModelParams &params,
-    Config &config,
-    vector<BulkDatum *> *bulk_data,
-    vector<SingleCellData *> *sc_data,
-    CopyNumberInputType cn_input_type);
-Config parse_config_file(string config_file_path);
+class Interface {
+    Config config_;
+    vector<BulkDatum *> bulk_data_;
+    vector<SingleCellData *> sc_data_;
+    unordered_map<string, size_t> mut_id2bulk_idx_;
+    CopyNumberInputType cn_input_type_;
 
-void Run(string config_file);
+    TSSBState *RunSliceSampler(const gsl_rng *random,
+                               ModelParams &params);
+    
+    void ReadBulkData();
+    void ReadCnPrior();
+    void ReadScRnaData();
+    void ReadScRnaHyperparams();
+
+public:
+    Interface(string config_file);
+    void Run();
+};
+
 
 #endif /* interface_hpp */

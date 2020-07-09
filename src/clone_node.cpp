@@ -686,35 +686,39 @@ gsl_matrix *CloneTreeNode::GetAncestralMatrix(CloneTreeNode *root,
     return A;
 }
 
-double ScLikelihood(const BulkDatum *s, const SingleCellData *sc, bool has_snv, const ModelParams &model_params) {
+double ScLikelihood(size_t loci_idx,
+                    const BulkDatum *bulk,
+                    const SingleCellData *sc,
+                    bool has_snv,
+                    const ModelParams &model_params) {
     double log_lik = 0.0;
 
     // if sc has mutation s, then there are 3 cases
     // 1. non-bursty
     // 2. bursty for variant
     // 3. bursty for reference
-    const Locus &somatic_locus = s->GetLocus();
-    const LocusDatum *locus_datum = sc->get_locus_datum(somatic_locus);
-    if (locus_datum == 0 || locus_datum->get_n_total_reads() == 0) {
+    size_t var_reads = sc->GetVariantReads(loci_idx);
+    size_t total_reads = sc->GetTotalReads(loci_idx);
+    if (total_reads == 0) {
         return 0.0;
     }
-    size_t total_reads = locus_datum->get_n_total_reads();
     if (has_snv) {
-        double alpha = somatic_locus.get_alpha();
-        double beta = somatic_locus.get_beta();
-        double log_lik_non_bursty = log_beta_binomial_pdf(locus_datum->get_n_var_reads(),
+        auto locus = bulk->GetLocus();
+        double alpha = locus.get_alpha();
+        double beta = locus.get_beta();
+        double log_lik_non_bursty = log_beta_binomial_pdf(var_reads,
                                                           total_reads,
                                                           alpha,
                                                           beta);
-        log_lik_non_bursty += log(1 - somatic_locus.get_dropout_prob());
-        double log_lik_bursty = log_beta_binomial_pdf(locus_datum->get_n_var_reads(),
+        log_lik_non_bursty += log(1 - locus.get_dropout_prob());
+        double log_lik_bursty = log_beta_binomial_pdf(var_reads,
                                                       total_reads,
                                                       model_params.GetScDropoutDistributionAlpha0(),
                                                       model_params.GetScDropoutDistributionBeta0());
-        log_lik_bursty += log(somatic_locus.get_dropout_prob());
+        log_lik_bursty += log(locus.get_dropout_prob());
         log_lik = log_add(log_lik_bursty, log_lik_non_bursty);
     } else {
-        log_lik = log_beta_binomial_pdf(locus_datum->get_n_var_reads(),
+        log_lik = log_beta_binomial_pdf(var_reads,
                                         total_reads,
                                         model_params.get_seq_error(),
                                         1 - model_params.get_seq_error());

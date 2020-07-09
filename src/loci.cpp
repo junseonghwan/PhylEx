@@ -22,18 +22,16 @@ n_var_reads(n_var_reads), n_total_reads(n_total_reads)
     }
 }
 
-Locus::Locus(string mutation_id, string chr, size_t pos, string gene_name) :
-chr(chr), pos(pos), gene_name(gene_name), mutation_id(mutation_id)
+Locus::Locus(string mutation_id, string chr, size_t pos) :
+chr(chr), pos(pos), mutation_id(mutation_id)
 {
     unique_str = chr + ":" + to_string(pos);
-    //hash_code = hash<string>()(unique_str);
     hash_code = hash<string>()(mutation_id);
 }
 
 Locus::Locus(const Locus &other) :
 chr(other.get_chr()),
 pos(other.get_pos()),
-gene_name(other.gene_name),
 mutation_id(other.mutation_id),
 alpha_(other.alpha_),
 beta_(other.beta_),

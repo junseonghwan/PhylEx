@@ -22,26 +22,33 @@ using namespace std;
 class SingleCellData
 {
     string cell_name;
-    unordered_map<Locus, LocusDatum*> reads;
-    unordered_map<Locus, size_t> mutation_map;
-    unordered_map<Locus, double> expression_levels;
+    vector<size_t> var_reads_;
+    vector<size_t> total_reads_;
+    vector<size_t> loci_idxs_;
 
 public:
-    SingleCellData(string cell_name);
+    SingleCellData(string cell_name, size_t loci_count);
     SingleCellData(string cell_name,
-                   unordered_map<Locus, LocusDatum*> &reads);
+                   vector<size_t> &var_reads,
+                   vector<size_t> &total_reads);
+    ~SingleCellData();
 
-    string get_name() const;
+    string GetName() const;
 
-    const LocusDatum *get_locus_datum(const Locus &locus) const;
-    const bool has_locus_datum(const Locus &locus) const;
+    //const LocusDatum *get_locus_datum(const Locus &locus) const;
+    //const bool has_locus_datum(const Locus &locus) const;
 
-    void insert_read(const Locus &, LocusDatum *);
-    void remove_locus(const Locus &locus);
-    
-    string print() const;
-
-    virtual ~SingleCellData();
+    inline size_t GetVariantReads(size_t loci_idx) const {
+        return var_reads_[loci_idx];
+    }
+    inline size_t GetTotalReads(size_t loci_idx) const {
+        return total_reads_[loci_idx];
+    }
+    inline const vector<size_t> &GetLoci() const {
+        return loci_idxs_;
+    }
+    void InsertDatum(size_t loci_idx, size_t var_reads, size_t total_reads);
+    string Print() const;
 };
 
 #endif /* single_cell_dna_hpp */
