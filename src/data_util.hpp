@@ -20,10 +20,6 @@
 
 using namespace std;
 
-enum CopyNumberInputType {
-    TOTAL_CN, GENOTYPE, TOTAL_CN_PROFILE, UNDETERMINED
-};
-
 class CompactTSSBState;
 
 class NewickNode
@@ -41,9 +37,6 @@ size_t convert_chr_to_int(string chr);
 bool path_exists(string path);
 void WriteLogLikToFile(string output_path, double val);
 void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool output_genotype);
-void write_scDNA_data(string output_path,
-                      const vector<SingleCellData *> &sc_data,
-                      const vector<BulkDatum *> &bulk);
 void WriteBetaBinomHp(string output_path,
                       const vector<BulkDatum*> &loci);
 void WriteScRnaData(string output_path,
@@ -60,17 +53,6 @@ void WriteCopyNumberProfileToFile(string output_path,
                       const vector<BulkDatum *> &bulk_data,
                       CloneTreeNode *root_node,
                       unordered_map<CloneTreeNode *, vector<pair<size_t, size_t> > > &cn_profile);
-
-CopyNumberInputType ReadBulkData(string bulk_data_path,
-                                 vector<BulkDatum *> &bulk_data,
-                                 unordered_map<string, Locus *> &somatic_loci);
-//void read_scDNA_data(string sc_data_path, vector<BulkDatum *> &bulk_data, vector<SingleCellData *> &sc_data);
-//void read_scRNA_data(string sc_data_path, unordered_set<Locus> &somatic_loci, vector<SingleCellData *> &sc_data);
-void ReadCnPrior(string cn_prior_path, vector<BulkDatum *> &bulk_data);
-void ReadScRnaData(string scRNA_data_path,
-                     unordered_map<string, Locus *> &id2locus,
-                     vector<SingleCellData *> &sc_data);
-void ReadScRnaHyperparams(string sc_hyperparam_file, unordered_map<string, Locus *> &id2locus);
 
 // output related functions
 void write_vector(string path, const vector<unsigned int> &data);

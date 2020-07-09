@@ -33,7 +33,6 @@ class Locus
 {
     string chr = "";
     size_t pos = 0;
-    string gene_name = "";
     string mutation_id;
     string unique_str;
     size_t hash_code;
@@ -42,13 +41,12 @@ class Locus
     double beta_ = 1.0;
     double dropout_prob_ = 0.5;
 public:
-    Locus(string mutation_id, string chr, size_t pos, string gene_name);
+    Locus(string mutation_id, string chr, size_t pos);
     Locus(const Locus &other);
     inline string get_chr() const { return chr; }
     inline size_t get_pos() const { return pos; }
     inline size_t get_hash_code() const { return hash_code; }
     inline string get_mutation_id() const { return mutation_id; }
-    inline string get_gene_name() const { return gene_name; }
     bool operator==(const Locus &other) const;
     string to_str() const;
     double get_alpha() const;

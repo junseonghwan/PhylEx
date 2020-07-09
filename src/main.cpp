@@ -37,7 +37,8 @@ int main(int argc, char *argv[])
     }
 
     cout << "Starting program..." << endl;
-    Run(config_file);
+    Interface interface(config_file);
+    interface.Run();
     
     return 0;
 }

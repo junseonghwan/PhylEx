@@ -37,7 +37,8 @@ class TSSBState
     double log_lik_bulk = DOUBLE_NEG_INF;
     double log_lik_sc = DOUBLE_NEG_INF;
 
-    vector<BulkDatum *> *bulk_data;
+    vector<BulkDatum *> *bulk_data_;
+    vector<bool> has_sc_coverage_;
     vector<SingleCellData *> *sc_data;
 
     unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
@@ -52,17 +53,21 @@ class TSSBState
                             const BulkDatum *s,
                             const ModelParams &params) = 0;
     // function pointer to compute likelihood of single cell at site s if it has the variant given by has_snv
-    double (*log_lik_sc_at_site)(const BulkDatum *s, const SingleCellData *c, bool has_snv, const ModelParams &params) = 0;
-
-    // private constructor -- used by simulator, where data has not been generated yet
-    TSSBState(CloneTreeNode *root);
+    double (*log_lik_sc_at_site)(size_t loci_idx,
+                                 const BulkDatum *s,
+                                 const SingleCellData *c,
+                                 bool has_snv,
+                                 const ModelParams &params) = 0;
 
     // helper functions for initializing assignment of SNV
-    //void initialize_data_assignment(const gsl_rng *random, BulkDatum *datum, const ModelParams &params);
     void initialize_data_assignment(const gsl_rng *random, size_t mut_id, const ModelParams &params);
     // helper functions for performing slice sampling on an SNV
-    //void slice_sample_data_assignment(const gsl_rng *random, BulkDatum *datum, const ModelParams &params);
-    void slice_sample_data_assignment(const gsl_rng *random, size_t mut_id, const ModelParams &model_params);
+    void slice_sample_data_assignment(const gsl_rng *random,
+                                      size_t mut_id,
+                                      const ModelParams &model_params);
+    void slice_sample_data_assignment_with_sc(const gsl_rng *random,
+                                              size_t mut_id,
+                                              const ModelParams &model_params);
     // assign data to a node
     //void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &model_params);
     void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params);
@@ -77,7 +82,9 @@ class TSSBState
     double compute_loglik_sc(unordered_set<const BulkDatum *> &snvs, size_t cell_id);
     
     EigenMatrix sc_presence_matrix_, sc_absence_matrix_;
-    void PreComputeScLikelihood(const ModelParams &model_params);
+    // Pre-compute single cell likelihoods and determine SNVs that don't have
+    // any single cell coverage.
+    void ProcessSingleCellData(const ModelParams &model_params);
 
     double LogLikDatum(CloneTreeNode *node,
                        BulkDatum *datum,
@@ -90,7 +97,8 @@ public:
                                       const CloneTreeNode *node,
                                       const BulkDatum *datum,
                                       const ModelParams &params),
-              double (*log_lik_sc_at_site)(const BulkDatum *s,
+              double (*log_lik_sc_at_site)(size_t loci_idx,
+                                           const BulkDatum *s,
                                            const SingleCellData *c,
                                            bool has_snv,
                                            const ModelParams &params),
@@ -136,24 +144,24 @@ public:
     
     // static functions
     static gsl_matrix *get_ancestral_matrix(TSSBState &state);
-    static TSSBState *construct_trivial_state(CloneTreeNode *root,
-                            double (*log_lik_datum)(size_t region,
-                                                    const CloneTreeNode *v,
-                                                    const BulkDatum *s,
-                                                    const ModelParams &params),
-                            double (*log_lik_sc_at_site)(const BulkDatum *s,
-                                                         const SingleCellData *c,
-                                                         bool has_snv,
-                                                         const ModelParams &params));
+    
     static double compute_loglik_sc(const vector<BulkDatum *> &bulk_data,
                                     unordered_set<const BulkDatum *> &snvs,
                                     SingleCellData *cell,
                                     const ModelParams &params,
-                                    double (*log_lik_sc_at_site)(const BulkDatum *s, const SingleCellData *c, bool has_snv, const ModelParams &params));
+                                    double (*log_lik_sc_at_site)(size_t loci_idx,
+                                                                 const BulkDatum *s,
+                                                                 const SingleCellData *c,
+                                                                 bool has_snv,
+                                                                 const ModelParams &params));
     static double compute_log_likelihood_sc(CloneTreeNode *root,
                                             const vector<BulkDatum *> &bulk_data,
                                             const vector<SingleCellData *> &sc_data,
-                                            double (*log_lik_sc_at_site)(const BulkDatum *s, const SingleCellData *c, bool has_snv, const ModelParams &params),
+                                            double (*log_lik_sc_at_site)(size_t loci_idx,
+                                                                         const BulkDatum *s,
+                                                                         const SingleCellData *c,
+                                                                         bool has_snv,
+                                                                         const ModelParams &params),
                                             const ModelParams &params,
                                             bool verbose=false);
     static void sample_alpha0(const gsl_rng *random, size_t n_mh_iter, ModelParams &params, vector<CloneTreeNode *> &nodes);

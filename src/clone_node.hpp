@@ -124,7 +124,7 @@ public:
     static void breadth_first_traversal(CloneTreeNode *root, vector<CloneTreeNode *> &ret, bool non_empty = false);
     static CloneTreeNode *find_node(const gsl_rng *random, double u, CloneTreeNode *root, const ModelParams &params);
     // return all data from ancestors including node itself
-    static void get_dataset(CloneTreeNode *node, unordered_set<const BulkDatum *> &dataset);
+    static void GetDataset(CloneTreeNode *node, unordered_set<const BulkDatum *> &dataset);
     static void get_cluster_labels(CloneTreeNode *root,
                                    const vector<BulkDatum *> &data,
                                    vector<unsigned int> &cluster_labels);
@@ -185,13 +185,14 @@ public:
     void set_cellular_prev(vector<double> &vec);
 
     static CloneTreeNode *create_root_node(size_t region_count);
-    static void get_snvs(CloneTreeNode *node, unordered_set<Locus> &ret);
+    static void RetrieveLoci(CloneTreeNode *node, unordered_set<Locus> &ret);
 };
 
-double ScLikelihood(const BulkDatum *s,
-                     const SingleCellData *sc,
-                     bool has_snv,
-                     const ModelParams &model_params);
+double ScLikelihood(size_t loci_idx,
+                    const BulkDatum *s,
+                    const SingleCellData *sc,
+                    bool has_snv,
+                    const ModelParams &model_params);
 double BulkLogLikWithTotalCopyNumber(size_t region,
                                      const CloneTreeNode *node,
                                      const BulkDatum *s,
