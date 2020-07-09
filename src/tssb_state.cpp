@@ -229,14 +229,14 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
         unordered_set<const BulkDatum *> *snvs = new unordered_set<const BulkDatum *>();
         // This loops until it reaches the root.
         // We can write better code for getting the mutations without traversing to the root each time.
-        CloneTreeNode::get_dataset(v, *snvs);
+        CloneTreeNode::GetDataset(v, *snvs);
         node2snvs[v] = snvs;
     }
     for (CloneTreeNode *v : subtree_new)
     {
         if (node2snvs.count(v) == 0) {
             unordered_set<const BulkDatum *> *snvs = new unordered_set<const BulkDatum *>();
-            CloneTreeNode::get_dataset(v, *snvs);
+            CloneTreeNode::GetDataset(v, *snvs);
             node2snvs[v] = snvs;
         }
     }
@@ -640,7 +640,7 @@ double TSSBState::compute_log_likelihood_sc(CloneTreeNode *root,
     for (CloneTreeNode *v : all_nodes)
     {
         unordered_set<const BulkDatum *> snvs;
-        CloneTreeNode::get_dataset(v, snvs);
+        CloneTreeNode::GetDataset(v, snvs);
         node2snvs[v] = snvs;
     }
     
@@ -679,7 +679,7 @@ double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bo
     for (CloneTreeNode *v : all_nodes)
     {
         unordered_set<const BulkDatum *> *snvs = new unordered_set<const BulkDatum *>();
-        CloneTreeNode::get_dataset(v, *snvs);
+        CloneTreeNode::GetDataset(v, *snvs);
         node2snvs[v] = snvs;
     }
     
@@ -1060,7 +1060,7 @@ void TSSBState::initialize_sc_cache(const ModelParams &model_params)
     for (CloneTreeNode *v : all_nodes)
     {
         unordered_set<const BulkDatum *> snvs;
-        CloneTreeNode::get_dataset(v, snvs);
+        CloneTreeNode::GetDataset(v, snvs);
         node2snvs[v] = snvs;
     }
     for (size_t c = 0; c < sc_data->size(); c++) {

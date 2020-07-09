@@ -121,7 +121,7 @@ void CloneTreeNode::sample_node_parameters(const gsl_rng *random, const ModelPar
     }
 }
 
-void CloneTreeNode::get_snvs(CloneTreeNode *node, unordered_set<Locus> &ret)
+void CloneTreeNode::RetrieveLoci(CloneTreeNode *node, unordered_set<Locus> &ret)
 {
     // traverse to the root to retrieve all SNVs
     CloneTreeNode *v = node;
@@ -283,7 +283,7 @@ const unordered_set<const BulkDatum *> &CloneTreeNode::get_data() const
     return data;
 }
 
-void CloneTreeNode::get_dataset(CloneTreeNode *node,
+void CloneTreeNode::GetDataset(CloneTreeNode *node,
                             unordered_set<const BulkDatum *> &dataset)
 {
     // trace up to the root node to get all SNVs

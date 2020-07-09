@@ -389,7 +389,7 @@ void GenerateScRnaReads2(const gsl_rng *random,
     cout << "Number of sites expressed: " << sampled_loci_idx.size() << "\n";
 
     unordered_set<Locus> snvs;
-    CloneTreeNode::get_snvs(node, snvs);
+    CloneTreeNode::RetrieveLoci(node, snvs);
     size_t var_loci_expr_count = 0;
     size_t var_read_observed_count = 0;
     for (auto locus_idx : sampled_loci_idx) {
