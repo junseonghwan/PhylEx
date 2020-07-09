@@ -133,6 +133,7 @@ BOOST_AUTO_TEST_CASE( TestScCache )
         vector<size_t> major_cns(1, 1);
         vector<size_t> minor_cns(1, 1);
 
+        mutation_id = "s" + to_string(i);
         BulkDatum *datum = new BulkDatum(mutation_id, "chr", i,
                                          var_reads, total_reads,
                                          major_cns, minor_cns);
@@ -162,24 +163,19 @@ BOOST_AUTO_TEST_CASE( TestScCache )
                    &bulk_data, &sc_data);
     cout << tree.print() << endl;
 
-    double sc_log_lik = TSSBState::compute_log_likelihood_sc(root,
-                                                             bulk_data,
-                                                             sc_data,
-                                                             ScLikelihood,
-                                                             model_params);
-    double sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params);
+    bool verbose = true;
+    double sc_log_lik = tree.compute_log_likelihood_sc(verbose);
+    double sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params, verbose);
     cout << "At init: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
     BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
     
     // Resample assignment of bulk data.
     tree.resample_data_assignment(random, model_params);
     cout << tree.print() << endl;
-    sc_log_lik = TSSBState::compute_log_likelihood_sc(root,
-                                                      bulk_data,
-                                                      sc_data,
-                                                      ScLikelihood,
-                                                      model_params);
-    sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params);
+    cout << "Brute force calculation: \n";
+    sc_log_lik = tree.compute_log_likelihood_sc(verbose);
+    cout << "Cache calculation: \n";
+    sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params, verbose);
     cout << "After move: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
     BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
 }

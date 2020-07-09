@@ -686,7 +686,7 @@ void CloneTreeNode::AllocateCache(size_t cell_count)
 
 void CloneTreeNode::UpdateCache(size_t c, double val)
 {
-    sc_cache[c] = val;
+    sc_cache[c] += val;
 }
 
 double CloneTreeNode::GetScCache(size_t c)

@@ -367,18 +367,9 @@ double TSSBState::get_log_lik()
     return log_lik;
 }
 
-double TSSBState::compute_log_likelihood_sc(CloneTreeNode *root,
-                                                   const vector<BulkDatum *> &bulk_data,
-                                                   const vector<SingleCellData *> &sc_data,
-                                                   double (*log_lik_sc_at_site)(size_t loci_idx,
-                                                                                const BulkDatum *s,
-                                                                                const SingleCellData *c,
-                                                                                bool has_snv,
-                                                                                const ModelParams &params),
-                                                   const ModelParams &params,
-                                                   bool verbose)
+double TSSBState::compute_log_likelihood_sc(bool verbose)
 {
-    if (sc_data.size() == 0) {
+    if (sc_data->size() == 0) {
         return 0.0;
     }
 
@@ -387,22 +378,13 @@ double TSSBState::compute_log_likelihood_sc(CloneTreeNode *root,
     // Marginalize over assignment to the nodes.
     vector<CloneTreeNode *> all_nodes;
     get_all_nodes(true, root, all_nodes);
-    unordered_map<CloneTreeNode *, unordered_set<const BulkDatum *> > node2snvs;
-    for (CloneTreeNode *v : all_nodes)
-    {
-        unordered_set<const BulkDatum *> snvs;
-        CloneTreeNode::GetDataset(v, snvs);
-        node2snvs[v] = snvs;
-    }
     
     double log_prior_assignment = -log(all_nodes.size());
-    for (size_t c = 0; c < sc_data.size(); c++) {
+    for (size_t c = 0; c < sc_data->size(); c++) {
         double log_lik_cell = DOUBLE_NEG_INF;
-        SingleCellData *cell = sc_data.at(c);
         for (size_t i = 0; i < all_nodes.size(); i++) {
             CloneTreeNode *node = all_nodes[i];
-            auto snvs = node2snvs.at(node);
-            double log_val = TSSBState::compute_loglik_sc(bulk_data, snvs, cell, params, log_lik_sc_at_site);
+            double log_val = compute_loglik_sc(node, c);
             if (verbose) {
                 cout << "[" << node->get_name() << "]: " << log_val << endl;
             }
@@ -410,7 +392,6 @@ double TSSBState::compute_log_likelihood_sc(CloneTreeNode *root,
         }
         log_lik_cell += log_prior_assignment;
         log_lik_sc += log_lik_cell;
-        //cout << "Cell " << c << ": " << log_lik_cell << endl;
     }
     
     return log_lik_sc;
@@ -425,7 +406,7 @@ double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bo
     // get all non-empty nodes, these are possible candidates for assignment of single cells
     vector<CloneTreeNode *> all_nodes;
     get_all_nodes(true, all_nodes);
-    
+
     for (size_t i = 0; i < all_nodes.size(); i++) {
         CloneTreeNode *v = all_nodes[i];
         InitializeCacheForNode(v);
@@ -470,28 +451,6 @@ double TSSBState::compute_loglik_sc(CloneTreeNode *v, size_t cell_id)
         log_lik += log_val;
         //cout << "Has SNV: " << has_snv << ", " << log_val << endl;
     }
-    return log_lik;
-}
-
-
-double TSSBState::compute_loglik_sc(const vector<BulkDatum *> &bulk_data,
-                                           unordered_set<const BulkDatum *> &snvs,
-                                           SingleCellData *cell,
-                                           const ModelParams &params,
-                                           double (*log_lik_sc_at_site)(size_t loci_idx,
-                                                                        const BulkDatum *s,
-                                                                        const SingleCellData *c,
-                                                                        bool has_snv,
-                                                                        const ModelParams &params))
-{
-    double log_lik = 0.0;
-    bool has_snv;
-    for (size_t i = 0; i < bulk_data.size(); i++) {
-        const BulkDatum *snv = bulk_data.at(i);
-        has_snv = (snvs.count(snv) > 0);
-        log_lik += log_lik_sc_at_site(i, snv, cell, has_snv, params);
-    }
-    
     return log_lik;
 }
 

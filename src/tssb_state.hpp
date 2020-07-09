@@ -139,25 +139,8 @@ public:
     // static functions
     static gsl_matrix *get_ancestral_matrix(TSSBState &state);
     
-    static double compute_loglik_sc(const vector<BulkDatum *> &bulk_data,
-                                    unordered_set<const BulkDatum *> &snvs,
-                                    SingleCellData *cell,
-                                    const ModelParams &params,
-                                    double (*log_lik_sc_at_site)(size_t loci_idx,
-                                                                 const BulkDatum *s,
-                                                                 const SingleCellData *c,
-                                                                 bool has_snv,
-                                                                 const ModelParams &params));
-    static double compute_log_likelihood_sc(CloneTreeNode *root,
-                                            const vector<BulkDatum *> &bulk_data,
-                                            const vector<SingleCellData *> &sc_data,
-                                            double (*log_lik_sc_at_site)(size_t loci_idx,
-                                                                         const BulkDatum *s,
-                                                                         const SingleCellData *c,
-                                                                         bool has_snv,
-                                                                         const ModelParams &params),
-                                            const ModelParams &params,
-                                            bool verbose=false);
+    double compute_log_likelihood_sc(bool verbose=false);
+    
     static void sample_alpha0(const gsl_rng *random, size_t n_mh_iter, ModelParams &params, vector<CloneTreeNode *> &nodes);
     static void sample_lambda(const gsl_rng *random, size_t n_mh_iter, ModelParams &params, vector<CloneTreeNode *> &nodes);
     static void sample_gamma(const gsl_rng *random, size_t n_mh_iter, ModelParams &params, vector<double> psi_sticks);
