@@ -667,6 +667,33 @@ bool CloneTreeNode::IsDescendantOf(CloneTreeNode *other) {
     return true;
 }
 
+bool CloneTreeNode::IsCacheAllocated(size_t cell_count)
+{
+    return (sc_cache.size() == cell_count);
+}
+
+void CloneTreeNode::AllocateCache(size_t cell_count)
+{
+    if (sc_cache.size() == 0) {
+        sc_cache.resize(cell_count);
+    } else {
+        if (cell_count != sc_cache.size()) {
+            cerr << "Cache size does not match the required size of " << cell_count << ".\n";
+            exit(-1);
+        }
+    }
+}
+
+void CloneTreeNode::UpdateCache(size_t c, double val)
+{
+    sc_cache[c] = val;
+}
+
+double CloneTreeNode::GetScCache(size_t c)
+{
+    return sc_cache[c];
+}
+
 void CloneTreeNode::construct_datum2node(vector<CloneTreeNode *> &all_nodes,
                                      unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node)
 {

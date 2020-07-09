@@ -43,10 +43,6 @@ class TSSBState
 
     unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
 
-    // vector index for sc_cache is the same as the sc_data idx
-    // for each cell, store the mapping from node to double (log likelihood of being assigned to that node)
-    vector<unordered_map<CloneTreeNode *, double> > sc_cache;
-
     // function pointer to compute likelihood of assigning bulk datum to node
     double (*log_lik_datum)(size_t region,
                             const CloneTreeNode *v,
@@ -73,10 +69,9 @@ class TSSBState
     void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache = true);
 
     void initialize_sc_cache(const ModelParams &model_params);
-    void initialize_sc_cache(size_t c, CloneTreeNode *v, const ModelParams &model_params);
+    void InitializeCacheForNode(CloneTreeNode *v);
     //void update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &params);
     void update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params);
-    void print_cache();
 
     double compute_loglik_sc(CloneTreeNode *v, size_t cell_id);
     
@@ -174,7 +169,7 @@ public:
 
     friend size_t descend_and_cull(CloneTreeNode *node);
     friend void descend_and_update_names(CloneTreeNode *node);
-    void clear_cache();
+    //void clear_cache();
 };
 
 void update_params(size_t region,

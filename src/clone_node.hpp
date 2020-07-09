@@ -62,7 +62,8 @@ class CloneTreeNode
     double nu = 0.0;
     CloneTreeNode *parent_node = 0;
     unordered_set<const BulkDatum *> data;
-    
+    vector<double> sc_cache;
+
     // map: child branch idx -> pair<psi_stick, Node *>
     unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child;
     bool operator==(const CloneTreeNode &other) const
@@ -86,6 +87,10 @@ class CloneTreeNode
 public:
     ~CloneTreeNode();
 
+    bool IsCacheAllocated(size_t cell_count);
+    void AllocateCache(size_t cell_count);
+    void UpdateCache(size_t c, double val);
+    double GetScCache(size_t c);
     string get_name() const;
     inline const vector<size_t> &get_name_vec() const { return name; };
     inline size_t get_depth() const { return name.size() - 1; }

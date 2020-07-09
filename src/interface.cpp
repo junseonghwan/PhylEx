@@ -107,7 +107,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         tree->resample_data_assignment(random, params);
         
         cull(tree->get_root());
-        tree->clear_cache();
+        //tree->clear_cache();
         
         // 2. update params
         double ar = sample_params_dirichlet(random, config_.n_mh_iter, *tree, params);
