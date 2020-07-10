@@ -25,6 +25,8 @@ using EigenMatrixXcd = Eigen::MatrixXcd;
 using EigenMatrixRef = Eigen::Ref<const EigenMatrix>;
 using EigenMatrixXcdRef = Eigen::Ref<const EigenMatrixXcd>;
 
+using DoubleMatrix = vector<vector<double> >;
+
 extern const double DOUBLE_INF;
 extern const double DOUBLE_NEG_INF;
 extern const double NaN;

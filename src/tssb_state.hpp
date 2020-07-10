@@ -74,8 +74,10 @@ class TSSBState
     void update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params);
 
     double compute_loglik_sc(CloneTreeNode *v, size_t cell_id);
-    
-    EigenMatrix sc_presence_matrix_, sc_absence_matrix_;
+
+    // N x C matrix storing likelihood of single cell reads for mutation n, cell c
+    // when the cell carries the mutation (presnce) and when it doesn't (absence).
+    DoubleMatrix sc_presence_matrix_, sc_absence_matrix_;
     // Pre-compute single cell likelihoods and determine SNVs that don't have
     // any single cell coverage.
     void ProcessSingleCellData(const ModelParams &model_params);

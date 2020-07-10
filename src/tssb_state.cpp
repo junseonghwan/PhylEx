@@ -20,7 +20,9 @@ bulk_data_(bulk_data),
 has_sc_coverage_(bulk_data_->size(), false),
 sc_data(sc_data),
 log_lik_datum(log_lik_datum),
-log_lik_sc_at_site(log_lik_sc_at_site)
+log_lik_sc_at_site(log_lik_sc_at_site),
+sc_presence_matrix_(bulk_data->size(), vector<double>(sc_data->size())),
+sc_absence_matrix_(bulk_data->size(), vector<double>(sc_data->size()))
 {
 //    if (sc_data != 0) {
 //        sc_cache.resize(sc_data->size());
@@ -43,15 +45,22 @@ log_lik_sc_at_site(log_lik_sc_at_site)
 void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
     size_t cell_count = sc_data->size();
     size_t mutation_count = bulk_data_->size();
-    sc_presence_matrix_ = EigenMatrix::Zero(cell_count, mutation_count);
-    sc_absence_matrix_ = EigenMatrix::Zero(cell_count, mutation_count);
+
     // Evaluate single cell log likelihoods.
     size_t snv_sc_coverage_count = 0;
     for (size_t n = 0; n < mutation_count; n++) {
         size_t sc_coverage_count = 0;
         for (size_t c = 0; c < cell_count; c++) {
-            sc_presence_matrix_(c,n) = log_lik_sc_at_site(n, bulk_data_->at(n), sc_data->at(c), true, model_params);
-            sc_absence_matrix_(c,n) = log_lik_sc_at_site(n, bulk_data_->at(n), sc_data->at(c), false, model_params);
+            sc_presence_matrix_[n][c] = log_lik_sc_at_site(n,
+                                                             bulk_data_->at(n),
+                                                             sc_data->at(c),
+                                                             true,
+                                                             model_params);
+            sc_absence_matrix_[n][c] = log_lik_sc_at_site(n,
+                                                            bulk_data_->at(n),
+                                                            sc_data->at(c),
+                                                            false,
+                                                            model_params);
             auto total_reads = sc_data->at(c)->GetTotalReads(n);
             sc_coverage_count += (total_reads > 0) ? 1 : 0;
         }
@@ -142,18 +151,20 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
     bool exp_mut_status;
     for (size_t c = 0; c < sc_data->size(); c++) {
         for (CloneTreeNode *v : subtree_curr) {
-            double x = sc_presence_matrix_(c, mut_id);
+            double x = sc_presence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, -x);
             exp_mut_status = v->IsDescendantOf(new_node) ? true : false;
-            double y = exp_mut_status ? sc_presence_matrix_(c, mut_id) : sc_absence_matrix_(c, mut_id);
+            double y = exp_mut_status ? sc_presence_matrix_.at(mut_id).at(c) :
+                                        sc_absence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, y);
         }
         
         for (CloneTreeNode *v : subtree_new) {
             exp_mut_status = v->IsDescendantOf(curr_node) ? true : false;
-            double x = exp_mut_status ? sc_presence_matrix_(c, mut_id) : sc_absence_matrix_(c, mut_id);
+            double x = exp_mut_status ? sc_presence_matrix_.at(mut_id).at(c) :
+                                        sc_absence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, -x);
-            double y = sc_presence_matrix_(c, mut_id);
+            double y = sc_presence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, y);
         }
     }
@@ -446,10 +457,9 @@ double TSSBState::compute_loglik_sc(CloneTreeNode *v, size_t cell_id)
         const BulkDatum *snv = bulk_data_->at(loci_idx);
         auto u = datum2node[snv];
         has_snv = u->IsAncestorOf(v);
-        double log_val = has_snv ? sc_presence_matrix_(cell_id, loci_idx) :
-        sc_absence_matrix_(cell_id, loci_idx);
+        double log_val = has_snv ? sc_presence_matrix_.at(loci_idx).at(cell_id) :
+                                    sc_absence_matrix_.at(loci_idx).at(cell_id);
         log_lik += log_val;
-        //cout << "Has SNV: " << has_snv << ", " << log_val << endl;
     }
     return log_lik;
 }
