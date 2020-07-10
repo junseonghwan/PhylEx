@@ -1189,3 +1189,40 @@ void cull(CloneTreeNode *root)
         }
     }
 }
+
+double ScLikelihood(CloneTreeNode *root,
+                    vector<BulkDatum *> &bulk_data,
+                    vector<SingleCellData *> &sc_data,
+                    const ModelParams &model_params)
+{
+    vector<CloneTreeNode *> nodes;
+    TSSBState::get_all_nodes(true, root, nodes);
+    unordered_map<CloneTreeNode *, unordered_set<const BulkDatum *> > node2snvs;
+    for (auto node : nodes) {
+        unordered_set<const BulkDatum *> snvs;
+        CloneTreeNode::GetDataset(node, snvs);
+        node2snvs[node] = snvs;
+    }
+
+    bool has_snv;
+    double log_lik = 0.0, log_val = 0.0;
+    double log_prior = -log(nodes.size());
+    for (size_t c = 0; c < sc_data.size(); c++) {
+        double log_lik_cell = DOUBLE_NEG_INF;
+        for (auto node : nodes) {
+            double log_lik_node = 0.0;
+            for (size_t loci_idx : sc_data.at(c)->GetLoci()) {
+                has_snv = node2snvs.at(node).count(bulk_data.at(loci_idx)) ? true : false;
+                log_val = ScLikelihood(loci_idx,
+                                       bulk_data.at(loci_idx),
+                                       sc_data.at(c),
+                                       has_snv,
+                                       model_params);
+                log_lik_node += log_val;
+            }
+            log_lik_cell = log_add(log_lik_cell, log_lik_node);
+        }
+        log_lik += (log_lik_cell + log_prior);
+    }
+    return log_lik;
+}
