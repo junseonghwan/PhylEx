@@ -1,4 +1,6 @@
 #include "tssb_state.hpp"
+
+#include <omp.h>
 #include "utils.hpp"
 
 TSSBState::TSSBState(const gsl_rng *random,
@@ -427,7 +429,7 @@ double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bo
     
     double log_lik_sc = 0.0;
     double log_val;
-    // TODO: this can be parallelized over cells
+    // TODO: this can be parallelized over cells -- but this is not the bottleneck.
     for (size_t c = 0; c < sc_data->size(); c++) {
         // Marginalize over the nodes.
         double log_lik_cell = DOUBLE_NEG_INF;
@@ -1138,11 +1140,28 @@ double sample_params_dirichlet(const gsl_rng *random,
                                const ModelParams &params)
 {
     size_t region_count = tree.get_root()->get_node_parameter().GetRegionCount();
-    double ar = 0.0;
+    double ar[region_count];
+    gsl_rng *rands[region_count];
     for (size_t i = 0; i < region_count; i++) {
-        ar += sample_params_dirichlet(i, random, n_mh_iter, tree, params);
+        rands[i] = generate_random_object(gsl_rng_get(random));
     }
-    return ar/region_count;
+    omp_set_num_threads(region_count);
+#pragma omp parallel
+    {
+    //int ID = omp_get_thread_num();
+    //printf("Hello %d ", ID);
+#pragma omp for
+        for (size_t i = 0; i < region_count; i++) {
+            ar[i] = sample_params_dirichlet(i, rands[i], n_mh_iter, tree, params);
+        }
+    }
+    double acceptance_rate = 0.0;
+    for (size_t i = 0; i < region_count; i++) {
+        acceptance_rate += ar[i];
+        gsl_rng_free(rands[i]);
+    }
+    
+    return acceptance_rate/region_count;
 }
 
 void cull(CloneTreeNode *root)
