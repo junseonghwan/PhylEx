@@ -7,88 +7,88 @@
 
 #include "simul_data.hpp"
 
-#include "Eigen/Dense"
-#include "Eigen/Eigenvalues"
+//#include "Eigen/Dense"
+//#include "Eigen/Eigenvalues"
 
 #include "data_util.hpp"
 #include "utils.hpp"
 #include "tssb_state.hpp"
 
-size_t SampleCnProfile(const gsl_rng *random,
-                       size_t curr,
-                       EigenMatrixRef P)
-{
-    if (curr == 0) {
-        return curr;
-    }
-    
-    // sample a new state
-    vector<double> probs;
-    for (size_t j = 0; j < P.cols(); j++) {
-        probs.push_back(P(curr, j));
-    }
-    size_t new_state = multinomial(random, probs);
-    return new_state;
-}
+//size_t SampleCnProfile(const gsl_rng *random,
+//                       size_t curr,
+//                       EigenMatrixRef P)
+//{
+//    if (curr == 0) {
+//        return curr;
+//    }
+//    
+//    // sample a new state
+//    vector<double> probs;
+//    for (size_t j = 0; j < P.cols(); j++) {
+//        probs.push_back(P(curr, j));
+//    }
+//    size_t new_state = multinomial(random, probs);
+//    return new_state;
+//}
+//
+//// Returns matrix Q of dimension NxN where N = max_cn - min_cn.
+//// If min_cn = 0, then since 0 is an absorbing state, Q(0,j) = 0.
+//EigenMatrix GetCnRateMatrix(double birth_rate,
+//                            double death_rate,
+//                            size_t min_cn,
+//                            size_t max_cn)
+//{
+//    size_t n_states = max_cn - min_cn + 1;
+//    EigenMatrix Q = EigenMatrix::Zero(n_states, n_states);
+//    for (size_t i = 0; i < n_states; i++) {
+//        if (i >= 1) {
+//            Q(i,i-1) = death_rate;
+//        }
+//        if (i < n_states - 1) {
+//            Q(i,i+1) = birth_rate;
+//        }
+//    }
+//    Q.diagonal() = -Q.rowwise().sum();
+//    
+//    // We check if cn state 0 is in the rate matrix.
+//    // If so, set it as the absorbing state.
+//    if (min_cn == 0) {
+//        Q.row(0).setZero();
+//    }
+//
+//    assert(abs(Q.sum()) < 1e-6);
+//    return Q;
+//}
 
-// Returns matrix Q of dimension NxN where N = max_cn - min_cn.
-// If min_cn = 0, then since 0 is an absorbing state, Q(0,j) = 0.
-EigenMatrix GetCnRateMatrix(double birth_rate,
-                            double death_rate,
-                            size_t min_cn,
-                            size_t max_cn)
-{
-    size_t n_states = max_cn - min_cn + 1;
-    EigenMatrix Q = EigenMatrix::Zero(n_states, n_states);
-    for (size_t i = 0; i < n_states; i++) {
-        if (i >= 1) {
-            Q(i,i-1) = death_rate;
-        }
-        if (i < n_states - 1) {
-            Q(i,i+1) = birth_rate;
-        }
-    }
-    Q.diagonal() = -Q.rowwise().sum();
-    
-    // We check if cn state 0 is in the rate matrix.
-    // If so, set it as the absorbing state.
-    if (min_cn == 0) {
-        Q.row(0).setZero();
-    }
-
-    assert(abs(Q.sum()) < 1e-6);
-    return Q;
-}
-
-EigenMatrix ExponentiateMatrix(EigenMatrixRef M)
-{
-    Eigen::EigenSolver<EigenMatrix> diagnoalization;
-    diagnoalization.compute(M);
-    auto evalues = diagnoalization.eigenvalues();
-    Eigen::MatrixXcd D = Eigen::MatrixXcd::Zero(evalues.rows(), evalues.rows());
-    for (size_t i = 0; i < evalues.rows(); i++) {
-        D(i,i) = exp(evalues(i).real());
-    }
-    Eigen::MatrixXcd V = diagnoalization.eigenvectors();
-    Eigen::MatrixXcd ret = V * D * V.inverse();
-    EigenMatrix expM = EigenMatrix::Zero(M.rows(), M.cols());
-    for (size_t i = 0; i < expM.rows(); i++) {
-        for (size_t j = 0; j < expM.cols(); j++) {
-            if (ret.coeffRef(i, j).imag() > 0) {
-                cerr << "Imaginary number found in the transition matrix." << endl;
-                exit(-1);
-            }
-            expM(i,j) = ret(i, j).real();
-        }
-    }
-    auto rowsums = expM.rowwise().sum();
-    for (size_t i = 0; i < rowsums.size(); i++) {
-        //cout << "line 85: " << rowsums(i) << endl;
-        assert(abs(1 - rowsums(i)) < 1e-3);
-    }
-
-    return expM;
-}
+//EigenMatrix ExponentiateMatrix(EigenMatrixRef M)
+//{
+//    Eigen::EigenSolver<EigenMatrix> diagnoalization;
+//    diagnoalization.compute(M);
+//    auto evalues = diagnoalization.eigenvalues();
+//    Eigen::MatrixXcd D = Eigen::MatrixXcd::Zero(evalues.rows(), evalues.rows());
+//    for (size_t i = 0; i < evalues.rows(); i++) {
+//        D(i,i) = exp(evalues(i).real());
+//    }
+//    Eigen::MatrixXcd V = diagnoalization.eigenvectors();
+//    Eigen::MatrixXcd ret = V * D * V.inverse();
+//    EigenMatrix expM = EigenMatrix::Zero(M.rows(), M.cols());
+//    for (size_t i = 0; i < expM.rows(); i++) {
+//        for (size_t j = 0; j < expM.cols(); j++) {
+//            if (ret.coeffRef(i, j).imag() > 0) {
+//                cerr << "Imaginary number found in the transition matrix." << endl;
+//                exit(-1);
+//            }
+//            expM(i,j) = ret(i, j).real();
+//        }
+//    }
+//    auto rowsums = expM.rowwise().sum();
+//    for (size_t i = 0; i < rowsums.size(); i++) {
+//        //cout << "line 85: " << rowsums(i) << endl;
+//        assert(abs(1 - rowsums(i)) < 1e-3);
+//    }
+//
+//    return expM;
+//}
 
 vector<Locus> CreateSNVs(gsl_rng *random,
                          const SimulationConfig &simul_config,
