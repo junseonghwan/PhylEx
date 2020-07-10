@@ -1,4 +1,6 @@
 #include "tssb_state.hpp"
+
+#include <omp.h>
 #include "utils.hpp"
 
 TSSBState::TSSBState(const gsl_rng *random,
@@ -427,7 +429,7 @@ double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bo
     
     double log_lik_sc = 0.0;
     double log_val;
-    // TODO: this can be parallelized over cells
+    // TODO: this can be parallelized over cells -- but this is not the bottleneck.
     for (size_t c = 0; c < sc_data->size(); c++) {
         // Marginalize over the nodes.
         double log_lik_cell = DOUBLE_NEG_INF;
@@ -1138,11 +1140,28 @@ double sample_params_dirichlet(const gsl_rng *random,
                                const ModelParams &params)
 {
     size_t region_count = tree.get_root()->get_node_parameter().GetRegionCount();
-    double ar = 0.0;
+    double ar[region_count];
+    gsl_rng *rands[region_count];
     for (size_t i = 0; i < region_count; i++) {
-        ar += sample_params_dirichlet(i, random, n_mh_iter, tree, params);
+        rands[i] = generate_random_object(gsl_rng_get(random));
     }
-    return ar/region_count;
+    omp_set_num_threads(region_count);
+#pragma omp parallel
+    {
+    //int ID = omp_get_thread_num();
+    //printf("Hello %d ", ID);
+#pragma omp for
+        for (size_t i = 0; i < region_count; i++) {
+            ar[i] = sample_params_dirichlet(i, rands[i], n_mh_iter, tree, params);
+        }
+    }
+    double acceptance_rate = 0.0;
+    for (size_t i = 0; i < region_count; i++) {
+        acceptance_rate += ar[i];
+        gsl_rng_free(rands[i]);
+    }
+    
+    return acceptance_rate/region_count;
 }
 
 void cull(CloneTreeNode *root)
@@ -1169,4 +1188,41 @@ void cull(CloneTreeNode *root)
             curr_node->set_clone_freq(region, curr_node->GetCellularPrevs(region) - children_cellular_prev);
         }
     }
+}
+
+double ScLikelihood(CloneTreeNode *root,
+                    vector<BulkDatum *> &bulk_data,
+                    vector<SingleCellData *> &sc_data,
+                    const ModelParams &model_params)
+{
+    vector<CloneTreeNode *> nodes;
+    TSSBState::get_all_nodes(true, root, nodes);
+    unordered_map<CloneTreeNode *, unordered_set<const BulkDatum *> > node2snvs;
+    for (auto node : nodes) {
+        unordered_set<const BulkDatum *> snvs;
+        CloneTreeNode::GetDataset(node, snvs);
+        node2snvs[node] = snvs;
+    }
+
+    bool has_snv;
+    double log_lik = 0.0, log_val = 0.0;
+    double log_prior = -log(nodes.size());
+    for (size_t c = 0; c < sc_data.size(); c++) {
+        double log_lik_cell = DOUBLE_NEG_INF;
+        for (auto node : nodes) {
+            double log_lik_node = 0.0;
+            for (size_t loci_idx : sc_data.at(c)->GetLoci()) {
+                has_snv = node2snvs.at(node).count(bulk_data.at(loci_idx)) ? true : false;
+                log_val = ScLikelihood(loci_idx,
+                                       bulk_data.at(loci_idx),
+                                       sc_data.at(c),
+                                       has_snv,
+                                       model_params);
+                log_lik_node += log_val;
+            }
+            log_lik_cell = log_add(log_lik_cell, log_lik_node);
+        }
+        log_lik += (log_lik_cell + log_prior);
+    }
+    return log_lik;
 }

@@ -199,19 +199,6 @@ int main(int argc, char *argv[])
         // in the BulkDatum to update the hyper parameters for each locus from file.
         // So changing it to a copy of Locus for each BulkDatum is not an option.
         auto loci = CreateSNVs(random, simul_config, data);
-        // Incorporate copy number variation using BD (non-clonal) or genotype (clonal).
-//        if (bd_process) {
-//            GenerateBulkDataWithBDProcess(random,
-//                                          simul_config,
-//                                          data,
-//                                          root_node);
-//        } else {
-//            GenerateBulkData(random,
-//                             simul_config,
-//                             data,
-//                             root_node);
-//        }
-        
         GenerateBulkData(random, simul_config, data, root_node);
 
         // Generate single cells data.
@@ -254,11 +241,10 @@ int main(int argc, char *argv[])
                                                            model_params);
                 }
             }
-            double sc_log_lik = TSSBState::compute_log_likelihood_sc(root_node,
-                                                                     data,
-                                                                     sc_data,
-                                                                     ScLikelihood,
-                                                                     model_params);
+            double sc_log_lik = ScLikelihood(root_node,
+                                             data,
+                                             sc_data,
+                                             model_params);
             WriteTreeToFile(output_path, data, root_node);
             WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
             WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);

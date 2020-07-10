@@ -114,6 +114,55 @@ BOOST_AUTO_TEST_CASE( TestScLikelihood )
     BOOST_TEST(fabs(realized - -9.210441917) < 1e-6);
 }
 
+BOOST_AUTO_TEST_CASE( TestScLikelihood2 )
+{
+    InitializeTestSetup();
+    
+    double alpha = 3.0;
+    double beta = 12.0;
+    double dropout_prob = 0.8;
+    
+    BulkDatum bulk1("s0", "chr", 0);
+    // Bulk data doesn't matter; just some values to ensure it runs.
+    bulk1.AddRegionData(10, 20, 1, 1);
+    bulk1.SetLocuHyperParameters(alpha, beta, dropout_prob);
+    BulkDatum bulk2("s1", "chr", 1);
+    bulk2.AddRegionData(10, 20, 1, 1);
+    bulk2.SetLocuHyperParameters(alpha, beta, dropout_prob);
+
+    vector<BulkDatum *> bulk_data;
+    bulk_data.push_back(&bulk1);
+    bulk_data.push_back(&bulk2);
+    
+    size_t loci_count = bulk_data.size();
+    
+    SingleCellData c0("c0", loci_count);
+    c0.InsertDatum(0, 10, 20);
+    c0.InsertDatum(1, 15, 15);
+    
+    SingleCellData c1("c1", loci_count);
+    c1.InsertDatum(0, 15, 20);
+    c1.InsertDatum(0, 5, 20);
+    
+    vector<SingleCellData *> sc_data;
+    sc_data.push_back(&c0);
+    sc_data.push_back(&c1);
+    
+    gsl_rng *random = generate_random_object(1);
+    
+    CloneTreeNode *root = CloneTreeNode::create_root_node(bulk1.GetRegionCount());
+    TSSBState tree(random, root, model_params,
+                   BulkLogLikWithGenotype, ScLikelihood,
+                   &bulk_data, &sc_data);
+    double log_lik_sc1 = tree.compute_log_likelihood_sc();
+    cout << log_lik_sc1 << endl;
+    
+    double log_lik_sc2 = ScLikelihood(root, bulk_data, sc_data, model_params);
+    cout << log_lik_sc2 << endl;
+    
+    BOOST_TEST( abs(log_lik_sc1 - log_lik_sc2) < 1e-3 );
+}
+
 BOOST_AUTO_TEST_CASE( TestScCache )
 {
     gsl_rng *random = generate_random_object(3);
@@ -163,7 +212,7 @@ BOOST_AUTO_TEST_CASE( TestScCache )
                    &bulk_data, &sc_data);
     cout << tree.print() << endl;
 
-    bool verbose = true;
+    bool verbose = false;
     double sc_log_lik = tree.compute_log_likelihood_sc(verbose);
     double sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params, verbose);
     cout << "At init: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
