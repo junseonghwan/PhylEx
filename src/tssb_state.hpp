@@ -173,5 +173,9 @@ double sample_params_dirichlet(const gsl_rng *random,
                                const ModelParams &params);
 void cull(CloneTreeNode *root);
 bool check_clone_freq(size_t region, CloneTreeNode *root);
+double ScLikelihood(CloneTreeNode *root,
+                    vector<BulkDatum *> &bulk_data,
+                    vector<SingleCellData *> &sc_data,
+                    const ModelParams &model_params);
 
 #endif /* tssb_state_hpp */
