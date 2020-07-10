@@ -19,7 +19,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <eigen3/Eigen/Dense>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_matrix.h>
 

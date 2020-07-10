@@ -1,5 +1,5 @@
 # code relating to tree structured stick breaking process
-include_directories(/usr/local/include/ ${CMAKE_SOURCE_DIR}/eigen)
+include_directories(/usr/local/include/)
 
 file( GLOB SRCS *.cpp *.hpp)
 add_library(tssb STATIC ${SRCS}) # create static library

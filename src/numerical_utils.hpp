@@ -14,16 +14,8 @@
 #include <vector>
 
 #include <gsl/gsl_matrix.h>
-#include "Eigen/Dense"
 
 using namespace std;
-
-using EigenVector = Eigen::VectorXd;
-using EigenVectorRef = Eigen::Ref<const EigenVector>;
-using EigenMatrix = Eigen::MatrixXd;
-using EigenMatrixXcd = Eigen::MatrixXcd;
-using EigenMatrixRef = Eigen::Ref<const EigenMatrix>;
-using EigenMatrixXcdRef = Eigen::Ref<const EigenMatrixXcd>;
 
 using DoubleMatrix = vector<vector<double> >;
 
