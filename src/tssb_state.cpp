@@ -50,8 +50,10 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
 
     // Evaluate single cell log likelihoods.
     size_t snv_sc_coverage_count = 0;
+    size_t snv_sc_var_coverage_count = 0;
     for (size_t n = 0; n < mutation_count; n++) {
         size_t sc_coverage_count = 0;
+        size_t sc_var_coverage_count = 0;
         for (size_t c = 0; c < cell_count; c++) {
             sc_presence_matrix_[n][c] = log_lik_sc_at_site(n,
                                                              bulk_data_->at(n),
@@ -64,14 +66,19 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
                                                             false,
                                                             model_params);
             auto total_reads = sc_data->at(c)->GetTotalReads(n);
+            auto var_reads = sc_data->at(c)->GetVariantReads(n);
             sc_coverage_count += (total_reads > 0) ? 1 : 0;
+            sc_var_coverage_count += (var_reads > 0) ? 1 : 0;
         }
         if (sc_coverage_count > 0) {
-            has_sc_coverage_.push_back(true);
+            has_sc_coverage_[n] = true;
             snv_sc_coverage_count++;
         }
+        if (sc_var_coverage_count > 0) {
+            snv_sc_var_coverage_count++;
+        }
     }
-    cout << "SNV with single cell coverage: " << snv_sc_coverage_count << "\n";
+    cout << "SNV with single cell coverage: " << snv_sc_var_coverage_count << "/" << snv_sc_coverage_count << "\n";
 }
 
 /*******************
