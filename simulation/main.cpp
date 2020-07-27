@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
 //        cerr << "For BD simulation, specify birth, death rates, and max_cn." << endl;
 //        cerr << "For clonal copy number, specify prior over copy number with at least 3 entries." << endl;
 //    }
-    
+
     for (size_t n = 0; n < simul_config.n_sims; n++) {
         string sim_path = simul_config.output_path + "/sim" + to_string(n);
         gsl_rng *random = generate_random_object(gsl_rng_get(rand));

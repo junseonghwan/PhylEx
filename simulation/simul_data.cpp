@@ -390,11 +390,14 @@ void GenerateScRnaReads(const gsl_rng *random,
     }
 
     // Randomly select n_expr_loci to be expressed.
-    vector<size_t> sampled_loci_idx;
+    unordered_set<size_t> sampled_loci_idx;
+    size_t locus_idx = 0;
     for (size_t i = 0; i < n_expr_loci; i++) {
-        size_t locus_idx = discrete_uniform(random, somatic_loci.size());
+        do {
+            locus_idx = discrete_uniform(random, somatic_loci.size());
+        } while(sampled_loci_idx.count(locus_idx) != 0);
         if (bulk_sc_coverage[locus_idx] == 1) {
-            sampled_loci_idx.push_back(locus_idx);
+            sampled_loci_idx.insert(locus_idx);
         }
     }
     
