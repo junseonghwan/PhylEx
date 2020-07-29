@@ -348,9 +348,6 @@ const vector<BulkDatum *> &TSSBState::get_data() const
 
 void TSSBState::assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache)
 {
-    if (curr_node != 0 && new_node != 0) {
-        cout << "Assign " << mut_id << ": " << curr_node->get_name() << " -> " << new_node->get_name() << "\n";
-    }
     auto datum = bulk_data_->at(mut_id);
     if (curr_node != 0) {
         curr_node->remove_datum(datum);
@@ -419,7 +416,7 @@ double TSSBState::compute_log_likelihood_sc(bool verbose)
             log_lik_cell = log_add(log_val, log_lik_cell);
         }
         log_lik_cell += log_prior_assignment;
-        cout << "Cell " << c << ": " << log_lik_cell << endl;
+        //cout << "Cell " << c << ": " << log_lik_cell << endl;
         log_lik_sc += log_lik_cell;
     }
     
@@ -458,7 +455,7 @@ double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bo
             log_lik_cell = log_add(log_val, log_lik_cell);
         }
         log_val = (log_lik_cell + log_prior_assignment);
-        cout << "Cell " << c << ": " << log_val << endl;
+        //cout << "Cell " << c << ": " << log_val << endl;
         log_lik_sc += log_val;
     }
 
@@ -485,7 +482,6 @@ void TSSBState::resample_data_assignment(const gsl_rng *random, const ModelParam
 {
     for (size_t mut_id = 0; mut_id < bulk_data_->size(); mut_id++)
     {
-        cout << "Re-assigning " << mut_id << "\n";
         if (has_sc_coverage_[mut_id]) {
             slice_sample_data_assignment_with_sc(random, mut_id, params);
         } else {

@@ -168,9 +168,8 @@ BOOST_AUTO_TEST_CASE( TestScCache )
     gsl_rng *random = generate_random_object(3);
     ModelParams model_params(3, 1, 0.8, 0.01);
     size_t region_count = 1;
-    //size_t single_cell_count = 10;
-    size_t single_cell_count = 1;
-    size_t bulk_data_count = 3;
+    size_t single_cell_count = 10;
+    size_t bulk_data_count = 20;
     size_t max_read_count = 100;
 
     // Generate some bulk data.
