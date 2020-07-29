@@ -41,7 +41,7 @@ sc_absence_matrix_(bulk_data->size(), vector<double>(sc_data->size()))
     // initialize the log likelihoods
     //log_lik_bulk = compute_log_likelihood_bulk(params);
     cout << "Initializing cache..." << endl;
-    log_lik_sc = compute_log_likelihood_sc_cached(params);
+    log_lik_sc = compute_log_likelihood_sc();
 }
 
 void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
@@ -128,7 +128,6 @@ void TSSBState::initialize_data_assignment(const gsl_rng *random, size_t mut_id,
 void TSSBState::InitializeCacheForNode(CloneTreeNode *v)
 {
     if (!v->IsCacheAllocated(sc_data->size())) {
-        cout << v->get_name() << "\n";
         v->AllocateCache(sc_data->size());
         double log_lik;
         for (size_t c = 0; c < sc_data->size(); c++) {
@@ -154,8 +153,8 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
     for (size_t c = 0; c < sc_data->size(); c++) {
         for (CloneTreeNode *v : subtree_curr) {
             // Check if cache is already allocated for v.
-            // If yes, update cache.
             // If not, initialize cache.
+            // If yes, update cache.
             if (!v->IsCacheAllocated(sc_data->size())) {
                 InitializeCacheForNode(v);
                 continue;
@@ -210,20 +209,20 @@ void TSSBState::slice_sample_data_assignment(const gsl_rng *random,
     double log_slice = log(uniform(random, 0.0, 1.0)); // sample the slice
     double new_log_lik_bulk = 0.0;
     size_t iter = 0;
-    
+
     while ((abs(u_max - u_min) > 1e-3)) {
-        
+
         iter++;
         u = uniform(random, u_min, u_max);
         new_node = CloneTreeNode::find_node(random, u, root, model_params); // this call may generate new nodes
-        
+
         if (new_node == curr_node) {
             break; // no need to carry out further computation
         }
-        
+
         // assign data point from curr_node to new_node
         assign_data_point(curr_node, new_node, mut_id, model_params);
-        
+
         // compute the log likelihood
         new_log_lik_bulk = LogLikDatum(new_node, datum, model_params);
         if (new_log_lik_bulk > (log_slice + curr_log_lik_bulk)) {
@@ -266,7 +265,8 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
     CloneTreeNode *new_node = 0;
 
     double curr_log_lik_bulk = LogLikDatum(curr_node, datum, model_params);
-    double curr_log_lik_sc = compute_log_likelihood_sc_cached(model_params);
+    //double curr_log_lik_sc = compute_log_likelihood_sc_cached(model_params);
+    double curr_log_lik_sc = compute_log_likelihood_sc();
     double curr_log_lik = curr_log_lik_bulk + curr_log_lik_sc;
     
     double log_slice = log(uniform(random, 0.0, 1.0)); // sample the slice
@@ -288,18 +288,19 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
         
         // compute the log likelihood
         new_log_lik_bulk = LogLikDatum(new_node, datum, model_params);
-        new_log_lik_sc = compute_log_likelihood_sc_cached(model_params);
+        //new_log_lik_sc = compute_log_likelihood_sc_cached(model_params);
+        new_log_lik_sc = compute_log_likelihood_sc();
         new_log_lik = new_log_lik_bulk + new_log_lik_sc;
         if (new_log_lik > (log_slice + curr_log_lik)) {
             // update log_lik_bulk, log_lik_sc, log_lik
             //log_lik_bulk = compute_log_likelihood_bulk(model_params);
-            //log_lik_sc = new_log_lik_sc;
+            log_lik_sc = new_log_lik_sc;
             //log_lik = log_lik_bulk + log_lik_sc;
             break;
         } else {
             // revert the changes
             assign_data_point(new_node, curr_node, mut_id, model_params);
-            //new_log_lik_sc = compute_log_likelihood_sc_cached(model_params, true);
+            //log_lik_sc = compute_log_likelihood_sc_cached(model_params);
             if (CloneTreeNode::less(new_node, curr_node)) {
                 u_min = u;
             } else {
