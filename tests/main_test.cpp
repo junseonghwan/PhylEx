@@ -168,8 +168,9 @@ BOOST_AUTO_TEST_CASE( TestScCache )
     gsl_rng *random = generate_random_object(3);
     ModelParams model_params(3, 1, 0.8, 0.01);
     size_t region_count = 1;
-    size_t single_cell_count = 10;
-    size_t bulk_data_count = 20;
+    //size_t single_cell_count = 10;
+    size_t single_cell_count = 1;
+    size_t bulk_data_count = 3;
     size_t max_read_count = 100;
 
     // Generate some bulk data.
@@ -212,19 +213,22 @@ BOOST_AUTO_TEST_CASE( TestScCache )
                    &bulk_data, &sc_data);
     cout << tree.print() << endl;
 
-    bool verbose = false;
+    bool verbose = true;
     double sc_log_lik = tree.compute_log_likelihood_sc(verbose);
     double sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params, verbose);
     cout << "At init: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
     BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
     
     // Resample assignment of bulk data.
-    tree.resample_data_assignment(random, model_params);
-    cout << tree.print() << endl;
-    cout << "Brute force calculation: \n";
-    sc_log_lik = tree.compute_log_likelihood_sc(verbose);
-    cout << "Cache calculation: \n";
-    sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params, verbose);
-    cout << "After move: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
-    BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
+    for (size_t i = 0; i < 10; i++) {
+        tree.resample_data_assignment(random, model_params);
+        cull(tree.get_root());
+        cout << tree.print() << endl;
+        cout << "Brute force calculation: \n";
+        sc_log_lik = tree.compute_log_likelihood_sc(verbose);
+        cout << "Cache calculation: \n";
+        sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params, verbose);
+        cout << "After move: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
+        BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
+    }
 }

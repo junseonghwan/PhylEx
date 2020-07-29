@@ -278,6 +278,17 @@ void WriteScRnaData(string output_path,
     f.close();
 }
 
+void WriteCell2NodeAssignment(string output_path,
+                              const vector<SingleCellData *> &sc_data,
+                              const vector<CloneTreeNode *> &cell2node) {
+    ofstream f;
+    f.open(output_path + "/cell2node.txt", ios::out);
+    for (size_t i = 0; i < cell2node.size(); i++) {
+        f << sc_data.at(i)->GetName() << "\t" << cell2node.at(i)->get_name() << "\n";
+    }
+    f.close();
+}
+
 void WriteTreeToFile(string output_path,
                 const vector<BulkDatum *> &bulk,
                 CloneTreeNode *root_node)

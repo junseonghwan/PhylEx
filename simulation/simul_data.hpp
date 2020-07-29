@@ -38,12 +38,12 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
                                    const SimulationConfig &simul_config,
                                    vector<BulkDatum *> &data,
                                    CloneTreeNode *root_node);
-void GenerateScRnaData(gsl_rng *random,
-                       CloneTreeNode *root_node,
-                       const vector<BulkDatum *> &data,
-                       const ModelParams &model_params,
-                       const SimulationConfig &simul_config,
-                       vector<SingleCellData *> &sc_data);
+vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
+                                          CloneTreeNode *root_node,
+                                          const vector<BulkDatum *> &data,
+                                          const ModelParams &model_params,
+                                          const SimulationConfig &simul_config,
+                                          vector<SingleCellData *> &sc_data);
 void GenerateScRnaReads(const gsl_rng *random,
                         const SimulationConfig &simul_config,
                         CloneTreeNode *node,

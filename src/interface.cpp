@@ -119,7 +119,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
             }
         }
         
-        double log_lik_post = tree->get_log_lik_bulk();
+        double log_lik_post = tree->compute_log_likelihood_bulk(params);
         double log_lik_prior_assignment = tree->get_log_prior_assignment(tree->get_root());
         double log_lik_sc = tree->get_log_lik_sc();
         double log_lik = log_lik_post + log_lik_prior_assignment + log_lik_sc;

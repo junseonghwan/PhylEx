@@ -216,13 +216,14 @@ int main(int argc, char *argv[])
 
             // Generate single cell reads.
             vector<SingleCellData *> sc_data;
-            GenerateScRnaData(random,
-                              root_node,
-                              data,
-                              model_params,
-                              simul_config,
-                              sc_data);
+            auto cell2node = GenerateScRnaData(random,
+                                               root_node,
+                                               data,
+                                               model_params,
+                                               simul_config,
+                                               sc_data);
             WriteScRnaData(output_path, data, sc_data);
+            WriteCell2NodeAssignment(output_path, sc_data, cell2node);
             WriteBetaBinomHp(output_path, data);
 
             // Output information needed for evaluation.

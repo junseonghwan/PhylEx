@@ -332,12 +332,12 @@ void GenerateBulkData(gsl_rng *random,
 //    }
 //}
 
-void GenerateScRnaData(gsl_rng *random,
-                       CloneTreeNode *root_node,
-                       const vector<BulkDatum *> &data,
-                       const ModelParams &model_params,
-                       const SimulationConfig &simul_config,
-                       vector<SingleCellData *> &sc_data)
+vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
+                                          CloneTreeNode *root_node,
+                                          const vector<BulkDatum *> &data,
+                                          const ModelParams &model_params,
+                                          const SimulationConfig &simul_config,
+                                          vector<SingleCellData *> &sc_data)
 {
     vector<size_t> bulk_sc_coverage(data.size(), 0);
     // We subselect bulk to have single cell coverage.
@@ -351,10 +351,12 @@ void GenerateScRnaData(gsl_rng *random,
     vector<CloneTreeNode *> non_empty_nodes;
     CloneTreeNode::breadth_first_traversal(root_node, non_empty_nodes, true);
 
+    vector<CloneTreeNode *> cell2node;
     CloneTreeNode *node;
     for (size_t c = 0; c < simul_config.n_cells; c++) {
         size_t idx = gsl_rng_uniform_int(random, non_empty_nodes.size());
         node = non_empty_nodes[idx];
+        cell2node.push_back(node);
 
         cout << "Cell " << c << " assigned to " << node->get_name() << endl;
         SingleCellData *sc = new SingleCellData("c" + to_string(c), data.size());
@@ -368,6 +370,8 @@ void GenerateScRnaData(gsl_rng *random,
         sc_data.push_back(sc);
         cout << "=====" << endl;
     }
+    
+    return cell2node;
 }
 
 void GenerateScRnaReads(const gsl_rng *random,

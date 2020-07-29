@@ -39,7 +39,7 @@ sc_absence_matrix_(bulk_data->size(), vector<double>(sc_data->size()))
     }
     
     // initialize the log likelihoods
-    log_lik_bulk = compute_log_likelihood_bulk(params);
+    //log_lik_bulk = compute_log_likelihood_bulk(params);
     cout << "Initializing cache..." << endl;
     log_lik_sc = compute_log_likelihood_sc_cached(params);
 }
@@ -128,6 +128,7 @@ void TSSBState::initialize_data_assignment(const gsl_rng *random, size_t mut_id,
 void TSSBState::InitializeCacheForNode(CloneTreeNode *v)
 {
     if (!v->IsCacheAllocated(sc_data->size())) {
+        cout << v->get_name() << "\n";
         v->AllocateCache(sc_data->size());
         double log_lik;
         for (size_t c = 0; c < sc_data->size(); c++) {
@@ -148,18 +149,17 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
     vector<CloneTreeNode *> subtree_new;
     get_all_nodes(false, curr_node, subtree_curr);
     get_all_nodes(false, new_node, subtree_new);
-    
-    // Ensure cache is allocated for each node.
-    for (CloneTreeNode *v : subtree_curr) {
-        InitializeCacheForNode(v);
-    }
-    for (CloneTreeNode *v : subtree_new) {
-        InitializeCacheForNode(v);
-    }
-    
+
     bool exp_mut_status;
     for (size_t c = 0; c < sc_data->size(); c++) {
         for (CloneTreeNode *v : subtree_curr) {
+            // Check if cache is already allocated for v.
+            // If yes, update cache.
+            // If not, initialize cache.
+            if (!v->IsCacheAllocated(sc_data->size())) {
+                InitializeCacheForNode(v);
+                continue;
+            }
             double x = sc_presence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, -x);
             exp_mut_status = v->IsDescendantOf(new_node) ? true : false;
@@ -167,8 +167,12 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
                                         sc_absence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, y);
         }
-        
+
         for (CloneTreeNode *v : subtree_new) {
+            if (!v->IsCacheAllocated(sc_data->size())) {
+                InitializeCacheForNode(v);
+                continue;
+            }
             exp_mut_status = v->IsDescendantOf(curr_node) ? true : false;
             double x = exp_mut_status ? sc_presence_matrix_.at(mut_id).at(c) :
                                         sc_absence_matrix_.at(mut_id).at(c);
@@ -202,6 +206,7 @@ void TSSBState::slice_sample_data_assignment(const gsl_rng *random,
     CloneTreeNode *new_node = 0;
 
     double curr_log_lik_bulk = LogLikDatum(curr_node, datum, model_params);
+    
     double log_slice = log(uniform(random, 0.0, 1.0)); // sample the slice
     double new_log_lik_bulk = 0.0;
     size_t iter = 0;
@@ -223,9 +228,9 @@ void TSSBState::slice_sample_data_assignment(const gsl_rng *random,
         new_log_lik_bulk = LogLikDatum(new_node, datum, model_params);
         if (new_log_lik_bulk > (log_slice + curr_log_lik_bulk)) {
             // update log_lik_bulk, log_lik_sc, log_lik
-            log_lik_bulk -= curr_log_lik_bulk;
-            log_lik_bulk += new_log_lik_bulk;
-            log_lik = log_lik_bulk + log_lik_sc;
+//            log_lik_bulk -= curr_log_lik_bulk;
+//            log_lik_bulk += new_log_lik_bulk;
+//            log_lik = log_lik_bulk + log_lik_sc;
             break;
         } else {
             // revert the changes
@@ -259,7 +264,7 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
     double u;
     CloneTreeNode *curr_node = datum2node[datum];
     CloneTreeNode *new_node = 0;
-    
+
     double curr_log_lik_bulk = LogLikDatum(curr_node, datum, model_params);
     double curr_log_lik_sc = compute_log_likelihood_sc_cached(model_params);
     double curr_log_lik = curr_log_lik_bulk + curr_log_lik_sc;
@@ -287,14 +292,14 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
         new_log_lik = new_log_lik_bulk + new_log_lik_sc;
         if (new_log_lik > (log_slice + curr_log_lik)) {
             // update log_lik_bulk, log_lik_sc, log_lik
-            log_lik_bulk = compute_log_likelihood_bulk(model_params);
-            log_lik_sc = new_log_lik_sc;
-            log_lik = log_lik_bulk + log_lik_sc;
+            //log_lik_bulk = compute_log_likelihood_bulk(model_params);
+            //log_lik_sc = new_log_lik_sc;
+            //log_lik = log_lik_bulk + log_lik_sc;
             break;
         } else {
             // revert the changes
             assign_data_point(new_node, curr_node, mut_id, model_params);
-            new_log_lik_sc = compute_log_likelihood_sc_cached(model_params);
+            //new_log_lik_sc = compute_log_likelihood_sc_cached(model_params, true);
             if (CloneTreeNode::less(new_node, curr_node)) {
                 u_min = u;
             } else {
@@ -343,6 +348,9 @@ const vector<BulkDatum *> &TSSBState::get_data() const
 
 void TSSBState::assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache)
 {
+    if (curr_node != 0 && new_node != 0) {
+        cout << "Assign " << mut_id << ": " << curr_node->get_name() << " -> " << new_node->get_name() << "\n";
+    }
     auto datum = bulk_data_->at(mut_id);
     if (curr_node != 0) {
         curr_node->remove_datum(datum);
@@ -380,12 +388,12 @@ double TSSBState::get_log_prior_assignment(CloneTreeNode *root)
     return log_prior_assignment;
 }
 
-double TSSBState::get_log_lik()
-{
-    double log_prior_assignment = get_log_prior_assignment(get_root());
-    log_lik = log_lik_bulk + log_lik_sc + log_prior_assignment;
-    return log_lik;
-}
+//double TSSBState::get_log_lik()
+//{
+//    double log_prior_assignment = get_log_prior_assignment(get_root());
+//    log_lik = log_lik_bulk + log_lik_sc + log_prior_assignment;
+//    return log_lik;
+//}
 
 double TSSBState::compute_log_likelihood_sc(bool verbose)
 {
@@ -411,6 +419,7 @@ double TSSBState::compute_log_likelihood_sc(bool verbose)
             log_lik_cell = log_add(log_val, log_lik_cell);
         }
         log_lik_cell += log_prior_assignment;
+        cout << "Cell " << c << ": " << log_lik_cell << endl;
         log_lik_sc += log_lik_cell;
     }
     
@@ -449,11 +458,10 @@ double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bo
             log_lik_cell = log_add(log_val, log_lik_cell);
         }
         log_val = (log_lik_cell + log_prior_assignment);
-        //cout << "Cell " << c << ": " << log_val << endl;
+        cout << "Cell " << c << ": " << log_val << endl;
         log_lik_sc += log_val;
     }
 
-    //print_cache();
     return log_lik_sc;
 }
 
@@ -477,6 +485,7 @@ void TSSBState::resample_data_assignment(const gsl_rng *random, const ModelParam
 {
     for (size_t mut_id = 0; mut_id < bulk_data_->size(); mut_id++)
     {
+        cout << "Re-assigning " << mut_id << "\n";
         if (has_sc_coverage_[mut_id]) {
             slice_sample_data_assignment_with_sc(random, mut_id, params);
         } else {

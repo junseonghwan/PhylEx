@@ -32,8 +32,8 @@ class TSSBState
 {
     CloneTreeNode *root;
 
-    double log_lik = DOUBLE_NEG_INF;
-    double log_lik_bulk = DOUBLE_NEG_INF;
+    //double log_lik = DOUBLE_NEG_INF;
+    //double log_lik_bulk = DOUBLE_NEG_INF;
     double log_lik_sc = DOUBLE_NEG_INF;
 
     vector<BulkDatum *> *bulk_data_;
@@ -129,9 +129,9 @@ public:
     double compute_log_likelihood_bulk(const ModelParams &params);
     double compute_log_likelihood_sc_cached(const ModelParams &params, bool verbose=false);
 
-    double get_log_lik();
+    //double get_log_lik();
     static double get_log_prior_assignment(CloneTreeNode *root);
-    inline double get_log_lik_bulk() { return log_lik_bulk; }
+    //inline double get_log_lik_bulk() { return log_lik_bulk; }
     inline double get_log_lik_sc() { return log_lik_sc; }
 
     // for output and debugging
