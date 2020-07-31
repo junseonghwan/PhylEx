@@ -411,8 +411,7 @@ void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &par
 {
     if (idx2child.size() == 0)
         return;
-    
-    //vector<double> unnorm_w(idx2child.size());
+
     vector<double> weights(idx2child.size());
     vector<double> intervals(idx2child.size());
     unordered_set<int> represented;
@@ -428,11 +427,10 @@ void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &par
             intervals[i] = intervals[i-1] + weights[i];
     }
     
-    unordered_map<size_t, pair<double, CloneTreeNode *> > new_map;
-    
     // throw uniform darts until all represented sticks are sampled
     double represented_stick_length = intervals[idx2child.size()-1];
     size_t n_children = intervals.size();
+    vector<size_t> new_order;
     while (represented.size() > 0) {
         double u = gsl_ran_flat(random, 0, 1);
         while (u > represented_stick_length) {
@@ -444,27 +442,43 @@ void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &par
             child->sample_node_parameters(random, params, this);
             
             double ww = psi_j * cum_prod;
+            cum_prod *= (1 - psi_j);
             weights.push_back(ww);
             intervals.push_back(intervals[n_children - 1] + ww);
             represented.insert(n_children);
             represented_stick_length += ww;
             n_children++;
         }
-        
+
+        vector<double> sub_weights;
+        vector<size_t> sub_indices;
+        double sum = 0.0;
         for (size_t i = 0; i < n_children; i++) {
-            if (u < intervals[i]) {
-                // found the child
-                pair<double, CloneTreeNode *> &ret = idx2child[i];
-                ret.second->edit_name(i);
-                new_map[i] = ret;
-                represented.erase(i);
-                break;
+            if (represented.count(i) > 0) {
+                sub_indices.push_back(i);
+                sub_weights.push_back(weights[i]);
+                sum += weights[i];
             }
         }
-        
-        // renormalize?
+
+        double cum = 0.0;
+        for (size_t i = 0; i < sub_weights.size(); i++) {
+            double norm_w = sub_weights.at(i)/sum;
+            if (u < cum + norm_w) {
+                represented.erase(sub_indices.at(i));
+                new_order.push_back(sub_indices.at(i));
+                break;
+            }
+            cum += norm_w;
+        }
     }
-    
+
+    unordered_map<size_t, pair<double, CloneTreeNode *> > new_map;
+    for (size_t i = 0; i < new_order.size(); i++) {
+        pair<double, CloneTreeNode *> &ret = idx2child[new_order.at(i)];
+        ret.second->edit_name(i);
+        new_map[i] = ret;
+    }
     idx2child = new_map;
 }
 

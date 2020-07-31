@@ -17,7 +17,7 @@
 gsl_rng* generate_random_object(long seed)
 {
 	// initialize random
-    const gsl_rng_type * random_type = gsl_rng_default;
+    const gsl_rng_type * random_type = gsl_rng_taus;
 	gsl_rng *random;
 
 	/* create a generator chosen by the
