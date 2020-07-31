@@ -413,23 +413,19 @@ void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &par
         return;
 
     vector<double> weights(idx2child.size());
-    vector<double> intervals(idx2child.size());
     unordered_set<int> represented;
     double cum_prod = 1.0;
+    double represented_stick_length = 0.0;
     for (size_t i = 0; i < idx2child.size(); i++)
     {
         weights[i] = idx2child[i].first * cum_prod;
+        represented_stick_length += weights[i];
         cum_prod *= (1 - idx2child[i].first);
         represented.insert(i);
-        if (i == 0)
-            intervals[i] = weights[i];
-        else
-            intervals[i] = intervals[i-1] + weights[i];
     }
     
     // throw uniform darts until all represented sticks are sampled
-    double represented_stick_length = intervals[idx2child.size()-1];
-    size_t n_children = intervals.size();
+    size_t n_children = weights.size();
     vector<size_t> new_order;
     while (represented.size() > 0) {
         double u = gsl_ran_flat(random, 0, 1);
@@ -444,7 +440,6 @@ void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &par
             double ww = psi_j * cum_prod;
             cum_prod *= (1 - psi_j);
             weights.push_back(ww);
-            intervals.push_back(intervals[n_children - 1] + ww);
             represented.insert(n_children);
             represented_stick_length += ww;
             n_children++;
