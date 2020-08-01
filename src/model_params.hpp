@@ -42,9 +42,17 @@ class ModelParams
     double gamma_max = 10.0;
     double gamma_min = 1.0;
     double gamma_sigma = 0.5;
-    
+
     double sc_dropout_alpha0_ = 0.01;
-    double sc_dropout_beta0_ = 0.01;
+    double sc_dropout_beta0_ = 1;
+
+    double sc_bursty_alpha0_ = 1;
+    double sc_bursty_beta0_ = 0.01;
+
+    // sc_mixture_proportions[0]: Dropout for variant.
+    // sc_mixture_proportions[1]: Bursty for variant.
+    // sc_mixture_proportions[2]: Bi-allelic distribution.
+    double sc_mixture_proportions[3] = {0.2, 0.4, 0.4};
 
     double b_rate = 0.1;
     double d_rate = 0.1;
@@ -72,11 +80,26 @@ public:
     inline double get_seq_error() const { return seq_error; }
     inline double get_amp_error() const { return amp_error; }
     inline double get_dir_conc_mult_factor() const { return dir_conc_multiplicative_factor; }
+    double GetScBurstyDistributionAlpha0() const {
+        return sc_bursty_alpha0_;
+    }
+    double GetScBurstyDistributionBeta0() const {
+        return sc_bursty_beta0_;
+    }
     double GetScDropoutDistributionAlpha0() const {
         return sc_dropout_alpha0_;
     }
     double GetScDropoutDistributionBeta0() const {
         return sc_dropout_beta0_;
+    }
+    inline double GetScDropoutProportion() const {
+        return sc_mixture_proportions[0];
+    }
+    inline double GetScBurstyVariantProportion() const {
+        return sc_mixture_proportions[1];
+    }
+    inline double GetScBiallelicProportion() const {
+        return sc_mixture_proportions[2];
     }
     inline double get_birth_rate() const { return b_rate; }
     inline double get_death_rate() const { return d_rate; }

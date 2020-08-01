@@ -766,17 +766,23 @@ double ScLikelihood(size_t loci_idx,
         auto locus = bulk->GetLocus();
         double alpha = locus.get_alpha();
         double beta = locus.get_beta();
-        double log_lik_non_bursty = log_beta_binomial_pdf(var_reads,
+        double log_lik_biallelic = log_beta_binomial_pdf(var_reads,
                                                           total_reads,
                                                           alpha,
                                                           beta);
-        log_lik_non_bursty += log(1 - locus.get_dropout_prob());
-        double log_lik_bursty = log_beta_binomial_pdf(var_reads,
+        log_lik_biallelic += log(model_params.GetScBiallelicProportion());
+        double log_lik_bursty_variant = log_beta_binomial_pdf(var_reads,
+                                                              total_reads,
+                                                              model_params.GetScBurstyDistributionAlpha0(),
+                                                              model_params.GetScBurstyDistributionBeta0());
+        log_lik_bursty_variant += log(model_params.GetScBurstyVariantProportion());
+        double log_lik_dropout = log_beta_binomial_pdf(var_reads,
                                                       total_reads,
                                                       model_params.GetScDropoutDistributionAlpha0(),
                                                       model_params.GetScDropoutDistributionBeta0());
-        log_lik_bursty += log(locus.get_dropout_prob());
-        log_lik = log_add(log_lik_bursty, log_lik_non_bursty);
+        log_lik_dropout += log(model_params.GetScDropoutProportion());
+        log_lik = log_add(log_lik_dropout, log_lik_biallelic);
+        log_lik = log_add(log_lik, log_lik_bursty_variant);
     } else {
         log_lik = log_beta_binomial_pdf(var_reads,
                                         total_reads,
