@@ -102,14 +102,14 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
     for (size_t iter = 0; iter < n_iter; iter++) {
 
         cout << "Iter: " << iter << endl;
+        cout << tree->print() << "\n";
 
         // 1. resample assignment
         tree->resample_data_assignment(random, params);
-        
+        cout << tree->print() << "\n";
         cull(tree->get_root());
         cout << tree->print() << "\n";
-        //tree->clear_cache();
-        
+
         // 2. update params
         double ar = sample_params_dirichlet(random, config_.n_mh_iter, *tree, params);
         if (iter < config_.burn_in) {
@@ -134,7 +134,9 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         
         // 3. update sticks
         tree->update_sticks(random, params);
-        
+        cull(tree->get_root());
+        cout << tree->print() << "\n";
+
         // 4. resample hyper parameters
         TSSBState::update_hyper_params(random, config_.n_mh_iter, *tree, params);
         alpha0.push_back(params.get_alpha0());

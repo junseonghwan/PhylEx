@@ -231,12 +231,7 @@ CloneTreeNode *CloneTreeNode::find_node(const gsl_rng *random, double u, CloneTr
 {
     CloneTreeNode *node = root;
     double nu = 0.0;
-    size_t depth = 0;
     while (true) {
-        depth = node->get_name_vec().size();
-        if (depth >= params.get_max_depth()) {
-            break;
-        }
         nu = node->get_nu_stick();
         
         if (u < nu) {
@@ -530,32 +525,31 @@ void CloneTreeNode::InitializeChild(const gsl_rng *random,
 
 CloneTreeNode *CloneTreeNode::locate_child(const gsl_rng *random, double &u, const ModelParams &params)
 {
-    unsigned int j = 0;
-    double cum_prod = 1.0;
-    double begin = 0;
-    while (true) {
-        if (get_num_children() <= j) { // draw new psi-stick and create a new child
-            InitializeChild(random, params);
-            /*
-             double psi_j = bounded_beta(random, 1, params.get_gamma());
-             CloneTreeNode *child = this->spawn_child(psi_j);
-             double nu_stick = bounded_beta(random, 1.0, params.alpha(child->get_name_vec()));
-             child->set_nu_stick(nu_stick);
-             child->sample_node_parameters(random, params, this);
-             */
-        }
-        pair<double, CloneTreeNode *> pair = idx2child[j];
-        double interval_length = cum_prod * pair.first;
-        if (u >= begin && u < (begin + interval_length)) {
-            // found the corresponding interval
-            u = (u - begin) / interval_length;
-            break;
-        }
-        begin += interval_length;
-        cum_prod *= (1 - pair.first);
-        j++;
+    double cum_prod = 1;
+    for (size_t i = 0; i < idx2child.size(); i++) {
+        cum_prod *= (1 - idx2child[i].first);
     }
-    return idx2child[j].second;
+    while (u > (1 - cum_prod)) {
+        InitializeChild(random, params);
+        cum_prod *= (1 - idx2child[idx2child.size()-1].first);
+    }
+
+    cum_prod = 1.0;
+    vector<double> intervals(idx2child.size() + 1);
+    intervals[0] = 0.0;
+    for (size_t j = 0; j < idx2child.size(); j++) {
+        cum_prod *= (1 - idx2child.at(j).first);
+        intervals[j+1] = (1 - cum_prod);
+    }
+    for (size_t j = 0; j < idx2child.size(); j++) {
+        if (u < intervals[j+1]) {
+            u = (u - intervals[j])/(intervals[j+1] - intervals[j]);
+            return idx2child[j].second;
+        }
+    }
+
+    cerr << "Error in locate_child.\n";
+    exit(-1);
 }
 
 bool CloneTreeNode::less(CloneTreeNode *lhs, CloneTreeNode *rhs)

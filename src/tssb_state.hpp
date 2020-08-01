@@ -63,8 +63,6 @@ class TSSBState
     void slice_sample_data_assignment_with_sc(const gsl_rng *random,
                                               size_t mut_id,
                                               const ModelParams &model_params);
-    // assign data to a node
-    //void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &model_params);
     void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache = true);
 
     void initialize_sc_cache(const ModelParams &model_params);
