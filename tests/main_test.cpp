@@ -168,8 +168,8 @@ BOOST_AUTO_TEST_CASE( TestScCache )
     gsl_rng *random = generate_random_object(3);
     ModelParams model_params(3, 1, 0.8, 0.01);
     size_t region_count = 1;
-    size_t single_cell_count = 2;
-    size_t bulk_data_count = 3;
+    size_t single_cell_count = 100;
+    size_t bulk_data_count = 20;
     size_t max_read_count = 100;
 
     // Generate some bulk data.
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE( TestScCache )
     BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
     
     // Resample assignment of bulk data.
-    for (size_t i = 0; i < 1; i++) {
+    for (size_t i = 0; i < 20; i++) {
         tree.resample_data_assignment(random, model_params);
         cull(tree.get_root());
         tree.update_sticks(random, model_params);
