@@ -239,7 +239,7 @@ CloneTreeNode *CloneTreeNode::find_node(const gsl_rng *random, double u, CloneTr
             break;
         }
         
-        // shrink u relative to the remaining stick (1 - nu)
+        // Shrink u relative to the remaining stick (1 - nu)
         u = (u - nu) / (1 - nu);
         
         // find sub branch by enumerating over the branching sticks
@@ -355,13 +355,14 @@ bool CloneTreeNode::contains_datum(BulkDatum *datum) const
 
 void CloneTreeNode::cull(unordered_set<size_t> &cull_list)
 {
-    // need to update the cullular prevalence as the nodes are culled (unfortunately, this needs to happen outside by the one that calls cull operation)
     unordered_map<size_t, pair<double, CloneTreeNode *> > new_idx2child;
+    size_t idx = 0;
     for (size_t j = 0; j < idx2child.size(); j++)
     {
         CloneTreeNode *node = idx2child[j].second;
         if (cull_list.count(j) == 0) {
-            new_idx2child[j] = idx2child[j];
+            new_idx2child[idx] = idx2child[j];
+            idx++;
         } else {
             //cout << get_name() << " cull child " << j << endl;
             idx2child[j].second = 0;
@@ -402,116 +403,113 @@ void CloneTreeNode::set_cellular_prev(vector<double> &vec)
 }
 
 
+//void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &params)
+//{
+//    if (idx2child.size() == 0)
+//        return;
+//
+//    vector<double> weights(idx2child.size());
+//    unordered_set<int> represented;
+//    double cum_prod = 1.0;
+//    double represented_stick_length = 0.0;
+//    for (size_t i = 0; i < idx2child.size(); i++)
+//    {
+//        weights[i] = idx2child[i].first * cum_prod;
+//        represented_stick_length += weights[i];
+//        cum_prod *= (1 - idx2child[i].first);
+//        represented.insert(i);
+//    }
+//
+//    // throw uniform darts until all represented sticks are sampled
+//    size_t n_children = weights.size();
+//    vector<size_t> new_order;
+//    while (represented.size() > 0) {
+//        double u = gsl_ran_flat(random, 0, 1);
+//        while (u > represented_stick_length) {
+//            // need to represent new children: i.e., draw psi sticks
+//            double psi_j = bounded_beta(random, 1, params.get_gamma());
+//            CloneTreeNode *child = this->spawn_child(psi_j);
+//            double nu_stick = bounded_beta(random, 1.0, params.alpha(child->get_name_vec()));
+//            child->set_nu_stick(nu_stick);
+//            child->sample_node_parameters(random, params, this);
+//
+//            double ww = psi_j * cum_prod;
+//            cum_prod *= (1 - psi_j);
+//            weights.push_back(ww);
+//            represented.insert(n_children);
+//            represented_stick_length += ww;
+//            n_children++;
+//        }
+//
+//        vector<double> sub_weights;
+//        vector<size_t> sub_indices;
+//        double sum = 0.0;
+//        for (size_t i = 0; i < n_children; i++) {
+//            if (represented.count(i) > 0) {
+//                sub_indices.push_back(i);
+//                sub_weights.push_back(weights[i]);
+//                sum += weights[i];
+//            }
+//        }
+//
+//        double cum = 0.0;
+//        for (size_t i = 0; i < sub_weights.size(); i++) {
+//            double norm_w = sub_weights.at(i)/sum;
+//            if (u < cum + norm_w) {
+//                represented.erase(sub_indices.at(i));
+//                new_order.push_back(sub_indices.at(i));
+//                break;
+//            }
+//            cum += norm_w;
+//        }
+//    }
+//
+//    unordered_map<size_t, pair<double, CloneTreeNode *> > new_map;
+//    for (size_t i = 0; i < new_order.size(); i++) {
+//        pair<double, CloneTreeNode *> &ret = idx2child[new_order.at(i)];
+//        ret.second->edit_name(i);
+//        new_map[i] = ret;
+//    }
+//    idx2child = new_map;
+//}
+
 void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &params)
 {
     if (idx2child.size() == 0)
         return;
 
-    vector<double> weights(idx2child.size());
-    unordered_set<int> represented;
+    vector<double> unnorm_w(idx2child.size());
+    vector<double> intervals(idx2child.size());
     double cum_prod = 1.0;
-    double represented_stick_length = 0.0;
     for (size_t i = 0; i < idx2child.size(); i++)
     {
-        weights[i] = idx2child[i].first * cum_prod;
-        represented_stick_length += weights[i];
-        cum_prod *= (1 - idx2child[i].first);
-        represented.insert(i);
+        double ww = idx2child[i].first;
+        unnorm_w[i] = ww * cum_prod;
+        cum_prod *= (1 - ww);
+        intervals[i] = (1 - cum_prod);
     }
-    
-    // throw uniform darts until all represented sticks are sampled
-    size_t n_children = weights.size();
+    size_t N = unnorm_w.size();
+    double norm = intervals[N - 1];
     vector<size_t> new_order;
-    while (represented.size() > 0) {
-        double u = gsl_ran_flat(random, 0, 1);
-        while (u > represented_stick_length) {
-            // need to represent new children: i.e., draw psi sticks
-            double psi_j = bounded_beta(random, 1, params.get_gamma());
-            CloneTreeNode *child = this->spawn_child(psi_j);
-            double nu_stick = bounded_beta(random, 1.0, params.alpha(child->get_name_vec()));
-            child->set_nu_stick(nu_stick);
-            child->sample_node_parameters(random, params, this);
-            
-            double ww = psi_j * cum_prod;
-            cum_prod *= (1 - psi_j);
-            weights.push_back(ww);
-            represented.insert(n_children);
-            represented_stick_length += ww;
-            n_children++;
-        }
-
-        vector<double> sub_weights;
-        vector<size_t> sub_indices;
-        double sum = 0.0;
-        for (size_t i = 0; i < n_children; i++) {
-            if (represented.count(i) > 0) {
-                sub_indices.push_back(i);
-                sub_weights.push_back(weights[i]);
-                sum += weights[i];
-            }
-        }
-
-        double cum = 0.0;
-        for (size_t i = 0; i < sub_weights.size(); i++) {
-            double norm_w = sub_weights.at(i)/sum;
-            if (u < cum + norm_w) {
-                represented.erase(sub_indices.at(i));
-                new_order.push_back(sub_indices.at(i));
-                break;
-            }
-            cum += norm_w;
+    vector<bool> represented(N, true);
+    int idx;
+    while (new_order.size() < N)
+    {
+        idx = multinomial(random, unnorm_w, norm);
+        if (represented[idx]) {
+            new_order.push_back(idx);
+            represented[idx] = false;
+            norm -= unnorm_w[idx];
+            unnorm_w[idx] = 0.0;
         }
     }
-
     unordered_map<size_t, pair<double, CloneTreeNode *> > new_map;
     for (size_t i = 0; i < new_order.size(); i++) {
-        pair<double, CloneTreeNode *> &ret = idx2child[new_order.at(i)];
-        ret.second->edit_name(i);
-        new_map[i] = ret;
+        idx2child.at(new_order.at(i)).second->edit_name(i);
+        new_map[i] = idx2child.at(new_order.at(i));
     }
     idx2child = new_map;
 }
-
-////void CloneTreeNode::reorder_sticks(const gsl_rng *random)
-//{
-//    if (idx2child.size() <= 1)
-//        return;
-//
-//    vector<double> unnorm_w(idx2child.size());
-//    double norm = 0.0;
-//    double cum_prod = 1.0;
-//    for (size_t i = 0; i < idx2child.size(); i++)
-//    {
-//        double ww = idx2child[i].first;
-//        cum_prod *= (1 - ww);
-//        unnorm_w[i] = (1 - cum_prod) - norm;
-//        if (unnorm_w[i] > 0) {
-//            unnorm_w[i] = std::numeric_limits< double >::min();
-//        }
-//        assert(unnorm_w[i] > 0);
-//        norm += unnorm_w[i];
-//    }
-//    size_t N = unnorm_w.size();
-//    //this->children_node_str.clear(); // remove all names
-//    unordered_map<size_t, pair<double, CloneTreeNode *> > new_map;
-//    int idx;
-//    for (size_t i = 0; i < N; i++)
-//    {
-//        if (norm == 0.0) {
-//            // the remaining sticks have 0 measure -- just keep the current ordering
-//            idx = i;
-//        } else {
-//            idx = multinomial(random, unnorm_w, norm);
-//        }
-//        pair<double, CloneTreeNode *> &ret = idx2child[idx];
-//        ret.second->edit_name(i);
-//        //this->children_node_str.insert(ret.second->get_name_vec());
-//        new_map[i] = ret;
-//        norm -= unnorm_w[idx];
-//        unnorm_w[idx] = 0.0;
-//    }
-//    idx2child = new_map;
-//}
 
 void CloneTreeNode::InitializeChild(const gsl_rng *random,
                                 const ModelParams &params)
@@ -764,6 +762,13 @@ double ScLikelihood(size_t loci_idx,
                                                           total_reads,
                                                           alpha,
                                                           beta);
+//        log_lik_biallelic += log(1-locus.get_dropout_prob());
+//        double log_lik_dropout = log_beta_binomial_pdf(var_reads,
+//                                                       total_reads,
+//                                                       model_params.GetScDropoutDistributionAlpha0(),
+//                                                       model_params.GetScBurstyDistributionBeta0());
+//        log_lik_dropout += log(locus.get_dropout_prob());
+//        log_lik = log_add(log_lik_biallelic, log_lik_dropout);
         log_lik_biallelic += log(model_params.GetScBiallelicProportion());
         double log_lik_bursty_variant = log_beta_binomial_pdf(var_reads,
                                                               total_reads,

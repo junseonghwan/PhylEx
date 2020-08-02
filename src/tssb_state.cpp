@@ -274,7 +274,6 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
     size_t iter = 0;
     
     while ((abs(u_max - u_min) > 1e-3)) {
-        
         iter++;
         u = uniform(random, u_min, u_max);
         new_node = CloneTreeNode::find_node(random, u, root, model_params); // this call may generate new nodes
@@ -315,14 +314,6 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
         if (iter == 20) { // slice sampler can degenerate, keep the max iteration to 20
             break;
         }
-    }
-    
-    // note: if datum is not assigned to a new node (reverted), then
-    // any new node created does not modify previous bulk log likelihood nor the single cells
-    
-    if (abs(u_max - u_min) <= 1e-3) {
-        // Slice sampler degenerated: this seems to occur quite a bit.
-        //cout << "Slice sampler degenerated. TODO: figure this out at some point!" << endl;
     }
 }
 
@@ -1184,7 +1175,7 @@ void cull(CloneTreeNode *root)
     
     vector<CloneTreeNode *> nodes;
     CloneTreeNode::breadth_first_traversal(root, nodes);
-    
+
     // update the clone frequencies
     size_t region_count = root->get_node_parameter().GetRegionCount();
     CloneTreeNode *curr_node;

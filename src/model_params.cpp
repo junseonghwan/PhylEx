@@ -218,11 +218,14 @@ ModelParams ModelParams::RandomInit(gsl_rng *random,
                                      double alpha0_max,
                                      double lambda_max,
                                      double gamma_max,
-                                     double seq_err)
+                                     double seq_err,
+                                    double alpha0_min,
+                                    double lambda_min,
+                                    double gamma_min)
 {
-    double alpha0 = gsl_ran_flat(random, 0, alpha0_max);
-    double lambda = gsl_ran_flat(random, 0, lambda_max);
-    double gamma = gsl_ran_flat(random, 0, gamma_max);
+    double alpha0 = gsl_ran_flat(random, alpha0_min, alpha0_max);
+    double lambda = gsl_ran_flat(random, lambda_min, lambda_max);
+    double gamma = gsl_ran_flat(random, gamma_min, gamma_max);
     ModelParams model_params(alpha0, gamma, lambda, seq_err);
     model_params.set_alpha0_bound(true, alpha0_max);
     model_params.set_lambda_bound(true, lambda_max);

@@ -40,7 +40,7 @@ class ModelParams
     double lambda_sigma = 0.1;
 
     double gamma_max = 10.0;
-    double gamma_min = 1.0;
+    double gamma_min = 0.1;
     double gamma_sigma = 0.5;
 
     double sc_dropout_alpha0_ = 0.01;
@@ -52,7 +52,7 @@ class ModelParams
     // sc_mixture_proportions[0]: Dropout for variant.
     // sc_mixture_proportions[1]: Bursty for variant.
     // sc_mixture_proportions[2]: Bi-allelic distribution.
-    double sc_mixture_proportions[3] = {0.2, 0.4, 0.4};
+    double sc_mixture_proportions[3] = {0.05, 0.4, 0.55};
 
     double b_rate = 0.1;
     double d_rate = 0.1;
@@ -148,7 +148,10 @@ public:
                                    double alpha0_max,
                                    double lambda_max,
                                    double gamma_max,
-                                   double seq_err);
+                                   double seq_err,
+                                  double alpha0_min = 1.0,
+                                  double lambda_min = 0.05,
+                                  double gamma_min = 0.1);
 };
 
 #endif /* tssb_params_h */

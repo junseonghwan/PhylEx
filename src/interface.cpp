@@ -106,7 +106,6 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
 
         // 1. resample assignment
         tree->resample_data_assignment(random, params);
-        cout << tree->print() << "\n";
         cull(tree->get_root());
         cout << tree->print() << "\n";
 
@@ -134,7 +133,6 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         
         // 3. update sticks
         tree->update_sticks(random, params);
-        cull(tree->get_root());
         cout << tree->print() << "\n";
 
         // 4. resample hyper parameters
