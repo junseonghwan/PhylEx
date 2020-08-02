@@ -214,7 +214,7 @@ BOOST_AUTO_TEST_CASE( TestScCache )
 
     bool verbose = true;
     double sc_log_lik = tree.compute_log_likelihood_sc(verbose);
-    double sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params, verbose);
+    double sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(verbose);
     cout << "At init: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
     BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
     
@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE( TestScCache )
         cout << "Brute force calculation: \n";
         sc_log_lik = tree.compute_log_likelihood_sc(verbose);
         cout << "Cache calculation: \n";
-        sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(model_params, verbose);
+        sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(verbose);
         cout << "After move: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
         BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
     }

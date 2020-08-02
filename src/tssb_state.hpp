@@ -55,7 +55,7 @@ class TSSBState
                                  const ModelParams &params) = 0;
 
     // helper functions for initializing assignment of SNV
-    void initialize_data_assignment(const gsl_rng *random, size_t mut_id, const ModelParams &params);
+    void InitializeDataAssignment(const gsl_rng *random, size_t mut_id, const ModelParams &params);
     // helper functions for performing slice sampling on an SNV
     void slice_sample_data_assignment(const gsl_rng *random,
                                       size_t mut_id,
@@ -63,12 +63,12 @@ class TSSBState
     void slice_sample_data_assignment_with_sc(const gsl_rng *random,
                                               size_t mut_id,
                                               const ModelParams &model_params);
-    void assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache = true);
+    void AssignDatum(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache = true);
 
     void initialize_sc_cache(const ModelParams &model_params);
     void InitializeCacheForNode(CloneTreeNode *v);
     //void update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &params);
-    void update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params);
+    void UpdateSingleCellCache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params);
 
     double compute_loglik_sc(CloneTreeNode *v, size_t cell_id);
 
@@ -125,7 +125,7 @@ public:
     double compute_log_likelihood_bulk(size_t region,
                                        const ModelParams &model_params);
     double compute_log_likelihood_bulk(const ModelParams &params);
-    double compute_log_likelihood_sc_cached(const ModelParams &params, bool verbose=false);
+    double compute_log_likelihood_sc_cached(bool verbose=false);
 
     //double get_log_lik();
     static double get_log_prior_assignment(CloneTreeNode *root);

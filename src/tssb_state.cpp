@@ -26,22 +26,17 @@ log_lik_sc_at_site(log_lik_sc_at_site),
 sc_presence_matrix_(bulk_data->size(), vector<double>(sc_data->size())),
 sc_absence_matrix_(bulk_data->size(), vector<double>(sc_data->size()))
 {
-//    if (sc_data != 0) {
-//        sc_cache.resize(sc_data->size());
-//    }
-    
     // Pre-compute single cell likelihood.
     ProcessSingleCellData(params);
     
     root->sample_node_parameters(random, params, 0);
     for (size_t idx = 0; idx < bulk_data->size(); idx++) {
-        this->initialize_data_assignment(random, idx, params);
+        this->InitializeDataAssignment(random, idx, params);
     }
     
-    // initialize the log likelihoods
-    //log_lik_bulk = compute_log_likelihood_bulk(params);
     cout << "Initializing cache..." << endl;
-    log_lik_sc = compute_log_likelihood_sc();
+    //log_lik_sc = compute_log_likelihood_sc();
+    log_lik_sc = compute_log_likelihood_sc_cached();
 }
 
 void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
@@ -81,38 +76,7 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
     cout << "SNV with single cell coverage: " << snv_sc_var_coverage_count << "/" << snv_sc_coverage_count << "\n";
 }
 
-/*******************
- private functions
- *******************/
-////void TSSBState::initialize_data_assignment(const gsl_rng *random, BulkDatum *datum, const ModelParams &params)
-//{
-//    // sample an initial tree
-////    double u = uniform(random, 0.0, 1.0);
-////    CloneTreeNode *node = CloneTreeNode::find_node(random, u, root, params); // this call may generate new nodes
-////    assign_data_point(0, node, datum, params);
-//
-//    // assign to the root
-//    //assign_data_point(0, root, datum, params);
-//
-//    // sample once then, assign to first child of root
-//    // root denotes healthy population and exist only for convenience regarding parameter sampling/computation
-//    // as none of the SNVs should be assigned to the root, create a single child of this root and initialize the tree by
-//    // assigning all of the SNVs there
-//    if (root->get_num_children() == 0) {
-//        // Spawn one child.
-//        root->InitializeChild(random, params);
-//        // sample an initial tree
-//        //double u = uniform(random, 0.0, 1.0);
-//        //CloneTreeNode::find_node(random, u, root, params); // this call may generate new nodes
-//    }
-//
-//    // assign the datum to the first child of root
-//    assert(root->get_num_children() > 0);
-//    CloneTreeNode *first_child_node = root->get_child(0).second;
-//    assign_data_point(0, first_child_node, datum, params);
-//}
-
-void TSSBState::initialize_data_assignment(const gsl_rng *random, size_t mut_id, const ModelParams &params)
+void TSSBState::InitializeDataAssignment(const gsl_rng *random, size_t mut_id, const ModelParams &params)
 {
     if (root->get_num_children() == 0) {
         // Spawn one child.
@@ -122,7 +86,7 @@ void TSSBState::initialize_data_assignment(const gsl_rng *random, size_t mut_id,
     // assign the datum to the first child of root
     assert(root->get_num_children() > 0);
     CloneTreeNode *first_child_node = root->get_child(0).second;
-    assign_data_point(0, first_child_node, mut_id, params, false);
+    AssignDatum(0, first_child_node, mut_id, params, false);
 }
 
 void TSSBState::InitializeCacheForNode(CloneTreeNode *v)
@@ -137,28 +101,29 @@ void TSSBState::InitializeCacheForNode(CloneTreeNode *v)
     }
 }
 
-void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params)
+void TSSBState::UpdateSingleCellCache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params)
 {
     //cout << "===== Update sc cache =====" << endl;
     if (sc_data == 0) {
         return;
     }
-    
+
     vector<CloneTreeNode *> subtree_curr;
     vector<CloneTreeNode *> subtree_new;
     get_all_nodes(false, curr_node, subtree_curr);
     get_all_nodes(false, new_node, subtree_new);
 
     bool exp_mut_status;
-    for (size_t c = 0; c < sc_data->size(); c++) {
-        for (CloneTreeNode *v : subtree_curr) {
-            // Check if cache is already allocated for v.
-            // If not, initialize cache.
-            // If yes, update cache.
-            if (!v->IsCacheAllocated(sc_data->size())) {
-                InitializeCacheForNode(v);
-                continue;
-            }
+    for (CloneTreeNode *v : subtree_curr) {
+        // Check if cache is already allocated for v.
+        // If not, initialize cache.
+        // If yes, update cache.
+        if (!v->IsCacheAllocated(sc_data->size())) {
+            InitializeCacheForNode(v);
+            continue;
+        }
+
+        for (size_t c = 0; c < sc_data->size(); c++) {
             double x = sc_presence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, -x);
             exp_mut_status = v->IsDescendantOf(new_node) ? true : false;
@@ -166,12 +131,14 @@ void TSSBState::update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_nod
                                         sc_absence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, y);
         }
+    }
 
-        for (CloneTreeNode *v : subtree_new) {
-            if (!v->IsCacheAllocated(sc_data->size())) {
-                InitializeCacheForNode(v);
-                continue;
-            }
+    for (CloneTreeNode *v : subtree_new) {
+        if (!v->IsCacheAllocated(sc_data->size())) {
+            InitializeCacheForNode(v);
+            continue;
+        }
+        for (size_t c = 0; c < sc_data->size(); c++) {
             exp_mut_status = v->IsDescendantOf(curr_node) ? true : false;
             double x = exp_mut_status ? sc_presence_matrix_.at(mut_id).at(c) :
                                         sc_absence_matrix_.at(mut_id).at(c);
@@ -221,7 +188,7 @@ void TSSBState::slice_sample_data_assignment(const gsl_rng *random,
         }
 
         // assign data point from curr_node to new_node
-        assign_data_point(curr_node, new_node, mut_id, model_params);
+        AssignDatum(curr_node, new_node, mut_id, model_params);
 
         // compute the log likelihood
         new_log_lik_bulk = LogLikDatum(new_node, datum, model_params);
@@ -233,7 +200,7 @@ void TSSBState::slice_sample_data_assignment(const gsl_rng *random,
             break;
         } else {
             // revert the changes
-            assign_data_point(new_node, curr_node, mut_id, model_params);
+            AssignDatum(new_node, curr_node, mut_id, model_params);
             if (CloneTreeNode::less(new_node, curr_node)) {
                 u_min = u;
             } else {
@@ -265,8 +232,13 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
     CloneTreeNode *new_node = 0;
 
     double curr_log_lik_bulk = LogLikDatum(curr_node, datum, model_params);
-    //double curr_log_lik_sc = compute_log_likelihood_sc_cached(model_params);
+    double curr_log_lik_sc_cached = compute_log_likelihood_sc_cached();
     double curr_log_lik_sc = compute_log_likelihood_sc();
+    double error = abs(curr_log_lik_sc_cached - curr_log_lik_sc);
+    if (error > 1e-3) {
+        cout << "Single cell cached: " << curr_log_lik_sc_cached << ", truth: " << curr_log_lik_sc << "\n";
+        exit(-1);
+    }
     double curr_log_lik = curr_log_lik_bulk + curr_log_lik_sc;
     
     double log_slice = log(uniform(random, 0.0, 1.0)); // sample the slice
@@ -283,12 +255,18 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
         }
         
         // assign data point from curr_node to new_node
-        assign_data_point(curr_node, new_node, mut_id, model_params);
+        AssignDatum(curr_node, new_node, mut_id, model_params);
         
         // compute the log likelihood
         new_log_lik_bulk = LogLikDatum(new_node, datum, model_params);
-        //new_log_lik_sc = compute_log_likelihood_sc_cached(model_params);
+        double new_log_lik_sc_cached = compute_log_likelihood_sc_cached();
         new_log_lik_sc = compute_log_likelihood_sc();
+        error = abs(new_log_lik_sc_cached - new_log_lik_sc);
+        if (error > 1e-3) {
+            cout << "Single cell cached: " << new_log_lik_sc_cached << ", truth: " << new_log_lik_sc << "\n";
+            exit(-1);
+        }
+
         new_log_lik = new_log_lik_bulk + new_log_lik_sc;
         if (new_log_lik > (log_slice + curr_log_lik)) {
             // update log_lik_bulk, log_lik_sc, log_lik
@@ -298,7 +276,7 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
             break;
         } else {
             // revert the changes
-            assign_data_point(new_node, curr_node, mut_id, model_params);
+            AssignDatum(new_node, curr_node, mut_id, model_params);
             //log_lik_sc = compute_log_likelihood_sc_cached(model_params);
             if (CloneTreeNode::less(new_node, curr_node)) {
                 u_min = u;
@@ -322,23 +300,7 @@ const vector<BulkDatum *> &TSSBState::get_data() const
     return *bulk_data_;
 }
 
-////void TSSBState::assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &model_params)
-//{
-//    if (curr_node != 0) {
-//        curr_node->remove_datum(datum);
-//    }
-//
-//    // update the map : datum -> node
-//    datum2node[datum] = new_node;
-//    // add the datum to the new node
-//    new_node->add_datum(datum);
-//
-//    // update single cell cache
-//    if (sc_data != 0 && sc_data->size() > 0)
-//        update_sc_cache(curr_node, new_node, datum, model_params);
-//}
-
-void TSSBState::assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache)
+void TSSBState::AssignDatum(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache)
 {
     auto datum = bulk_data_->at(mut_id);
     if (curr_node != 0) {
@@ -353,13 +315,9 @@ void TSSBState::assign_data_point(CloneTreeNode *curr_node, CloneTreeNode *new_n
     // update single cell cache.
     // TODO: do it only if mut_id has single cell coverage.
     if (update_cache && sc_data != 0 && sc_data->size() > 0)
-        update_sc_cache(curr_node, new_node, mut_id, model_params);
+        UpdateSingleCellCache(curr_node, new_node, mut_id, model_params);
 }
 
-
-/**********
- public functions
- **********/
 double TSSBState::get_log_prior_assignment(CloneTreeNode *root)
 {
     // log prior of the data assignment requires computing the probability of
@@ -392,7 +350,6 @@ double TSSBState::compute_log_likelihood_sc(bool verbose)
 
     double log_lik_sc = 0.0;
 
-    // Marginalize over assignment to the nodes.
     vector<CloneTreeNode *> all_nodes;
     get_all_nodes(true, root, all_nodes);
     
@@ -415,7 +372,7 @@ double TSSBState::compute_log_likelihood_sc(bool verbose)
     return log_lik_sc;
 }
 
-double TSSBState::compute_log_likelihood_sc_cached(const ModelParams &params, bool verbose)
+double TSSBState::compute_log_likelihood_sc_cached(bool verbose)
 {
     if (sc_data == 0 || sc_data->size() == 0) {
         return 0.0;
@@ -495,7 +452,7 @@ void TSSBState::move_datum(CloneTreeNode *new_node, size_t mut_id, const ModelPa
     }
     
     curr_node = datum2node[bulk_data_->at(mut_id)];
-    assign_data_point(curr_node, new_node, mut_id, model_params);
+    AssignDatum(curr_node, new_node, mut_id, model_params);
 }
 
 // helper functions for updating the sticks
