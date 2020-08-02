@@ -49,8 +49,8 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
                                       ModelParams &params)
 {
     size_t region_count = bulk_data_[0]->GetRegionCount();
-    CloneTreeNode *root = CloneTreeNode::create_root_node(region_count);
-    root->sample_node_parameters(random, params, 0);
+    CloneTreeNode *root = CloneTreeNode::CreateRootNode(region_count);
+    root->SampleNodeParameters(random, params, 0);
 
     TSSBState *tree;
     switch (cn_input_type_) {

@@ -28,10 +28,10 @@ BOOST_AUTO_TEST_CASE( TestBulkLogLikWithTotalCopyNumber )
     vector<size_t> var_read_count(1, 10);
     vector<size_t> total_read_count(1, 20);
     
-    auto root = CloneTreeNode::create_root_node(1);
-    auto child = (CloneTreeNode *)root->spawn_child(0.5);
-    child->set_cellular_prev(0, 0.5);
-    child->set_clone_freq(0, 0.5);
+    auto root = CloneTreeNode::CreateRootNode(1);
+    auto child = (CloneTreeNode *)root->SpawnChild(0.5);
+    child->SetCellularPrevalenceAtRegion(0, 0.5);
+    child->SetCloneFrequencyAtRegion(0, 0.5);
 
     BulkDatum datum1("s1", "chr", 0);
     datum1.AddRegionData(0, 0, 1, 1);
@@ -65,10 +65,10 @@ BOOST_AUTO_TEST_CASE( TestBulkLogLikWithGenotype )
     vector<size_t> var_read_count(1, 10);
     vector<size_t> total_read_count(1, 20);
 
-    auto root = CloneTreeNode::create_root_node(1);
-    auto child = (CloneTreeNode *)root->spawn_child(0.5);
-    child->set_cellular_prev(0, 0.5);
-    child->set_clone_freq(0, 0.5);
+    auto root = CloneTreeNode::CreateRootNode(1);
+    auto child = (CloneTreeNode *)root->SpawnChild(0.5);
+    child->SetCellularPrevalenceAtRegion(0, 0.5);
+    child->SetCloneFrequencyAtRegion(0, 0.5);
     
     BulkDatum datum1("s1", "chr", 0, var_read_count, total_read_count,
                      major_cn, minor_cn);
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE( TestScLikelihood2 )
     
     gsl_rng *random = generate_random_object(1);
     
-    CloneTreeNode *root = CloneTreeNode::create_root_node(bulk1.GetRegionCount());
+    CloneTreeNode *root = CloneTreeNode::CreateRootNode(bulk1.GetRegionCount());
     TSSBState tree(random, root, model_params,
                    BulkLogLikWithGenotype, ScLikelihood,
                    &bulk_data, &sc_data);
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE( TestScCache )
         sc_data.push_back(sc);
     }
 
-    CloneTreeNode *root = CloneTreeNode::create_root_node(region_count);
+    CloneTreeNode *root = CloneTreeNode::CreateRootNode(region_count);
     TSSBState tree(random, root, model_params,
                    BulkLogLikWithGenotype, ScLikelihood,
                    &bulk_data, &sc_data);

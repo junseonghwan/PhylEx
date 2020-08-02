@@ -13,8 +13,8 @@ CompactTSSBState::CompactTSSBState(TSSBState &tssb_state)
     CloneTreeNode *node;
     for (size_t i = 0; i < tssb_state.get_data().size(); i++) {
         node = tssb_state.get_node(tssb_state.get_data().at(i));
-        datum2param.push_back(new CloneTreeNodeParam(node->get_node_parameter()));
-        datum2node.push_back(node->get_name());
+        datum2param.push_back(new CloneTreeNodeParam(node->NodeParameter()));
+        datum2node.push_back(node->GetName());
     }
     
     // get non-empty nodes
@@ -26,7 +26,7 @@ CompactTSSBState::CompactTSSBState(TSSBState &tssb_state)
     //        clustering.push_back(data);
     //    }
     
-    CloneTreeNode::get_cluster_labels(tssb_state.get_root(), tssb_state.get_data(), cluster_labels);
+    CloneTreeNode::GetClusterLabels(tssb_state.get_root(), tssb_state.get_data(), cluster_labels);
 }
 
 CompactTSSBState::~CompactTSSBState()

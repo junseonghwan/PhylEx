@@ -29,7 +29,7 @@ sc_absence_matrix_(bulk_data->size(), vector<double>(sc_data->size()))
     // Pre-compute single cell likelihood.
     ProcessSingleCellData(params);
     
-    root->sample_node_parameters(random, params, 0);
+    root->SampleNodeParameters(random, params, 0);
     for (size_t idx = 0; idx < bulk_data->size(); idx++) {
         this->InitializeDataAssignment(random, idx, params);
     }
@@ -78,14 +78,14 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
 
 void TSSBState::InitializeDataAssignment(const gsl_rng *random, size_t mut_id, const ModelParams &params)
 {
-    if (root->get_num_children() == 0) {
+    if (root->GetChildrenCount() == 0) {
         // Spawn one child.
         root->InitializeChild(random, params);
     }
     
     // assign the datum to the first child of root
-    assert(root->get_num_children() > 0);
-    CloneTreeNode *first_child_node = root->get_child(0).second;
+    assert(root->GetChildrenCount() > 0);
+    CloneTreeNode *first_child_node = root->GetChild(0).second;
     AssignDatum(0, first_child_node, mut_id, params, false);
 }
 
@@ -153,7 +153,7 @@ void TSSBState::UpdateSingleCellCache(CloneTreeNode *curr_node, CloneTreeNode *n
 double TSSBState::LogLikDatum(CloneTreeNode *node,
                               BulkDatum *datum,
                               const ModelParams &model_params) {
-    size_t region_count = node->get_node_parameter().GetRegionCount();
+    size_t region_count = node->NodeParameter().GetRegionCount();
     double log_lik = 0.0;
     for (size_t i = 0; i < region_count; i++) {
         log_lik += log_lik_datum(i, node, datum, model_params);
@@ -181,7 +181,7 @@ void TSSBState::slice_sample_data_assignment(const gsl_rng *random,
 
         iter++;
         u = uniform(random, u_min, u_max);
-        new_node = CloneTreeNode::find_node(random, u, root, model_params); // this call may generate new nodes
+        new_node = CloneTreeNode::FindNode(random, u, root, model_params); // this call may generate new nodes
 
         if (new_node == curr_node) {
             break; // no need to carry out further computation
@@ -201,7 +201,7 @@ void TSSBState::slice_sample_data_assignment(const gsl_rng *random,
         } else {
             // revert the changes
             AssignDatum(new_node, curr_node, mut_id, model_params);
-            if (CloneTreeNode::less(new_node, curr_node)) {
+            if (CloneTreeNode::Less(new_node, curr_node)) {
                 u_min = u;
             } else {
                 u_max = u;
@@ -242,7 +242,7 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
     while ((abs(u_max - u_min) > 1e-3)) {
         iter++;
         u = uniform(random, u_min, u_max);
-        new_node = CloneTreeNode::find_node(random, u, root, model_params); // this call may generate new nodes
+        new_node = CloneTreeNode::FindNode(random, u, root, model_params); // this call may generate new nodes
         
         if (new_node == curr_node) {
             break; // no need to carry out further computation
@@ -266,7 +266,7 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
             // revert the changes
             AssignDatum(new_node, curr_node, mut_id, model_params);
             //log_lik_sc = compute_log_likelihood_sc_cached(model_params);
-            if (CloneTreeNode::less(new_node, curr_node)) {
+            if (CloneTreeNode::Less(new_node, curr_node)) {
                 u_min = u;
             } else {
                 u_max = u;
@@ -292,13 +292,13 @@ void TSSBState::AssignDatum(CloneTreeNode *curr_node, CloneTreeNode *new_node, s
 {
     auto datum = bulk_data_->at(mut_id);
     if (curr_node != 0) {
-        curr_node->remove_datum(datum);
+        curr_node->RemoveDatum(datum);
     }
     
     // update the map : datum -> node
     datum2node[datum] = new_node;
     // add the datum to the new node
-    new_node->add_datum(datum);
+    new_node->AddDatum(datum);
     
     // update single cell cache.
     // TODO: do it only if mut_id has single cell coverage.
@@ -315,7 +315,7 @@ double TSSBState::get_log_prior_assignment(CloneTreeNode *root)
     
     double log_prior_assignment = 0.0;
     for (size_t i = 0; i < mixture.size(); i++) {
-        size_t n_data = mixture[i].second->get_num_data();
+        size_t n_data = mixture[i].second->DataCount();
         if (n_data > 0) {
             log_prior_assignment += n_data * log(mixture[i].first);
         }
@@ -348,7 +348,7 @@ double TSSBState::compute_log_likelihood_sc(bool verbose)
             CloneTreeNode *node = all_nodes[i];
             double log_val = compute_loglik_sc(node, c);
             if (verbose) {
-                cout << "[" << node->get_name() << "]: " << log_val << endl;
+                cout << "[" << node->GetName() << "]: " << log_val << endl;
             }
             log_lik_cell = log_add(log_val, log_lik_cell);
         }
@@ -385,9 +385,9 @@ double TSSBState::compute_log_likelihood_sc_cached(bool verbose)
         double log_lik_cell = DOUBLE_NEG_INF;
         for (size_t i = 0; i < all_nodes.size(); i++) {
             CloneTreeNode *v = all_nodes[i];
-            log_val = v->GetScCache(c);
+            log_val = v->GetCache(c);
             if (verbose) {
-                cout << "[" << v->get_name() << "]: " << log_val << endl;
+                cout << "[" << v->GetName() << "]: " << log_val << endl;
             }
             log_lik_cell = log_add(log_val, log_lik_cell);
         }
@@ -436,7 +436,7 @@ void TSSBState::move_datum(CloneTreeNode *new_node, size_t mut_id, const ModelPa
         if (curr_node == 0) {
             cerr << "Error: Node is not part of the tree!" << endl;
         }
-        curr_node = curr_node->get_parent_node();
+        curr_node = curr_node->GetParentNode();
     }
     
     curr_node = datum2node[bulk_data_->at(mut_id)];
@@ -452,9 +452,9 @@ void TSSBState::reorder_sticks(const gsl_rng *random, const ModelParams &model_p
         CloneTreeNode *node = q.front();
         q.pop();
         
-        node->reorder_sticks(random, model_params);
+        node->ResampleStickOrder(random, model_params);
         // enqueue children nodes to the queue
-        for (auto it = node->get_idx2child().begin(); it != node->get_idx2child().end(); ++it) {
+        for (auto it = node->GetIdx2Child().begin(); it != node->GetIdx2Child().end(); ++it) {
             q.push(it->second.second);
         }
     }
@@ -462,10 +462,10 @@ void TSSBState::reorder_sticks(const gsl_rng *random, const ModelParams &model_p
 
 void descend_and_update_names(CloneTreeNode *node)
 {
-    node->reset_children_names();
+    node->ResetChildrenNames();
     CloneTreeNode *child = 0;
     
-    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     for (auto it = children.begin(); it != children.end(); it++) {
         child = it->second.second;
         descend_and_update_names(child);
@@ -474,11 +474,11 @@ void descend_and_update_names(CloneTreeNode *node)
 
 size_t descend_and_cull(CloneTreeNode *node)
 {
-    size_t n_data = node->get_num_data();
+    size_t n_data = node->DataCount();
     size_t n_data_desc = 0;
     CloneTreeNode *child = 0;
     
-    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     unordered_set<size_t> cull_list;
     bool stop = false;
     for (int i = children.size() - 1; i >= 0; i--) {
@@ -497,7 +497,7 @@ size_t descend_and_cull(CloneTreeNode *node)
         
     }
     
-    node->cull(cull_list);
+    node->Cull(cull_list);
     
     return n_data + n_data_desc;
 }
@@ -505,10 +505,10 @@ size_t descend_and_cull(CloneTreeNode *node)
 // returns pair<n_data at node, n_data at descendants of node>
 pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random, CloneTreeNode *node, const ModelParams &params)
 {
-    size_t n_data = node->get_num_data();
+    size_t n_data = node->DataCount();
     size_t total_num_data_at_desc = 0; // number of data points below this node (over all descendant nodes)
     
-    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     vector<pair<size_t, size_t> > n_data_desc; // n_data_desc[i] stores <n_data at i, total_num_desc of i> (note: the second count does not include n_data at i)
     for (size_t i = 0; i < children.size(); i++)
     {
@@ -519,11 +519,11 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
     }
     
     // update nu-stick except for the root, which stays at 0
-    if (node == root && node->get_nu_stick() == 0) {
+    if (node == root && node->GetNuStick() == 0) {
         // do not sample nu-stick for root
     } else {
-        double temp = bounded_beta(random, n_data + 1, total_num_data_at_desc + params.ComputeAlpha(node->get_name_vec()));
-        node->set_nu_stick(temp);
+        double temp = bounded_beta(random, n_data + 1, total_num_data_at_desc + params.ComputeAlpha(node->GetNameVector()));
+        node->SetNuStick(temp);
     }
     
     // update psi-sticks
@@ -535,7 +535,7 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
         size_t n_data_i = num_data_at_child + num_data_at_desc_of_child;
         //double temp = bounded_beta(random, n_data_i + 1, params.get_gamma() + (total_num_data_at_desc - n_data_i - cumulative_num_data));
         double temp = bounded_beta(random, n_data_i + 1, params.GetGamma() + cumulative_num_data);
-        node->set_psi_stick(i, temp);
+        node->SetPsiStick(i, temp);
         cumulative_num_data += n_data_i;
     }
     assert(total_num_data_at_desc == cumulative_num_data);
@@ -590,13 +590,13 @@ void TSSBState::get_all_nodes(bool non_empty, CloneTreeNode *root_node, vector<C
                 ret.push_back(node);
                 nodes.insert(node);
             } else {
-                if (node->get_num_data() > 0) {
+                if (node->DataCount() > 0) {
                     ret.push_back(node);
                     nodes.insert(node);
                 }
             }
         }
-        unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+        unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
         for (size_t i = 0; i < children.size(); i++)
         {
             CloneTreeNode *child = children[i].second;
@@ -609,9 +609,9 @@ void TSSBState::get_all_nodes(bool non_empty, CloneTreeNode *root_node, vector<C
 // the nodes are ordered by depth first traversal
 void TSSBState::get_mixture(CloneTreeNode *node, double mass, vector<pair<double, CloneTreeNode *> > &ret)
 {
-    double node_mass = mass * node->get_nu_stick();
+    double node_mass = mass * node->GetNuStick();
     ret.push_back(make_pair(node_mass, node));
-    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     double cum_prod = 1.0;
     vector<double> weights;
     for (size_t i = 0; i < children.size(); i++)
@@ -620,45 +620,8 @@ void TSSBState::get_mixture(CloneTreeNode *node, double mass, vector<pair<double
         double val = cum_prod * (1 - children[i].first);
         weights.push_back(1 - val);
         cum_prod *= (1 - children[i].first);
-        get_mixture(child, (1 - node->get_nu_stick()) * mass * weights[i], ret);
+        get_mixture(child, (1 - node->GetNuStick()) * mass * weights[i], ret);
     }
-}
-
-//void TSSBState::insert_datum(const gsl_rng *random, BulkDatum * datum, const ModelParams &params)
-//{
-//    double u = gsl_ran_flat(random, 0, 1);
-//    CloneTreeNode *node = CloneTreeNode::find_node(random, u, root, params);
-//    bulk_data->push_back(datum);
-//    assign_data_point(0, node, datum, params);
-//    
-//    // do not update sc_cache as it will initialized and called in compute_likelihood_sc_cached
-//}
-
-void TSSBState::initialize_sc_cache(const ModelParams &model_params)
-{
-    //sc_cache.resize(sc_data->size());
-    vector<CloneTreeNode *> all_nodes;
-    get_all_nodes(false, all_nodes);
-    unordered_map<CloneTreeNode *, unordered_set<const BulkDatum *> > node2snvs;
-    for (CloneTreeNode *v : all_nodes)
-    {
-        unordered_set<const BulkDatum *> snvs;
-        CloneTreeNode::GetDataset(v, snvs);
-        node2snvs[v] = snvs;
-    }
-    for (auto v : all_nodes) {
-        // Check if cache is initialized.
-        v->AllocateCache(sc_data->size());
-        for (size_t c = 0; c < sc_data->size(); c++) {
-            v->UpdateCache(c, compute_loglik_sc(v, c));
-        }
-    }
-}
-
-void TSSBState::set_sc_data(vector<SingleCellData *> *sc_data, const ModelParams &model_params)
-{
-    this->sc_data = sc_data;
-    initialize_sc_cache(model_params);
 }
 
 // get all nodes in this tree with at least one datum
@@ -678,8 +641,8 @@ gsl_matrix *TSSBState::get_ancestral_matrix(TSSBState &state)
         CloneTreeNode *v = state.get_node(datum);
         // trace up to the root and set the row of A
         while (v != state.root) {
-            v = v->get_parent_node();
-            unordered_set<const BulkDatum *> data = v->get_data();
+            v = v->GetParentNode();
+            unordered_set<const BulkDatum *> data = v->GetData();
             ancestors[i].insert(data.begin(), data.end());
         }
     }
@@ -719,7 +682,7 @@ double TSSBState::compute_log_likelihood_bulk(size_t region,
 // compute (or get) the log likelihood of the current state
 double TSSBState::compute_log_likelihood_bulk(const ModelParams &model_params)
 {
-    size_t region_count = root->get_node_parameter().GetRegionCount();
+    size_t region_count = root->NodeParameter().GetRegionCount();
     double log_lik_bulk = 0.0;
     for (size_t i = 0; i < region_count; i++) {
         log_lik_bulk += compute_log_likelihood_bulk(i, model_params);
@@ -741,10 +704,10 @@ double log_prod_beta(vector<CloneTreeNode *> &nodes, const ModelParams &params)
     double log_sum = 0.0;
     double alpha;
     for (CloneTreeNode *node : nodes) {
-        if (node->get_depth() == 0 && node->get_nu_stick() == 0) // root is assigned 0 nu-stick as it denotes healthy population that should not have any mutation assigned to it
+        if (node->GetDepth() == 0 && node->GetNuStick() == 0) // root is assigned 0 nu-stick as it denotes healthy population that should not have any mutation assigned to it
             continue;
-        double x = node->get_nu_stick();
-        alpha = params.ComputeAlpha(node->get_name_vec());
+        double x = node->GetNuStick();
+        alpha = params.ComputeAlpha(node->GetNameVector());
         double y = log_beta_pdf(x, 1.0, alpha);
         log_sum += y;
         // below: for a small value of alpha, beta(1, alpha) is essentially a point mass at 1
@@ -903,8 +866,8 @@ void TSSBState::update_hyper_params(const gsl_rng *random,
     state.get_all_nodes(all_nodes);
     vector<double> psi_sticks;
     for (CloneTreeNode *node : all_nodes) {
-        for (size_t i = 0; i < node->get_idx2child().size(); i++) {
-            psi_sticks.push_back(node->get_idx2child()[i].first);
+        for (size_t i = 0; i < node->GetIdx2Child().size(); i++) {
+            psi_sticks.push_back(node->GetIdx2Child()[i].first);
         }
     }
     
@@ -922,9 +885,9 @@ string TSSBState::print()
         CloneTreeNode *node = q.front();
         q.pop();
         
-        ret += node->print() + "\n";
+        ret += node->Print() + "\n";
         // enqueue children nodes to the queue
-        unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child = node->get_idx2child();
+        unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child = node->GetIdx2Child();
         for (size_t i = 0; i < idx2child.size(); i++) {
             q.push(idx2child[i].second);
         }
@@ -959,16 +922,16 @@ string TSSBState::print()
 
 double update_cellular_prev_recursive(size_t region, CloneTreeNode * node)
 {
-    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
-    const CloneTreeNodeParam &param = node->get_node_parameter();
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
+    const CloneTreeNodeParam &param = node->NodeParameter();
     double children_prev = 0.0;
     for (auto it = children.begin(); it != children.end(); ++it)
     {
         CloneTreeNode *child = it->second.second;
         children_prev += update_cellular_prev_recursive(region, child);
     }
-    auto cell_prev = param.get_clone_freqs(region) + children_prev;
-    node->set_cellular_prev(region, cell_prev);
+    auto cell_prev = param.GetCloneFreqAtRegion(region) + children_prev;
+    node->SetCellularPrevalenceAtRegion(region, cell_prev);
     return cell_prev;
 }
 
@@ -978,7 +941,7 @@ void update_params(size_t region,
 {
     // update clone frequencies
     for (size_t i = 0; i < nodes.size(); i++) {
-        nodes[i]->set_clone_freq(region, new_clone_freq[i]);
+        nodes[i]->SetCloneFrequencyAtRegion(region, new_clone_freq[i]);
     }
     // update cellular prevalences
     update_cellular_prev_recursive(region, nodes[0]);
@@ -994,12 +957,12 @@ void get_clone_freqs(size_t region,
     for (size_t i = 0; i < nodes.size(); i++)
     {
         node = nodes[i];
-        clone_freqs[i] = node->get_node_parameter().get_cellular_prevs(region);
-        unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+        clone_freqs[i] = node->NodeParameter().GetCellularPrevalenceAtRegion(region);
+        unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
         for (auto it = children.begin(); it != children.end(); ++it)
         {
             CloneTreeNode *child = it->second.second;
-            clone_freqs[i] -= child->get_node_parameter().get_cellular_prevs(region);
+            clone_freqs[i] -= child->NodeParameter().GetCellularPrevalenceAtRegion(region);
         }
     }
 }
@@ -1014,7 +977,7 @@ bool check_clone_freq(size_t region, CloneTreeNode *root)
         node = q.front();
         q.pop();
         sum_of_freqs += node->GetCloneFreqs(region);
-        unordered_map<size_t, pair<double, CloneTreeNode *> > &idx2child = node->get_idx2child();
+        unordered_map<size_t, pair<double, CloneTreeNode *> > &idx2child = node->GetIdx2Child();
         for (size_t i = 0; i < idx2child.size(); i++) {
             q.push(idx2child[i].second);
         }
@@ -1088,7 +1051,7 @@ double sample_params_dirichlet(const gsl_rng *random,
                                TSSBState &tree,
                                const ModelParams &params)
 {
-    size_t region_count = tree.get_root()->get_node_parameter().GetRegionCount();
+    size_t region_count = tree.get_root()->NodeParameter().GetRegionCount();
     double ar[region_count];
     gsl_rng *rands[region_count];
     for (size_t i = 0; i < region_count; i++) {
@@ -1119,22 +1082,22 @@ void cull(CloneTreeNode *root)
     descend_and_update_names(root);
     
     vector<CloneTreeNode *> nodes;
-    CloneTreeNode::breadth_first_traversal(root, nodes);
+    CloneTreeNode::BreadthFirstTraversal(root, nodes);
 
     // update the clone frequencies
-    size_t region_count = root->get_node_parameter().GetRegionCount();
+    size_t region_count = root->NodeParameter().GetRegionCount();
     CloneTreeNode *curr_node;
     for (size_t region = 0; region < region_count; region++) {
         for (size_t i = 0; i < nodes.size(); i++) {
             curr_node = (CloneTreeNode *)nodes[i];
-            unordered_map<size_t, pair<double, CloneTreeNode *> > &idx2child = curr_node->get_idx2child();
+            unordered_map<size_t, pair<double, CloneTreeNode *> > &idx2child = curr_node->GetIdx2Child();
             double children_cellular_prev = 0.0;
             for (size_t idx = 0; idx < idx2child.size(); idx++) {
                 CloneTreeNode *child_node = (CloneTreeNode *)idx2child[idx].second;
                 children_cellular_prev += child_node->GetCellularPrevs(region);
             }
             // cull does not alter cellular prevalence but it does change the clone frequncy because some children gets removed
-            curr_node->set_clone_freq(region, curr_node->GetCellularPrevs(region) - children_cellular_prev);
+            curr_node->SetCloneFrequencyAtRegion(region, curr_node->GetCellularPrevs(region) - children_cellular_prev);
         }
     }
 }

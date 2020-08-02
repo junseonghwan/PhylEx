@@ -33,51 +33,49 @@ using namespace std;
 
 class CloneTreeNodeParam
 {
-    vector<double> clone_freqs;
-    vector<double> cellular_prevs;
+    vector<double> clone_freqs_;
+    vector<double> cellular_prevs_;
 public:
     CloneTreeNodeParam(size_t region_count);
-    inline const vector<double> &get_clone_freqs() const { return clone_freqs; }
-    inline const vector<double> &get_cellular_prevs() const { return cellular_prevs; }
-    inline double get_clone_freqs(size_t region) const { return clone_freqs[region]; }
-    inline double get_cellular_prevs(size_t region) const { return cellular_prevs[region]; }
-    void set_clone_freq(size_t idx, double val);
-    void set_cellular_prev(size_t idx, double val);
-    void set_clone_freq(vector<double> &vec);
-    void set_cellular_prev(vector<double> &vec);
-    bool is_consistent();
+    inline const vector<double> &GetCloneFreqs() const { return clone_freqs_; }
+    inline const vector<double> &GetCellularPrevalences() const { return cellular_prevs_; }
+    inline double GetCloneFreqAtRegion(size_t region) const { return clone_freqs_[region]; }
+    inline double GetCellularPrevalenceAtRegion(size_t region) const { return cellular_prevs_[region]; }
+    void SetCloneFrequencyAtRegion(size_t idx, double val);
+    void SetCellularPrevalenceAtRegion(size_t idx, double val);
     void SetRootParameters();
+    bool IsConsistent() const;
     size_t GetRegionCount() const {
-        return clone_freqs.size();
+        return clone_freqs_.size();
     }
-    string GetCloneFreqsAsString();
-    string GetCellularPrevsAsString();
+    string GetCloneFreqsAsString() const;
+    string GetCellularPrevsAsString() const;
 };
 
 class CloneTreeNode
 {
-    CloneTreeNodeParam param;
-    
-    vector<size_t> name;
-    double nu = 0.0;
-    CloneTreeNode *parent_node = 0;
-    unordered_set<const BulkDatum *> data;
-    vector<double> sc_cache;
+    CloneTreeNodeParam param_;
+
+    vector<size_t> name_;
+    double nu_ = 0.0;
+    CloneTreeNode *parent_node_ = 0;
+    unordered_set<const BulkDatum *> data_;
+    vector<double> sc_cache_;
 
     // map: child branch idx -> pair<psi_stick, Node *>
-    unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child;
+    unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child_;
     bool operator==(const CloneTreeNode &other) const
     {
-        if (this->parent_node != other.parent_node)
+        if (this->parent_node_ != other.parent_node_)
             return false;
-        if (name.size() != other.name.size())
+        if (name_.size() != other.name_.size())
             return false;
-        size_t n = name.size();
-        return (name[n-1] == other.name[n-1]);
+        size_t n = name_.size();
+        return (name_[n-1] == other.name_[n-1]);
     }
 
     // change the last part of the node's name to j -- used extensively by reorder_sticks
-    void edit_name(size_t j);
+    void EditName(size_t j);
     
     // For creating the root node.
     CloneTreeNode(size_t region_count);
@@ -90,64 +88,65 @@ public:
     bool IsCacheAllocated(size_t cell_count);
     void AllocateCache(size_t cell_count);
     void UpdateCache(size_t c, double val);
-    double GetScCache(size_t c);
-    string get_name() const;
-    inline const vector<size_t> &get_name_vec() const { return name; };
-    inline size_t get_depth() const { return name.size() - 1; }
-    size_t get_num_data() const;
-    double get_nu_stick() const;
-    CloneTreeNode *get_parent_node() const;
-    const unordered_set<const BulkDatum *> &get_data() const;
-    const pair<double, CloneTreeNode *> &get_child(size_t child_idx) const;
-    size_t get_num_children() const;
-    bool is_root() const;
-    bool is_leaf() const;
-    unordered_map<size_t, pair<double, CloneTreeNode *> > &get_idx2child();
+    double GetCache(size_t c);
+    string GetName() const;
+    inline const vector<size_t> &GetNameVector() const { return name_; };
+    inline size_t GetDepth() const { return name_.size() - 1; }
+    size_t DataCount() const;
+    double GetNuStick() const;
+    CloneTreeNode *GetParentNode() const;
+    const unordered_set<const BulkDatum *> &GetData() const;
+    const pair<double, CloneTreeNode *> &GetChild(size_t child_idx) const;
+
+    size_t GetChildrenCount() const;
+    bool IsRoot() const;
+    bool IsLeaf() const;
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &GetIdx2Child();
 
     // setters
-    void set_nu_stick(double nu);
-    void set_psi_stick(size_t child_idx, double psi);
+    void SetNuStick(double nu);
+    void SetPsiStick(size_t child_idx, double psi);
     
     // add/remove datum
-    void add_datum(BulkDatum *datum);
-    void remove_datum(BulkDatum *datum);
-    bool contains_datum(BulkDatum *datum) const;
+    void AddDatum(BulkDatum *datum);
+    void RemoveDatum(BulkDatum *datum);
+    bool ContainsDatum(BulkDatum *datum) const;
     
     // operations on sticks
-    void cull(unordered_set<size_t> &cull_list);
-    void reorder_sticks(const gsl_rng *random, const ModelParams &params);
-    void reset_children_names();
+    void Cull(unordered_set<size_t> &cull_list);
+    void ResampleStickOrder(const gsl_rng *random, const ModelParams &params);
+    void ResetChildrenNames();
     
     // Returns true if this node is ancestor of other or other == this.
     bool IsAncestorOf(CloneTreeNode *other);
     bool IsDescendantOf(CloneTreeNode *other);
     
     // identify the branch that contains u, return the corresponding child Node
-    CloneTreeNode *locate_child(const gsl_rng *random, double &u, const ModelParams &hyper_params);
+    CloneTreeNode *LocateChild(const gsl_rng *random, double &u, const ModelParams &hyper_params);
     void InitializeChild(const gsl_rng *random,
                          const ModelParams &params);
     
-    static string form_node_string(string curr_node_str, size_t branch);
-    static string get_parent_string(string curr_node_str);
+    static string ConstructNodeString(string curr_node_str, size_t branch);
+    static string RetrieveParentString(string curr_node_str);
     
-    static void breadth_first_traversal(CloneTreeNode *root, vector<CloneTreeNode *> &ret, bool non_empty = false);
-    static CloneTreeNode *find_node(const gsl_rng *random, double u, CloneTreeNode *root, const ModelParams &params);
-    // return all data from ancestors including node itself
+    static void BreadthFirstTraversal(CloneTreeNode *root, vector<CloneTreeNode *> &ret, bool non_empty = false);
+    static CloneTreeNode *FindNode(const gsl_rng *random, double u, CloneTreeNode *root, const ModelParams &params);
+    // Return all data from ancestors including node itself.
     static void GetDataset(CloneTreeNode *node, unordered_set<const BulkDatum *> &dataset);
-    static void get_cluster_labels(CloneTreeNode *root,
-                                   const vector<BulkDatum *> &data,
-                                   vector<unsigned int> &cluster_labels);
-    static void construct_datum2node(vector<CloneTreeNode *> &all_nodes,
-                                     unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node);
+    static void GetClusterLabels(CloneTreeNode *root,
+                                 const vector<BulkDatum *> &data,
+                                 vector<unsigned int> &cluster_labels);
+    static void Datum2Node(vector<CloneTreeNode *> &all_nodes,
+                           unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node);
     static gsl_matrix *GetAncestralMatrix(CloneTreeNode *root,
                                           const vector<BulkDatum *> &bulk_data,
                                           const unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node);
 
-    static bool less(CloneTreeNode *l, CloneTreeNode *r);
+    static bool Less(CloneTreeNode *l, CloneTreeNode *r);
     friend bool operator<(const CloneTreeNode& lhs, const CloneTreeNode& rhs) {
         vector<string> lhs_arr, rhs_arr;
-        boost::split(lhs_arr, lhs.name, boost::is_any_of("_"));
-        boost::split(rhs_arr, rhs.name, boost::is_any_of("_"));
+        boost::split(lhs_arr, lhs.name_, boost::is_any_of("_"));
+        boost::split(rhs_arr, rhs.name_, boost::is_any_of("_"));
         if (lhs_arr.size() < rhs_arr.size())
             return true;
         else if (lhs_arr.size() > rhs_arr.size())
@@ -169,31 +168,25 @@ public:
     friend bool operator<=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs > rhs); }
     friend bool operator>=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs < rhs); }
 
-//    inline EigenVectorRef GetCellularPrevs() const {
-//        return param.get_cellular_prevs();
-//    }
-//    inline EigenVectorRef GetCloneFreqs() const {
-//        return param.get_clone_freqs();
-//    }
     inline double GetCellularPrevs(size_t region) const {
-        return param.get_cellular_prevs(region);
+        return param_.GetCellularPrevalenceAtRegion(region);
     }
     inline double GetCloneFreqs(size_t region) const {
-        return param.get_clone_freqs(region);
+        return param_.GetCloneFreqAtRegion(region);
     }
-    CloneTreeNodeParam &get_node_parameter();
-    void sample_node_parameters(const gsl_rng *random,
+    CloneTreeNodeParam &NodeParameter();
+    void SampleNodeParameters(const gsl_rng *random,
                                 const ModelParams &params,
                                 CloneTreeNode *parent);
-    CloneTreeNode *spawn_child(double psi);
-    string print();
+    CloneTreeNode *SpawnChild(double psi);
+    string Print();
 
-    void set_clone_freq(size_t idx, double new_val);
-    void set_cellular_prev(size_t idx, double new_val);
-    void set_clone_freq(vector<double> &vec);
-    void set_cellular_prev(vector<double> &vec);
+    void SetCloneFrequencyAtRegion(size_t region, double new_val);
+    void SetCellularPrevalenceAtRegion(size_t region, double new_val);
+    void SetCloneFrequencyVector(vector<double> &vec);
+    void SetCellularPrevalenceVector(vector<double> &vec);
 
-    static CloneTreeNode *create_root_node(size_t region_count);
+    static CloneTreeNode *CreateRootNode(size_t region_count);
     static void RetrieveLoci(CloneTreeNode *node, unordered_set<Locus> &ret);
 };
 

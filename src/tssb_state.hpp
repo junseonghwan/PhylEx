@@ -65,9 +65,7 @@ class TSSBState
                                               const ModelParams &model_params);
     void AssignDatum(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params, bool update_cache = true);
 
-    void initialize_sc_cache(const ModelParams &model_params);
     void InitializeCacheForNode(CloneTreeNode *v);
-    //void update_sc_cache(CloneTreeNode *curr_node, CloneTreeNode *new_node, BulkDatum *datum, const ModelParams &params);
     void UpdateSingleCellCache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params);
 
     double compute_loglik_sc(CloneTreeNode *v, size_t cell_id);
@@ -97,9 +95,6 @@ public:
                                            const ModelParams &params),
               vector<BulkDatum *> *bulk_data,
               vector<SingleCellData *> *sc_data);
-
-    //void insert_datum(const gsl_rng *random, BulkDatum * datum, const ModelParams &params);
-    void set_sc_data(vector<SingleCellData *> *sc_data, const ModelParams &model_params);
 
     const vector<BulkDatum *> &get_data() const;
 

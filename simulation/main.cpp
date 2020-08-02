@@ -49,7 +49,7 @@ void CreateLinearTree(size_t region_count,
     nodes.push_back(root);
     auto node = root;
     for (size_t i = 0; i < max_depth; i++) {
-        node = (CloneTreeNode*)node->spawn_child(1);
+        node = (CloneTreeNode*)node->SpawnChild(1);
         nodes.push_back(node);
     }
     size_t n_nodes = max_depth + 1;
@@ -64,18 +64,18 @@ void CreateLinearTree(size_t region_count,
         }
         for (size_t i = 0; i < n_nodes; i++) {
             clone_freq[i] = cell_prev[i] - cell_prev[i+1];
-            nodes[i]->set_cellular_prev(region, cell_prev[i]);
-            nodes[i]->set_clone_freq(region, clone_freq[i]);
+            nodes[i]->SetCellularPrevalenceAtRegion(region, cell_prev[i]);
+            nodes[i]->SetCloneFrequencyAtRegion(region, clone_freq[i]);
         }
     }
 
     for (size_t i = 0; i < n_nodes; i++) {
-        cout << nodes[i]->print() << endl;
+        cout << nodes[i]->Print() << endl;
     }
 }
 
 bool BelowMinimumCellFraction(CloneTreeNode *node, double min) {
-    auto cell_fractions = node->get_node_parameter().get_clone_freqs();
+    auto cell_fractions = node->NodeParameter().GetCloneFreqs();
     for (auto cf : cell_fractions) {
         if (cf <= min) {
             return true;
@@ -93,11 +93,11 @@ void CreateNaryTree(size_t region_count,
                     double min_cell_fraction) {
     deque<CloneTreeNode *> queue;
     queue.push_back(root);
-    root->get_node_parameter().SetRootParameters();
+    root->NodeParameter().SetRootParameters();
     while (!queue.empty()) {
         auto node = queue.front();
         queue.pop_front();
-        if (node->get_depth() >= max_depth ||
+        if (node->GetDepth() >= max_depth ||
             BelowMinimumCellFraction(node, min_cell_fraction)) {
             continue;
         }
@@ -107,26 +107,26 @@ void CreateNaryTree(size_t region_count,
             branch_count = gsl_rng_uniform_int(random, num_branches - 1) + 1;
         }
         for (size_t i = 0; i < branch_count; i++) {
-            auto child_node = (CloneTreeNode*)node->spawn_child(0.5);
+            auto child_node = (CloneTreeNode*)node->SpawnChild(0.5);
             // Set cellular prevalence.
             for (size_t region = 0; region < region_count; region++) {
-                double parent_clone_freq = node->get_node_parameter().get_clone_freqs()[region];
+                double parent_clone_freq = node->NodeParameter().GetCloneFreqs()[region];
                 double u = 0.5;
                 if (random != 0) {
                     u = gsl_ran_flat(random, 0, 1);
                 }
                 double cell_prev = u * parent_clone_freq;
-                child_node->set_clone_freq(region, cell_prev);
-                child_node->set_cellular_prev(region, cell_prev);
-                node->set_clone_freq(region, parent_clone_freq - cell_prev);
+                child_node->SetCloneFrequencyAtRegion(region, cell_prev);
+                child_node->SetCellularPrevalenceAtRegion(region, cell_prev);
+                node->SetCloneFrequencyAtRegion(region, parent_clone_freq - cell_prev);
             }
             queue.push_back(child_node);
         }
     }
     vector<CloneTreeNode *> nodes;
-    CloneTreeNode::breadth_first_traversal(root, nodes);
+    CloneTreeNode::BreadthFirstTraversal(root, nodes);
     for (size_t i = 0; i < nodes.size(); i++) {
-        cout << nodes[i]->print() << endl;
+        cout << nodes[i]->Print() << endl;
     }
 }
 
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
         string sim_path = simul_config.output_path + "/sim" + to_string(n);
         gsl_rng *random = generate_random_object(gsl_rng_get(rand));
 
-        auto root_node = CloneTreeNode::create_root_node(simul_config.n_regions);
+        auto root_node = CloneTreeNode::CreateRootNode(simul_config.n_regions);
         if (simul_config.num_branches == 1) {
             CreateLinearTree(simul_config.n_regions, rand, root_node, simul_config.max_depth);
         } else {
@@ -228,11 +228,11 @@ int main(int argc, char *argv[])
 
             // Output information needed for evaluation.
             vector<CloneTreeNode *> all_nodes;
-            CloneTreeNode::breadth_first_traversal(root_node,
+            CloneTreeNode::BreadthFirstTraversal(root_node,
                                                    all_nodes,
                                                    false);
             unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
-            CloneTreeNode::construct_datum2node(all_nodes, datum2node);
+            CloneTreeNode::Datum2Node(all_nodes, datum2node);
             double bulk_log_lik = 0.0;
             for (size_t region = 0; region < simul_config.n_regions; region++) {
                 for (size_t i = 0; i < simul_config.n_sites; i++) {
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 
             // output cluster labels
             vector<unsigned int> cluster_labels;
-            CloneTreeNode::get_cluster_labels(root_node, data, cluster_labels);
+            CloneTreeNode::GetClusterLabels(root_node, data, cluster_labels);
             ofstream f;
             f.open(output_path + "/cluster_labels.txt", ios::out);
             for (size_t i = 0; i < cluster_labels.size(); i++) {

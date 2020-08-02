@@ -284,7 +284,7 @@ void WriteCell2NodeAssignment(string output_path,
     ofstream f;
     f.open(output_path + "/cell2node.txt", ios::out);
     for (size_t i = 0; i < cell2node.size(); i++) {
-        f << sc_data.at(i)->GetName() << "\t" << cell2node.at(i)->get_name() << "\n";
+        f << sc_data.at(i)->GetName() << "\t" << cell2node.at(i)->GetName() << "\n";
     }
     f.close();
 }
@@ -302,9 +302,9 @@ void WriteTreeToFile(string output_path,
 
     // construct datum2node mapping
     vector<CloneTreeNode *> all_nodes;
-    CloneTreeNode::breadth_first_traversal(root_node, all_nodes, false);
+    CloneTreeNode::BreadthFirstTraversal(root_node, all_nodes, false);
     unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
-    CloneTreeNode::construct_datum2node(all_nodes, datum2node);
+    CloneTreeNode::Datum2Node(all_nodes, datum2node);
 
     // ancestral matrix for mutations for computing accuracy on the ordering
     gsl_matrix *A = CloneTreeNode::GetAncestralMatrix(root_node, bulk, datum2node);
@@ -316,7 +316,7 @@ void WriteTreeToFile(string output_path,
     CloneTreeNode *node;
     for (size_t i = 0; i < n_muts; i++) {
         node = datum2node[bulk[i]];
-        string phi_str = ConvertToCommaSeparatedValues(node->get_node_parameter().get_cellular_prevs());
+        string phi_str = ConvertToCommaSeparatedValues(node->NodeParameter().GetCellularPrevalences());
         f << bulk[i]->GetId() << "\t" << phi_str << endl;
     }
     f.close();
@@ -324,7 +324,7 @@ void WriteTreeToFile(string output_path,
     f.open(output_path + "/clone_freq.csv", ios::out);
     for (size_t i = 0; i < n_muts; i++) {
         node = datum2node[bulk[i]];
-        string eta_str = ConvertToCommaSeparatedValues(node->get_node_parameter().get_clone_freqs());
+        string eta_str = ConvertToCommaSeparatedValues(node->NodeParameter().GetCloneFreqs());
         f << bulk[i]->GetId() << "\t" << eta_str << endl;
     }
     f.close();
@@ -332,7 +332,7 @@ void WriteTreeToFile(string output_path,
     // write datum to node string
     f.open(output_path + "/datum2node.tsv", ios::out);
     for (size_t i = 0; i < datum2node.size(); i++) {
-        f << bulk[i]->GetId()  << "\t" << datum2node[bulk[i]]->get_name() << "\n";
+        f << bulk[i]->GetId()  << "\t" << datum2node[bulk[i]]->GetName() << "\n";
     }
     f.close();
 
@@ -346,7 +346,7 @@ void WriteTreeToFile(string output_path,
     // Cellular prevalence for each of the nodes.
     f.open(output_path + "/node2cellular_prev.csv", ios::out);
     for (auto node : all_nodes) {
-        f << node->get_name() << "\t" << ConvertToCommaSeparatedValues(node->get_node_parameter().get_cellular_prevs()) << "\n";
+        f << node->GetName() << "\t" << ConvertToCommaSeparatedValues(node->NodeParameter().GetCellularPrevalences()) << "\n";
     }
     f.close();
 }
@@ -423,8 +423,8 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
     // Initialize TSSBState
     // We need CloneTreeNode *root
     // vector<BulkDatum *> *bulk_data
-    CloneTreeNode *clone_root = CloneTreeNode::create_root_node(1);
-    clone_root->get_node_parameter().SetRootParameters();
+    CloneTreeNode *clone_root = CloneTreeNode::CreateRootNode(1);
+    clone_root->NodeParameter().SetRootParameters();
     name2clone_node[root->name] = clone_root;
 
     queue<NewickNode *> q1;
@@ -442,8 +442,8 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
             //      boost::split(results, child->name, boost::is_any_of("_"));
             //      size_t child_idx = stoi(results[results.size()-1]);
             auto *child = *it;
-            CloneTreeNode *child_node = (CloneTreeNode*)parent->spawn_child(0.0);
-            child_node->set_cellular_prev(0, child->cellular_prevalence);
+            CloneTreeNode *child_node = (CloneTreeNode*)parent->SpawnChild(0.0);
+            child_node->SetCellularPrevalenceAtRegion(0, child->cellular_prevalence);
             q1.push(child);
             q2.push(child_node);
             name2clone_node[child->name] = child_node;
@@ -454,9 +454,9 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
         exit(-1);
     }
     vector<CloneTreeNode *> ret;
-    CloneTreeNode::breadth_first_traversal(clone_root, ret);
+    CloneTreeNode::BreadthFirstTraversal(clone_root, ret);
     for (size_t i = 0; i < ret.size(); i++) {
-        cout << ret.at(i)->print() << endl;
+        cout << ret.at(i)->Print() << endl;
     }
   
     gsl_rng *random = generate_random_object(1);
@@ -487,7 +487,7 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
             CloneTreeNode *n = name2clone_node.at(node_name);
             //tssb->move_datum(n, data_map.at(datum_id), model_params);
             tssb->move_datum(n, mut_idx, model_params);
-            cout << datum_id << " assigned to " << node_name << ": " << n->print() << endl;
+            cout << datum_id << " assigned to " << node_name << ": " << n->Print() << endl;
         } else {
             cerr << "Error!!!" << endl;
             exit(-1);
@@ -557,10 +557,10 @@ void read_data_assignment(string file_path)
 
 string write_newick(CloneTreeNode *node)
 {
-    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->get_idx2child();
+    unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     if (children.size() == 0) {
         //return (node->get_name() + ":" + to_string(node->get_node_parameter().get_cellular_prev()));
-        return node->get_name() + ":" + to_string(1.0);
+        return node->GetName() + ":" + to_string(1.0);
     }
 
     string newick = "(";
@@ -573,16 +573,16 @@ string write_newick(CloneTreeNode *node)
         }
     }
     //newick += ")" + (node->get_name() + ":" + to_string(node->get_node_parameter().get_cellular_prev())) + ";";
-    newick += ")" + node->get_name() + ":" + to_string(1.0);
+    newick += ")" + node->GetName() + ":" + to_string(1.0);
     return newick;
 }
 
 void fill_node_to_param(CloneTreeNode *node,
                         unordered_map<string, vector<double> > &node2param) {
     vector<CloneTreeNode *> all_nodes;
-    CloneTreeNode::breadth_first_traversal(node, all_nodes, false);
+    CloneTreeNode::BreadthFirstTraversal(node, all_nodes, false);
     for (auto node : all_nodes) {
-        node2param[node->get_name()] = node->get_node_parameter().get_cellular_prevs();
+        node2param[node->GetName()] = node->NodeParameter().GetCellularPrevalences();
     }
 }
 
@@ -614,7 +614,7 @@ void write_tree(string output_path,
     auto params = state.get_param();
     for (size_t i = 0; i < n_muts; i++) {
         auto p = params[i];
-        auto phi = p->get_cellular_prevs();
+        auto phi = p->GetCellularPrevalences();
         f << bulk[i]->GetId() << "\t" << ConvertToCommaSeparatedValues(phi) << endl;
     }
     f.close();
@@ -658,7 +658,7 @@ void WriteCopyNumberProfileToFile(string output_path,
 {
     // cn_profile stores copy number profile for each node as vector, where vector is ordered in the same way as the mutations in the bulk input file
     vector<CloneTreeNode *> nodes;
-    CloneTreeNode::breadth_first_traversal(root_node, nodes, false);
+    CloneTreeNode::BreadthFirstTraversal(root_node, nodes, false);
 
     size_t n_nodes = nodes.size();
     size_t n_muts = bulk_data.size();

@@ -116,15 +116,15 @@ CloneTreeNode *SampleFromTssbPrior(size_t region_count,
                                    ModelParams &model_params,
                                    vector<BulkDatum *> &data)
 {
-    CloneTreeNode *root = CloneTreeNode::create_root_node(region_count);
-    root->set_nu_stick(0.0);
-    root->sample_node_parameters(random, model_params, 0);
+    CloneTreeNode *root = CloneTreeNode::CreateRootNode(region_count);
+    root->SetNuStick(0.0);
+    root->SampleNodeParameters(random, model_params, 0);
 
     // sample tree and latent assignment of datum to node
     for (size_t i = 0; i < n_data; i++) {
         double u = gsl_ran_flat(random, 0, 1);
-        auto node = CloneTreeNode::find_node(random, u, root, model_params);
-        node->add_datum(data[i]);
+        auto node = CloneTreeNode::FindNode(random, u, root, model_params);
+        node->AddDatum(data[i]);
     }
 
     cull(root);
@@ -141,7 +141,7 @@ void GenerateBulkData(gsl_rng *random,
     // When assigning SNV to a node, sample clonal copy number profile.
     size_t n_data = data.size();
     vector<CloneTreeNode *> all_nodes;
-    CloneTreeNode::breadth_first_traversal(root_node, all_nodes, false);
+    CloneTreeNode::BreadthFirstTraversal(root_node, all_nodes, false);
     double seq_err = simul_config.seq_err;
     size_t b_alleles, depth;
     BulkDatum *datum;
@@ -150,7 +150,7 @@ void GenerateBulkData(gsl_rng *random,
         size_t node_id = discrete_uniform(random, all_nodes.size()-1) + 1;
         auto node = all_nodes[node_id];
         datum = data[i];
-        node->add_datum(datum);
+        node->AddDatum(datum);
         
         // Generate bulk data for each region.
         for (size_t region = 0; region < simul_config.n_regions; region++) {
@@ -158,7 +158,7 @@ void GenerateBulkData(gsl_rng *random,
             double total_cn = 2;
             size_t total_allele_count, var_allele_count, ref_allele_count, var_cn;
 
-            if (node->get_parent_node() == 0) {
+            if (node->GetParentNode() == 0) {
                 // This is an error b/c,
                 // We ensured when sampling node_id to not choose the root.
                 cerr << "Error: we sampled the root node." << endl;
@@ -168,7 +168,7 @@ void GenerateBulkData(gsl_rng *random,
                 var_allele_count = discrete(random, simul_config.var_allele_copy_prob);
                 ref_allele_count = discrete(random, simul_config.ref_allele_copy_prob);
                 total_allele_count = var_allele_count + ref_allele_count;
-                double phi = node->get_node_parameter().get_cellular_prevs()[region];
+                double phi = node->NodeParameter().GetCellularPrevalences()[region];
                 total_cn = phi * total_allele_count + (1 - phi) * 2;
                 depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
                 // Ensure var_cn >= 1.
@@ -349,7 +349,7 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
 
     // Retrieve all nodes/clones with at least one SNV assigned.
     vector<CloneTreeNode *> non_empty_nodes;
-    CloneTreeNode::breadth_first_traversal(root_node, non_empty_nodes, true);
+    CloneTreeNode::BreadthFirstTraversal(root_node, non_empty_nodes, true);
 
     vector<CloneTreeNode *> cell2node;
     CloneTreeNode *node;
@@ -358,7 +358,7 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
         node = non_empty_nodes[idx];
         cell2node.push_back(node);
 
-        cout << "Cell " << c << " assigned to " << node->get_name() << endl;
+        cout << "Cell " << c << " assigned to " << node->GetName() << endl;
         SingleCellData *sc = new SingleCellData("c" + to_string(c), data.size());
         GenerateScRnaReads(random,
                             simul_config,
