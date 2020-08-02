@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
     
     gsl_rng *rand = generate_random_object(simul_config.seed);
     auto model_params = ModelParams::RandomInit(rand, 10, 1, 10, simul_config.seq_err);
-    model_params.set_var_cp_prob(simul_config.var_cp_prob);
+    model_params.SetVariantCopyProbability(simul_config.var_cp_prob);
 
 //    bool bd_process = false;
 //    if (simul_config.birth_rate > 0 && simul_config.max_cn > 2) {

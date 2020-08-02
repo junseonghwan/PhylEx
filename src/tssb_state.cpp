@@ -232,13 +232,7 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
     CloneTreeNode *new_node = 0;
 
     double curr_log_lik_bulk = LogLikDatum(curr_node, datum, model_params);
-    double curr_log_lik_sc_cached = compute_log_likelihood_sc_cached();
-    double curr_log_lik_sc = compute_log_likelihood_sc();
-    double error = abs(curr_log_lik_sc_cached - curr_log_lik_sc);
-    if (error > 1e-3) {
-        cout << "Single cell cached: " << curr_log_lik_sc_cached << ", truth: " << curr_log_lik_sc << "\n";
-        exit(-1);
-    }
+    double curr_log_lik_sc = compute_log_likelihood_sc_cached();
     double curr_log_lik = curr_log_lik_bulk + curr_log_lik_sc;
     
     double log_slice = log(uniform(random, 0.0, 1.0)); // sample the slice
@@ -259,13 +253,7 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
         
         // compute the log likelihood
         new_log_lik_bulk = LogLikDatum(new_node, datum, model_params);
-        double new_log_lik_sc_cached = compute_log_likelihood_sc_cached();
-        new_log_lik_sc = compute_log_likelihood_sc();
-        error = abs(new_log_lik_sc_cached - new_log_lik_sc);
-        if (error > 1e-3) {
-            cout << "Single cell cached: " << new_log_lik_sc_cached << ", truth: " << new_log_lik_sc << "\n";
-            exit(-1);
-        }
+        double new_log_lik_sc = compute_log_likelihood_sc_cached();
 
         new_log_lik = new_log_lik_bulk + new_log_lik_sc;
         if (new_log_lik > (log_slice + curr_log_lik)) {
@@ -534,7 +522,7 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
     if (node == root && node->get_nu_stick() == 0) {
         // do not sample nu-stick for root
     } else {
-        double temp = bounded_beta(random, n_data + 1, total_num_data_at_desc + params.alpha(node->get_name_vec()));
+        double temp = bounded_beta(random, n_data + 1, total_num_data_at_desc + params.ComputeAlpha(node->get_name_vec()));
         node->set_nu_stick(temp);
     }
     
@@ -546,7 +534,7 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
         size_t num_data_at_desc_of_child = n_data_desc[i].second;
         size_t n_data_i = num_data_at_child + num_data_at_desc_of_child;
         //double temp = bounded_beta(random, n_data_i + 1, params.get_gamma() + (total_num_data_at_desc - n_data_i - cumulative_num_data));
-        double temp = bounded_beta(random, n_data_i + 1, params.get_gamma() + cumulative_num_data);
+        double temp = bounded_beta(random, n_data_i + 1, params.GetGamma() + cumulative_num_data);
         node->set_psi_stick(i, temp);
         cumulative_num_data += n_data_i;
     }
@@ -756,7 +744,7 @@ double log_prod_beta(vector<CloneTreeNode *> &nodes, const ModelParams &params)
         if (node->get_depth() == 0 && node->get_nu_stick() == 0) // root is assigned 0 nu-stick as it denotes healthy population that should not have any mutation assigned to it
             continue;
         double x = node->get_nu_stick();
-        alpha = params.alpha(node->get_name_vec());
+        alpha = params.ComputeAlpha(node->get_name_vec());
         double y = log_beta_pdf(x, 1.0, alpha);
         log_sum += y;
         // below: for a small value of alpha, beta(1, alpha) is essentially a point mass at 1
@@ -771,9 +759,9 @@ void TSSBState::sample_alpha0(const gsl_rng *random, size_t n_mh_iter, ModelPara
     //double curr_log_lik = log_prod_beta(nodes, params);
     double curr_log_lik_slice = log_prod_beta(nodes, params) + log(gsl_ran_flat(random, 0, 1));
     double new_log_lik;
-    double alpha_0_ll = params.get_alpha0_bound(false);
-    double alpha_0_uu = params.get_alpha0_bound(true);
-    double curr_alpha0 = params.get_alpha0();
+    double alpha_0_ll = params.GetAlpha0Bound(false);
+    double alpha_0_uu = params.GetAlpha0Bound(true);
+    double curr_alpha0 = params.GetAlpha0();
     double new_alpha0;
     double u;
     //for (size_t i = 0; i < n_mh_iter; i++)
@@ -787,7 +775,7 @@ void TSSBState::sample_alpha0(const gsl_rng *random, size_t n_mh_iter, ModelPara
         //        if (new_alpha0 <= alpha_0_ll || new_alpha0 > alpha_0_uu) {
         //            continue;
         //        }
-        params.set_alpha0(new_alpha0);
+        params.SetAlpha0(new_alpha0);
         new_log_lik = log_prod_beta(nodes, params);
         //double log_unif = log(gsl_ran_flat(random, 0.0, 1.0));
         //if (log_unif < (new_log_lik - curr_log_lik)) {
@@ -807,7 +795,7 @@ void TSSBState::sample_alpha0(const gsl_rng *random, size_t n_mh_iter, ModelPara
         }
         if (abs(alpha_0_uu - alpha_0_ll) < 1e-6) {
             // revert
-            params.set_alpha0(curr_alpha0);
+            params.SetAlpha0(curr_alpha0);
             cout << "alpha0 slice sampler shrank to 0!" << endl;
             break;
         }
@@ -819,9 +807,9 @@ void TSSBState::sample_lambda(const gsl_rng *random, size_t n_mh_iter, ModelPara
     //double curr_log_lik = log_prod_beta(nodes, params);
     double curr_log_slice = log_prod_beta(nodes, params) + log(gsl_ran_flat(random, 0, 1));
     double new_log_lik;
-    double ll = params.get_lambda_bound(false);
-    double uu = params.get_lambda_bound(true);
-    double curr_val = params.get_lambda();
+    double ll = params.GetLambdaBound(false);
+    double uu = params.GetLambdaBound(true);
+    double curr_val = params.GetLambda();
     double new_val;
     double u;
     //for (size_t i = 0; i < n_mh_iter; i++)
@@ -835,7 +823,7 @@ void TSSBState::sample_lambda(const gsl_rng *random, size_t n_mh_iter, ModelPara
         //        if (new_val <= ll || new_val > uu) {
         //            continue;
         //        }
-        params.set_lambda(new_val);
+        params.SetLambda(new_val);
         new_log_lik = log_prod_beta(nodes, params);
         //double log_unif = log(gsl_ran_flat(random, 0.0, 1.0));
         //if (log_unif < (new_log_lik - curr_log_lik)) {
@@ -855,7 +843,7 @@ void TSSBState::sample_lambda(const gsl_rng *random, size_t n_mh_iter, ModelPara
         }
         if (abs(uu - ll) < 1e-6) {
             // revert
-            params.set_lambda(curr_val);
+            params.SetLambda(curr_val);
             cout << "lambda slice sampler shrank to 0!" << endl;
             break;
         }
@@ -865,11 +853,11 @@ void TSSBState::sample_lambda(const gsl_rng *random, size_t n_mh_iter, ModelPara
 void TSSBState::sample_gamma(const gsl_rng *random, size_t n_mh_iter, ModelParams &params, vector<double> psi_sticks)
 {
     //double curr_log_lik = log_prod_beta(psi_sticks, params.get_gamma());
-    double curr_log_slice = log_prod_beta(psi_sticks, params.get_gamma()) + log(gsl_ran_flat(random, 0, 1));
+    double curr_log_slice = log_prod_beta(psi_sticks, params.GetGamma()) + log(gsl_ran_flat(random, 0, 1));
     double new_log_lik;
-    double ll = params.get_gamma_bound(false);
-    double uu = params.get_gamma_bound(true);
-    double curr_gamma = params.get_gamma();
+    double ll = params.GetGammaBound(false);
+    double uu = params.GetGammaBound(true);
+    double curr_gamma = params.GetGamma();
     double new_gamma;
     //for (size_t i = 0; i < n_mh_iter; i++)
     while (true)
@@ -879,8 +867,8 @@ void TSSBState::sample_gamma(const gsl_rng *random, size_t n_mh_iter, ModelParam
         //new_gamma = gsl_ran_gaussian(random, params.get_gamma_sigma()) + curr_gamma;
         //        if (new_gamma < ll || new_gamma > uu)
         //            continue;
-        params.set_gamma(new_gamma);
-        new_log_lik = log_prod_beta(psi_sticks, params.get_gamma());
+        params.SetGamma(new_gamma);
+        new_log_lik = log_prod_beta(psi_sticks, params.GetGamma());
         //double log_unif = log(gsl_ran_flat(random, 0.0, 1.0));
         //if (log_unif < (new_log_lik - curr_log_lik)) {
         if (new_log_lik > curr_log_slice) {
@@ -899,7 +887,7 @@ void TSSBState::sample_gamma(const gsl_rng *random, size_t n_mh_iter, ModelParam
         }
         if (abs(uu - ll) < 1e-6) {
             // revert
-            params.set_gamma(curr_gamma);
+            params.SetGamma(curr_gamma);
             cout << "gamma slice sampler shrank to 0!" << endl;
             break;
         }
@@ -1047,7 +1035,7 @@ double sample_params_dirichlet(size_t region,
     // Perform MH to update the parameters
     // collect current parameters via tree traversal
     // sample from DP centered at current parameters multipled by constant factor
-    double K = params.get_dir_conc_mult_factor();
+    double K = params.GetDirichletConcentrationFactor();
     vector<CloneTreeNode *> nodes;
     tree.get_all_nodes(nodes);
     size_t dim = nodes.size();

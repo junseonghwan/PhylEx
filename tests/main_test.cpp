@@ -17,9 +17,9 @@ const double VAR_CP_PROB = 0.5;
 ModelParams model_params(ALPHA0, GAMMA, LAMBDA, SEQ_ERR);
 
 void InitializeTestSetup() {
-    model_params.set_var_cp_prob(VAR_CP_PROB);
-    model_params.set_sc_dropout_alpha0(0.01);
-    model_params.set_sc_dropout_beta0(0.01);
+    model_params.SetVariantCopyProbability(VAR_CP_PROB);
+    model_params.SetSingleCellDropoutAlphaParameter(0.01);
+    model_params.SetSingleCellDropoutBetaParameter(0.01);
 }
 
 BOOST_AUTO_TEST_CASE( TestBulkLogLikWithTotalCopyNumber )

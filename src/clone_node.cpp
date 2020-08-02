@@ -514,9 +514,9 @@ void CloneTreeNode::reorder_sticks(const gsl_rng *random, const ModelParams &par
 void CloneTreeNode::InitializeChild(const gsl_rng *random,
                                 const ModelParams &params)
 {
-    double psi_j = bounded_beta(random, 1, params.get_gamma());
+    double psi_j = bounded_beta(random, 1, params.GetGamma());
     CloneTreeNode *child = this->spawn_child(psi_j);
-    double nu_stick = bounded_beta(random, 1.0, params.alpha(child->get_name_vec()));
+    double nu_stick = bounded_beta(random, 1.0, params.ComputeAlpha(child->get_name_vec()));
     child->set_nu_stick(nu_stick);
     child->sample_node_parameters(random, params, this);
 }
@@ -765,7 +765,7 @@ double ScLikelihood(size_t loci_idx,
         log_lik_biallelic += log(1-locus.get_dropout_prob());
         double log_lik_dropout = log_beta_binomial_pdf(var_reads,
                                                        total_reads,
-                                                       model_params.GetScDropoutDistributionAlpha0(),
+                                                       model_params.GetScBurstyDistributionAlpha0(),
                                                        model_params.GetScBurstyDistributionBeta0());
         log_lik_dropout += log(locus.get_dropout_prob());
         log_lik = log_add(log_lik_biallelic, log_lik_dropout);
@@ -785,8 +785,8 @@ double ScLikelihood(size_t loci_idx,
     } else {
         log_lik = log_beta_binomial_pdf(var_reads,
                                         total_reads,
-                                        model_params.get_seq_error(),
-                                        1 - model_params.get_seq_error());
+                                        model_params.GetSequencingError(),
+                                        1 - model_params.GetSequencingError());
     }
 
     return log_lik;
@@ -802,7 +802,7 @@ double BulkLogLikWithTotalCopyNumberByRegion(const CloneTreeNode *node,
         return 0.0;
     }
     
-    double seq_err = model_params.get_seq_error();
+    double seq_err = model_params.GetSequencingError();
     if (node->get_parent_node() == 0) {
         // this node is the root, represents the healthy population
         return log(gsl_ran_binomial_pdf(var_reads,
@@ -823,7 +823,7 @@ double BulkLogLikWithTotalCopyNumberByRegion(const CloneTreeNode *node,
     double log_val;
     double log_prior_genotype;
     double log_lik = DOUBLE_NEG_INF;
-    double log_prior_norm = log(1 - gsl_ran_binomial_pdf(0, model_params.get_var_cp_prob(), total_cn));
+    double log_prior_norm = log(1 - gsl_ran_binomial_pdf(0, model_params.GetVariantCopyProbability(), total_cn));
     // We marginalize over the number of variant copies
     for (size_t var_cn = 1; var_cn <= total_cn; var_cn++) {
         xi = (1 - phi) * seq_err;
@@ -833,7 +833,7 @@ double BulkLogLikWithTotalCopyNumberByRegion(const CloneTreeNode *node,
             xi += phi * var_cn / total_cn;
         }
         log_val = log_binomial_pdf(var_reads, xi, total_reads);
-        log_prior_genotype = log_binomial_pdf(var_cn, model_params.get_var_cp_prob(), total_cn);
+        log_prior_genotype = log_binomial_pdf(var_cn, model_params.GetVariantCopyProbability(), total_cn);
         log_prior_genotype -= log_prior_norm;
         log_lik = log_add(log_lik, log_val + log_prior_genotype);
     }
@@ -869,7 +869,7 @@ double BulkLogLikWithCopyNumberProfileByRegion(const CloneTreeNode *node,
         return 0.0;
     }
     
-    double seq_err = model_params.get_seq_error();
+    double seq_err = model_params.GetSequencingError();
     if (node->get_parent_node() == 0) {
         // this node is the root, represents the healthy population
         return log(gsl_ran_binomial_pdf(var_reads, seq_err, total_reads));
@@ -888,7 +888,7 @@ double BulkLogLikWithCopyNumberProfileByRegion(const CloneTreeNode *node,
                                       total_reads);
     
     for (size_t total_cn = 0; total_cn < cn_probs.size(); total_cn++) {
-        double log_prior_norm = log(1 - gsl_ran_binomial_pdf(0, model_params.get_var_cp_prob(), total_cn));
+        double log_prior_norm = log(1 - gsl_ran_binomial_pdf(0, model_params.GetVariantCopyProbability(), total_cn));
         double log_lik_cn = DOUBLE_NEG_INF;
         for (size_t var_cn = 1; var_cn <= total_cn; var_cn++) {
             xi = (1 - cell_prev) * seq_err;
@@ -903,7 +903,7 @@ double BulkLogLikWithCopyNumberProfileByRegion(const CloneTreeNode *node,
                                        xi,
                                        total_reads);
             log_prior_genotype = log(gsl_ran_binomial_pdf(var_cn,
-                                                          model_params.get_var_cp_prob(), total_cn));
+                                                          model_params.GetVariantCopyProbability(), total_cn));
             log_prior_genotype -= log_prior_norm;
             log_lik_cn = log_add(log_lik_cn, log_val + log_prior_genotype);
         }
@@ -954,7 +954,7 @@ double BulkLogLikWithGenotypeByRegion(const CloneTreeNode *node,
         }
     }
 
-    double seq_err = model_params.get_seq_error();
+    double seq_err = model_params.GetSequencingError();
     if (node->get_parent_node() == 0) {
         // This node is the root, represents the healthy population.
         return log(gsl_ran_binomial_pdf(var_reads,

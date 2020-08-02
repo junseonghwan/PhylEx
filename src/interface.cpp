@@ -110,13 +110,13 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         // 2. update params
         double ar = sample_params_dirichlet(random, config_.n_mh_iter, *tree, params);
         if (iter < config_.burn_in) {
-            if (ar < 0.08 && params.get_dir_conc_mult_factor() < 10000) {
-                params.set_dir_conc_mult_factor(params.get_dir_conc_mult_factor() * 2);
+            if (ar < 0.08 && params.GetDirichletConcentrationFactor() < 10000) {
+                params.SetDirichletConcentrationFactor(params.GetDirichletConcentrationFactor() * 2);
             } else if (ar > 0.5 && ar < 0.99) {
-                params.set_dir_conc_mult_factor(params.get_dir_conc_mult_factor() / 2);
+                params.SetDirichletConcentrationFactor(params.GetDirichletConcentrationFactor() / 2);
             }
         }
-        
+
         double log_lik_post = tree->compute_log_likelihood_bulk(params);
         double log_lik_prior_assignment = tree->get_log_prior_assignment(tree->get_root());
         double log_lik_sc = tree->compute_log_likelihood_sc();
@@ -125,19 +125,19 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         cout << "log lik_bulk: " << log_lik_post << endl;
         cout << "log lik_prior: " << log_lik_prior_assignment << endl;
         cout << "log lik_sc: " << log_lik_sc << endl;
-        cout << "alpha0: " << params.get_alpha0() << endl;
-        cout << "lambda: " << params.get_lambda() << endl;
-        cout << "gamma: " << params.get_gamma() << endl;
-        
+        cout << "alpha0: " << params.GetAlpha0() << endl;
+        cout << "lambda: " << params.GetLambda() << endl;
+        cout << "gamma: " << params.GetGamma() << endl;
+
         // 3. update sticks
         tree->update_sticks(random, params);
         cout << tree->print() << "\n";
 
         // 4. resample hyper parameters
         TSSBState::update_hyper_params(random, config_.n_mh_iter, *tree, params);
-        alpha0.push_back(params.get_alpha0());
-        lambda.push_back(params.get_lambda());
-        gamma.push_back(params.get_gamma());
+        alpha0.push_back(params.GetAlpha0());
+        lambda.push_back(params.GetLambda());
+        gamma.push_back(params.GetGamma());
         
         if (joint_best.size() < state_count) {
             auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree));
@@ -556,9 +556,9 @@ void Interface::Run()
                                                  config_.lambda_max,
                                                  config_.gamma_max,
                                                  config_.seq_err);
-    params.set_sc_dropout_alpha0(config_.sc_dropout_alpha0);
-    params.set_sc_dropout_beta0(config_.sc_dropout_beta0);
-    params.set_var_cp_prob(config_.var_cp_prob_);
+    params.SetSingleCellDropoutAlphaParameter(config_.sc_dropout_alpha0);
+    params.SetSingleCellDropoutBetaParameter(config_.sc_dropout_beta0);
+    params.SetVariantCopyProbability(config_.var_cp_prob_);
 
     RunSliceSampler(random, params);
 }
