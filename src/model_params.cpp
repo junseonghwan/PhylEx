@@ -95,29 +95,19 @@ void ModelParams::SetLambdaBound(bool max, double val)
     }
 }
 
+void ModelParams::SetSequencingError(double val)
+{
+    seq_error_ = val;
+}
+
 void ModelParams::SetDirichletConcentrationFactor(double val)
 {
     this->dir_conc_multiplicative_factor_ = val;
 }
 
-ModelParams ModelParams::RandomInit(gsl_rng *random,
-                                    double alpha0_max,
-                                    double lambda_max,
-                                    double gamma_max,
-                                    double seq_err,
-                                    double alpha0_min,
-                                    double lambda_min,
-                                    double gamma_min)
+void ModelParams::RandomInit(gsl_rng *random)
 {
-    double alpha0 = gsl_ran_flat(random, alpha0_min, alpha0_max);
-    double lambda = gsl_ran_flat(random, lambda_min, lambda_max);
-    double gamma = gsl_ran_flat(random, gamma_min, gamma_max);
-    ModelParams model_params(alpha0, gamma, lambda, seq_err);
-    model_params.SetAlpha0Bound(true, alpha0_max);
-    model_params.SetLambdaBound(true, lambda_max);
-    model_params.SetGammaBound(true, gamma_max);
-    model_params.SetAlpha0Bound(false, alpha0_min);
-    model_params.SetLambdaBound(false, lambda_min);
-    model_params.SetGammaBound(false, gamma_min);
-    return model_params;
+    alpha0_ = gsl_ran_flat(random, alpha0_min, alpha0_max);
+    lambda_ = gsl_ran_flat(random, lambda_min, lambda_max);
+    gamma_ = gsl_ran_flat(random, gamma_min, gamma_max);
 }

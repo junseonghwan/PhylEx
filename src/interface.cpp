@@ -23,7 +23,7 @@
 #include "numerical_utils.hpp"
 #include "utils.hpp"
 
-void write_best_trees(string output_path,
+void WriteBestTress(string output_path,
                       const vector<BulkDatum *> &bulk,
                       vector<pair<double, shared_ptr<CompactTSSBState > > > &best_states)
 {
@@ -52,6 +52,9 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
     CloneTreeNode *root = CloneTreeNode::CreateRootNode(region_count);
     root->SampleNodeParameters(random, params, 0);
 
+    auto sc_lik_fn = model_params_.UseSingleCellDropoutDistribution() ?
+                        ScLikelihoodWithDropout : ScLikelihood;
+    
     TSSBState *tree;
     switch (cn_input_type_) {
         case CopyNumberInputType::GENOTYPE:
@@ -59,7 +62,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
                                  root,
                                  params,
                                  BulkLogLikWithGenotype,
-                                 ScLikelihood,
+                                 sc_lik_fn,
                                  &bulk_data_,
                                  &sc_data_);
             break;
@@ -157,7 +160,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         }
 
         if ((iter % config_.output_interval) == 0) {
-            write_best_trees(config_.output_path + "/joint", bulk_data_, joint_best);
+            WriteBestTress(config_.output_path + "/joint", bulk_data_, joint_best);
             for (size_t i = n_trees; i < states.size(); i++) {
                 write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second.get());
                 WriteLogLikToFile(config_.output_path + "/states/tree" + to_string(n_trees) + "/log_lik.txt", states[i].first);
@@ -169,7 +172,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
     cout << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms." << endl;
     
     // flush the states
-    write_best_trees(config_.output_path + "/joint", bulk_data_, joint_best);
+    WriteBestTress(config_.output_path + "/joint", bulk_data_, joint_best);
     for (size_t i = n_trees; i < states.size(); i++) {
         write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second.get());
         WriteLogLikToFile(config_.output_path + "/states/tree" + to_string(n_trees) + "/log_lik.txt", states[i].first);
@@ -179,7 +182,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
     return tree;
 }
 
-void ProcessConfigFile(string config_file_path, Config &config)
+void ProcessConfigFile(string config_file_path, Config &config, ModelParams &model_params)
 {
     string line;
     ifstream config_file(config_file_path);
@@ -217,20 +220,24 @@ void ProcessConfigFile(string config_file_path, Config &config)
         } else if (results[0] == "burn_in") {
             config.burn_in = stoul(results[1]);
         } else if (results[0] == "alpha0_max") {
-            config.alpha0_max = stod(results[1]);
+            model_params.SetAlpha0Bound(true, stod(results[1]));
         } else if (results[0] == "lambda_max") {
-            config.lambda_max = stod(results[1]);
+            model_params.SetLambdaBound(true, stod(results[1]));
         } else if (results[0] == "gamma_max") {
-            config.gamma_max = stod(results[1]);
+            model_params.SetGammaBound(true, stod(results[1]));
         } else if (results[0] == "seq_err") {
-            config.seq_err = stod(results[1]);
+            model_params.SetSequencingError(stod(results[1]));
         } else if (results[0] == "var_cp_prob") {
-            config.var_cp_prob_ = stod(results[1]);
+            model_params.SetVariantCopyProbability(stod(results[1]));
         } else if (results[0] == "sc_dropout_alpha0") {
-            config.sc_dropout_alpha0 = stod(results[1]);
+            model_params.SetSingleCellDropoutAlphaParameter(stod(results[1]));
         } else if (results[0] == "sc_dropout_beta0") {
-            config.sc_dropout_beta0 = stod(results[1]);
-        } else {
+            model_params.SetSingleCellDropoutBetaParameter(stod(results[1]));
+        } else if (results[0] == "sc_bursty_alpha0") {
+            model_params.SetSingleCellBurstyAlphaParameter(stod(results[1]));
+        } else if (results[0] == "sc_bursty_beta0") {
+            model_params.SetSingleCellBurstyBetaParameter(stod(results[1]));
+        }else {
             cerr << "Unknown option: " << results[0] << endl;
         }
     }
@@ -530,7 +537,7 @@ void Interface::ReadScRnaHyperparams()
 Interface::Interface(string config_file) {
     // Parse the configuration file
     cout << "Reading config file:" << config_file << endl;
-    ProcessConfigFile(config_file, config_);
+    ProcessConfigFile(config_file, config_, model_params_);
     
     ReadBulkData();
     if (config_.cn_prior_path != "") {
@@ -551,14 +558,6 @@ Interface::Interface(string config_file) {
 void Interface::Run()
 {
     gsl_rng *random = generate_random_object(config_.seed);
-    ModelParams params = ModelParams::RandomInit(random,
-                                                 config_.alpha0_max,
-                                                 config_.lambda_max,
-                                                 config_.gamma_max,
-                                                 config_.seq_err);
-    params.SetSingleCellDropoutAlphaParameter(config_.sc_dropout_alpha0);
-    params.SetSingleCellDropoutBetaParameter(config_.sc_dropout_beta0);
-    params.SetVariantCopyProbability(config_.var_cp_prob_);
-
-    RunSliceSampler(random, params);
+    model_params_.RandomInit(random);
+    RunSliceSampler(random, model_params_);
 }

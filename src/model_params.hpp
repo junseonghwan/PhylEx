@@ -8,6 +8,7 @@
 #ifndef tssb_params_h
 #define tssb_params_h
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -39,11 +40,11 @@ class ModelParams
     double gamma_max = 10.0;
     double gamma_min = 0.1;
 
-    double sc_dropout_alpha0_ = 0.01;
-    double sc_dropout_beta0_ = 1;
+    double sc_dropout_alpha0_ = -1;
+    double sc_dropout_beta0_ = -1;
 
-    double sc_bursty_alpha0_ = 0.01;
-    double sc_bursty_beta0_ = 0.01;
+    double sc_bursty_alpha0_ = -1;
+    double sc_bursty_beta0_ = -1;
 
     // sc_mixture_proportions[0]: Dropout for variant.
     // sc_mixture_proportions[1]: Bursty for variant.
@@ -51,6 +52,7 @@ class ModelParams
     double sc_mixture_proportions_[3] = {0.2, 0.3, 0.5};
 
 public:
+    ModelParams() {}
     ModelParams(double alpha0,
                 double gamma,
                 double lambda,
@@ -101,6 +103,8 @@ public:
     void SetGammaBound(bool max, double val);
     void SetLambdaBound(bool max, double val);
     
+    void SetSequencingError(double val);
+    
     void SetVariantCopyProbability(double var_cp) { var_cp_prob_ = var_cp; }
     
     void SetSingleCellDropoutAlphaParameter(double sc_dropout_alpha0) {
@@ -110,16 +114,20 @@ public:
         sc_dropout_beta0_ = sc_dropout_beta0;
     }
     
+    void SetSingleCellBurstyAlphaParameter(double sc_bursty_alpha0) {
+        sc_bursty_alpha0_ = sc_bursty_alpha0;
+    }
+    void SetSingleCellBurstyBetaParameter(double sc_bursty_beta0) {
+        sc_bursty_beta0_ = sc_bursty_beta0;
+    }
+    
     void SetDirichletConcentrationFactor(double val);
     
-    static ModelParams RandomInit(gsl_rng *random,
-                                  double alpha0_max,
-                                  double lambda_max,
-                                  double gamma_max,
-                                  double seq_err,
-                                  double alpha0_min = 1.0,
-                                  double lambda_min = 0.05,
-                                  double gamma_min = 0.1);
+    bool UseSingleCellDropoutDistribution() {
+        return (sc_dropout_alpha0_ > 0 && sc_dropout_beta0_ > 0);
+    }
+    
+    void RandomInit(gsl_rng *random);
 };
 
 #endif /* tssb_params_h */

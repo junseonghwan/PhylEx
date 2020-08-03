@@ -195,6 +195,11 @@ double ScLikelihood(size_t loci_idx,
                     const SingleCellData *sc,
                     bool has_snv,
                     const ModelParams &model_params);
+double ScLikelihoodWithDropout(size_t loci_idx,
+                               const BulkDatum *bulk,
+                               const SingleCellData *sc,
+                               bool has_snv,
+                               const ModelParams &model_params);
 double BulkLogLikWithTotalCopyNumber(size_t region,
                                      const CloneTreeNode *node,
                                      const BulkDatum *s,

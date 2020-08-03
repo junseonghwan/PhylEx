@@ -649,7 +649,7 @@ gsl_matrix *CloneTreeNode::GetAncestralMatrix(CloneTreeNode *root,
     return A;
 }
 
-double ScLikelihood(size_t loci_idx,
+double ScLikelihoodWithDropout(size_t loci_idx,
                     const BulkDatum *bulk,
                     const SingleCellData *sc,
                     bool has_snv,
@@ -657,9 +657,56 @@ double ScLikelihood(size_t loci_idx,
     double log_lik = 0.0;
 
     // if sc has mutation s, then there are 3 cases
-    // 1. non-bursty
-    // 2. bursty for variant
-    // 3. bursty for reference
+    // 1. Bi-allelic,
+    // 2. Bursty for variant,
+    // 3. Bursty for reference (dropout).
+    size_t var_reads = sc->GetVariantReads(loci_idx);
+    size_t total_reads = sc->GetTotalReads(loci_idx);
+    if (total_reads == 0) {
+        return 0.0;
+    }
+    if (has_snv) {
+        auto locus = bulk->GetLocus();
+        double alpha = locus.get_alpha();
+        double beta = locus.get_beta();
+        double log_lik_biallelic = log_beta_binomial_pdf(var_reads,
+                                                         total_reads,
+                                                         alpha,
+                                                         beta);
+        log_lik_biallelic += log(model_params.GetScBiallelicProportion());
+        double log_lik_bursty_variant = log_beta_binomial_pdf(var_reads,
+                                                              total_reads,
+                                                              model_params.GetScBurstyDistributionAlpha0(),
+                                                              model_params.GetScBurstyDistributionBeta0());
+        log_lik_bursty_variant += log(model_params.GetScBurstyVariantProportion());
+        double log_lik_dropout = log_beta_binomial_pdf(var_reads,
+                                                      total_reads,
+                                                      model_params.GetScDropoutDistributionAlpha0(),
+                                                      model_params.GetScDropoutDistributionBeta0());
+        log_lik_dropout += log(model_params.GetScDropoutProportion());
+        log_lik = log_add(log_lik_dropout, log_lik_biallelic);
+        log_lik = log_add(log_lik, log_lik_bursty_variant);
+    } else {
+        log_lik = log_beta_binomial_pdf(var_reads,
+                                        total_reads,
+                                        model_params.GetSequencingError(),
+                                        1 - model_params.GetSequencingError());
+    }
+    
+    return log_lik;
+
+}
+
+double ScLikelihood(size_t loci_idx,
+                    const BulkDatum *bulk,
+                    const SingleCellData *sc,
+                    bool has_snv,
+                    const ModelParams &model_params) {
+    double log_lik = 0.0;
+
+    // if sc has mutation s, then there are 2 cases
+    // 1. Bi-allelic,
+    // 2. Bursty distribution.
     size_t var_reads = sc->GetVariantReads(loci_idx);
     size_t total_reads = sc->GetTotalReads(loci_idx);
     if (total_reads == 0) {
@@ -673,26 +720,13 @@ double ScLikelihood(size_t loci_idx,
                                                           total_reads,
                                                           alpha,
                                                           beta);
-        log_lik_biallelic += log(1-locus.get_dropout_prob());
+        log_lik_biallelic += log(1-locus.GetBurstyProbability());
         double log_lik_dropout = log_beta_binomial_pdf(var_reads,
                                                        total_reads,
                                                        model_params.GetScBurstyDistributionAlpha0(),
                                                        model_params.GetScBurstyDistributionBeta0());
-        log_lik_dropout += log(locus.get_dropout_prob());
+        log_lik_dropout += log(locus.GetBurstyProbability());
         log_lik = log_add(log_lik_biallelic, log_lik_dropout);
-//        log_lik_biallelic += log(model_params.GetScBiallelicProportion());
-//        double log_lik_bursty_variant = log_beta_binomial_pdf(var_reads,
-//                                                              total_reads,
-//                                                              model_params.GetScBurstyDistributionAlpha0(),
-//                                                              model_params.GetScBurstyDistributionBeta0());
-//        log_lik_bursty_variant += log(model_params.GetScBurstyVariantProportion());
-//        double log_lik_dropout = log_beta_binomial_pdf(var_reads,
-//                                                      total_reads,
-//                                                      model_params.GetScDropoutDistributionAlpha0(),
-//                                                      model_params.GetScDropoutDistributionBeta0());
-//        log_lik_dropout += log(model_params.GetScDropoutProportion());
-//        log_lik = log_add(log_lik_dropout, log_lik_biallelic);
-//        log_lik = log_add(log_lik, log_lik_bursty_variant);
     } else {
         log_lik = log_beta_binomial_pdf(var_reads,
                                         total_reads,

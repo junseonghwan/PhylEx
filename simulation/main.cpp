@@ -242,10 +242,10 @@ int main(int argc, char *argv[])
                                                            model_params);
                 }
             }
-            double sc_log_lik = ScLikelihood(root_node,
-                                             data,
-                                             sc_data,
-                                             model_params);
+            double sc_log_lik = ComputeSingleCellLikelihood(root_node,
+                                                            data,
+                                                            sc_data,
+                                                            model_params);
             WriteTreeToFile(output_path, data, root_node);
             WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
             WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);

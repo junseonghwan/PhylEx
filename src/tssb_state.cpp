@@ -509,7 +509,8 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
     size_t total_num_data_at_desc = 0; // number of data points below this node (over all descendant nodes)
     
     unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
-    vector<pair<size_t, size_t> > n_data_desc; // n_data_desc[i] stores <n_data at i, total_num_desc of i> (note: the second count does not include n_data at i)
+    // n_data_desc[i] stores <n_data at i, total_num_desc of i> (note: the second count does not include n_data at i)
+    vector<pair<size_t, size_t> > n_data_desc;
     for (size_t i = 0; i < children.size(); i++)
     {
         CloneTreeNode *child = children.at(i).second;
@@ -522,7 +523,9 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
     if (node == root && node->GetNuStick() == 0) {
         // do not sample nu-stick for root
     } else {
-        double temp = bounded_beta(random, n_data + 1, total_num_data_at_desc + params.ComputeAlpha(node->GetNameVector()));
+        double temp = bounded_beta(random,
+                                   n_data + 1,
+                                   total_num_data_at_desc + params.ComputeAlpha(node->GetNameVector()));
         node->SetNuStick(temp);
     }
     
@@ -533,7 +536,6 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
         size_t num_data_at_child = n_data_desc[i].first;
         size_t num_data_at_desc_of_child = n_data_desc[i].second;
         size_t n_data_i = num_data_at_child + num_data_at_desc_of_child;
-        //double temp = bounded_beta(random, n_data_i + 1, params.get_gamma() + (total_num_data_at_desc - n_data_i - cumulative_num_data));
         double temp = bounded_beta(random, n_data_i + 1, params.GetGamma() + cumulative_num_data);
         node->SetPsiStick(i, temp);
         cumulative_num_data += n_data_i;
@@ -1102,10 +1104,10 @@ void cull(CloneTreeNode *root)
     }
 }
 
-double ScLikelihood(CloneTreeNode *root,
-                    vector<BulkDatum *> &bulk_data,
-                    vector<SingleCellData *> &sc_data,
-                    const ModelParams &model_params)
+double ComputeSingleCellLikelihood(CloneTreeNode *root,
+                                   vector<BulkDatum *> &bulk_data,
+                                   vector<SingleCellData *> &sc_data,
+                                   const ModelParams &model_params)
 {
     vector<CloneTreeNode *> nodes;
     TSSBState::get_all_nodes(true, root, nodes);

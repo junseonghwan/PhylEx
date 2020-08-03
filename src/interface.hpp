@@ -22,7 +22,7 @@ const double DEFAULT_GAMMA_MAX = 5.0;
 
 const size_t BULK_WITH_GENOTYPE_COLUMN_COUNT = 9;
 const size_t BULK_WITH_TOTAL_CN_COLUMN_COUNT = 8;
-// Not supporting it for now.
+// Not supporting CN_PRIOR option for now.
 const size_t BULK_WITH_TOTAL_CN_PRIOR_COLUMN_COUNT = -1;
 
 enum CopyNumberInputType {
@@ -44,17 +44,11 @@ public:
     size_t thinning = 10;
     size_t burn_in = 500;
     size_t output_interval = 100; // interval at which to perform file output operation
-    double alpha0_max = DEFAULT_ALPHA0_MAX;
-    double lambda_max = DEFAULT_LAMBDA_MAX;
-    double gamma_max = DEFAULT_GAMMA_MAX;
-    double seq_err = 0.01;
-    double var_cp_prob_ = 0.25;
-    double sc_dropout_alpha0 = 0.01;
-    double sc_dropout_beta0 = 0.01;
 };
 
 class Interface {
     Config config_;
+    ModelParams model_params_;
     vector<BulkDatum *> bulk_data_;
     vector<SingleCellData *> sc_data_;
     unordered_map<string, size_t> mut_id2bulk_idx_;

@@ -35,7 +35,7 @@ pos(other.get_pos()),
 mutation_id(other.mutation_id),
 alpha_(other.alpha_),
 beta_(other.beta_),
-dropout_prob_(other.dropout_prob_)
+bursty_prob_(other.bursty_prob_)
 {
     unique_str = chr + ":" + to_string(pos);
     //hash_code = hash<string>()(unique_str);

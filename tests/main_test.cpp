@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE( TestScLikelihood2 )
     double log_lik_sc1 = tree.compute_log_likelihood_sc();
     cout << log_lik_sc1 << endl;
     
-    double log_lik_sc2 = ScLikelihood(root, bulk_data, sc_data, model_params);
+    double log_lik_sc2 = ComputeSingleCellLikelihood(root, bulk_data, sc_data, model_params);
     cout << log_lik_sc2 << endl;
     
     BOOST_TEST( abs(log_lik_sc1 - log_lik_sc2) < 1e-3 );

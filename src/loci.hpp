@@ -39,7 +39,7 @@ class Locus
     // Hyper parameter for Beta prior on probability of for bi-allelic locus.
     double alpha_ = 1.0;
     double beta_ = 1.0;
-    double dropout_prob_ = 0.5;
+    double bursty_prob_ = 0.5;
 public:
     Locus(string mutation_id, string chr, size_t pos);
     Locus(const Locus &other);
@@ -51,11 +51,11 @@ public:
     string to_str() const;
     double get_alpha() const;
     double get_beta() const;
-    double get_dropout_prob() const { return dropout_prob_; }
+    double GetBurstyProbability() const { return bursty_prob_; }
     void set_alpha(double alpha);
     void set_beta(double beta);
     void set_dropout_prob(double dropout_prob) {
-        dropout_prob_ = dropout_prob;
+        bursty_prob_ = dropout_prob;
     }
 };
 

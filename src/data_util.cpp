@@ -606,7 +606,7 @@ void write_tree(string output_path,
     size_t n_muts = bulk.size();
 
     // ancestral matrix for mutations for computing accuracy on the ordering
-    //write_matrix_as_csv(output_path + "/ancestral_matrix.csv", *state.get_ancestral_matrix());
+    write_matrix_as_csv(output_path + "/ancestral_matrix.csv", *(state.GetAncestralMatrix()));
 
     // cellular prevalence for each of the mutations: Nx2
     ofstream f;
