@@ -424,8 +424,8 @@ void GenerateScRnaReads(const gsl_rng *random,
             if (bursty) {
                 //cout << "Bursty." << endl;
                 var_expr_prob = gsl_ran_beta(random,
-                                             simul_config.sc_dropout_alpha0,
-                                             simul_config.sc_dropout_beta0);
+                                             simul_config.sc_bursty_alpha0,
+                                             simul_config.sc_bursty_beta0);
             } else {
                 //cout << "Not Bursty." << endl;
                 double alpha = locus.get_alpha();

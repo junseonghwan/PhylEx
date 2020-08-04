@@ -45,8 +45,8 @@ public:
     double sc_mean_depth;
     double bursty_prob;
     double dropout_rate;
-    double sc_dropout_alpha0;
-    double sc_dropout_beta0;
+    double sc_bursty_alpha0;
+    double sc_bursty_beta0;
     size_t beta_binomial_hp_max;
     
     size_t n_reps;

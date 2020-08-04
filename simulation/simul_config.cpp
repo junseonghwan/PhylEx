@@ -60,10 +60,10 @@ void SimulationConfig::insert_option(string key, string val)
             this->randomize_dropout = stoi(val) == 0? false : true;
         } else if (key == "bursty_prob") {
             this->bursty_prob = stod(val);
-        } else if (key == "sc_dropout_alpha0") {
-            this->sc_dropout_alpha0 = stod(val);
-        } else if (key == "sc_dropout_beta0") {
-            this->sc_dropout_beta0 = stod(val);
+        } else if (key == "sc_bursty_alpha0") {
+            this->sc_bursty_alpha0 = stod(val);
+        } else if (key == "sc_bursty_beta0") {
+            this->sc_bursty_beta0 = stod(val);
         } else if (key == "beta_binomial_hp_max") {
             this->beta_binomial_hp_max = stoul(val);
         } else if (key == "n_sims") {
