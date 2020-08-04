@@ -155,7 +155,12 @@ int main(int argc, char *argv[])
     parse_config_file(config_file_path, simul_config);
     
     gsl_rng *rand = generate_random_object(simul_config.seed);
-    auto model_params = ModelParams::RandomInit(rand, 10, 1, 10, simul_config.seq_err);
+    ModelParams model_params;
+    model_params.SetAlpha0Bound(true, 10.0);
+    model_params.SetLambdaBound(false, 1.0);
+    model_params.SetGammaBound(true, 10.0);
+    model_params.SetSequencingError(simul_config.seq_err);
+    model_params.RandomInit(rand);
     model_params.SetVariantCopyProbability(simul_config.var_cp_prob);
 
 //    bool bd_process = false;
