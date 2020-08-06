@@ -8,7 +8,6 @@
 #ifndef tssb_params_h
 #define tssb_params_h
 
-#include <optional>
 #include <string>
 #include <vector>
 
