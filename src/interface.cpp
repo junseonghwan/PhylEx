@@ -64,25 +64,28 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
                                  BulkLogLikWithGenotype,
                                  sc_lik_fn,
                                  &bulk_data_,
-                                 &sc_data_);
+                                 &sc_data_,
+                                 config_.use_geometric_mean);
             break;
         case CopyNumberInputType::TOTAL_CN:
             tree = new TSSBState(random,
                                  root,
                                  params,
                                  BulkLogLikWithTotalCopyNumber,
-                                 ScLikelihood,
+                                 sc_lik_fn,
                                  &bulk_data_,
-                                 &sc_data_);
+                                 &sc_data_,
+                                 config_.use_geometric_mean);
             break;
         case CopyNumberInputType::TOTAL_CN_PROFILE:
             tree = new TSSBState(random,
                                  root,
                                  params,
                                  BulkLogLikWithCopyNumberProfile,
-                                 ScLikelihood,
+                                 sc_lik_fn,
                                  &bulk_data_,
-                                 &sc_data_);
+                                 &sc_data_,
+                                 config_.use_geometric_mean);
             break;
         case CopyNumberInputType::UNDETERMINED:
             exit(-1);
@@ -237,7 +240,9 @@ void ProcessConfigFile(string config_file_path, Config &config, ModelParams &mod
             model_params.SetSingleCellBurstyAlphaParameter(stod(results[1]));
         } else if (results[0] == "sc_bursty_beta0") {
             model_params.SetSingleCellBurstyBetaParameter(stod(results[1]));
-        }else {
+        } else if (results[0] == "geometric_mean") {
+            config.use_geometric_mean = stod(results[1]) == 1.0 ? true : false;
+        } else {
             cerr << "Unknown option: " << results[0] << endl;
         }
     }

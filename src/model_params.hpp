@@ -49,7 +49,7 @@ class ModelParams
     // sc_mixture_proportions[0]: Dropout for variant.
     // sc_mixture_proportions[1]: Bursty for variant.
     // sc_mixture_proportions[2]: Bi-allelic distribution.
-    double sc_mixture_proportions_[3] = {0.2, 0.3, 0.5};
+    double sc_mixture_proportions_[3] = {0.05, 0.45, 0.5};
 
 public:
     ModelParams() {}

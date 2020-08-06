@@ -44,6 +44,7 @@ public:
     size_t thinning = 10;
     size_t burn_in = 500;
     size_t output_interval = 100; // interval at which to perform file output operation
+    bool use_geometric_mean = false;
 };
 
 class Interface {

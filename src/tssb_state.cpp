@@ -16,8 +16,10 @@ TSSBState::TSSBState(const gsl_rng *random,
                                                   bool has_snv,
                                                   const ModelParams &params),
                      vector<BulkDatum *> *bulk_data,
-                     vector<SingleCellData*> *sc_data) :
+                     vector<SingleCellData*> *sc_data,
+                     bool use_geometric_mean) :
 root(root),
+use_geometric_mean_(use_geometric_mean),
 bulk_data_(bulk_data),
 has_sc_coverage_(bulk_data_->size(), false),
 sc_data(sc_data),
@@ -253,8 +255,7 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
         
         // compute the log likelihood
         new_log_lik_bulk = LogLikDatum(new_node, datum, model_params);
-        double new_log_lik_sc = compute_log_likelihood_sc_cached();
-
+        new_log_lik_sc = compute_log_likelihood_sc_cached();
         new_log_lik = new_log_lik_bulk + new_log_lik_sc;
         if (new_log_lik > (log_slice + curr_log_lik)) {
             // update log_lik_bulk, log_lik_sc, log_lik
@@ -357,6 +358,9 @@ double TSSBState::compute_log_likelihood_sc(bool verbose)
         log_lik_sc += log_lik_cell;
     }
     
+    if (use_geometric_mean_) {
+        log_lik_sc /= sc_data->size();
+    }
     return log_lik_sc;
 }
 
@@ -396,6 +400,10 @@ double TSSBState::compute_log_likelihood_sc_cached(bool verbose)
         log_lik_sc += log_val;
     }
 
+    // Raise single cell likelihood to power of 1/C.
+    if (use_geometric_mean_) {
+        log_lik_sc /= sc_data->size();
+    }
     return log_lik_sc;
 }
 

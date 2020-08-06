@@ -35,6 +35,7 @@ class TSSBState
     //double log_lik = DOUBLE_NEG_INF;
     //double log_lik_bulk = DOUBLE_NEG_INF;
     double log_lik_sc = DOUBLE_NEG_INF;
+    bool use_geometric_mean_;
 
     vector<BulkDatum *> *bulk_data_;
     vector<bool> has_sc_coverage_;
@@ -94,7 +95,8 @@ public:
                                            bool has_snv,
                                            const ModelParams &params),
               vector<BulkDatum *> *bulk_data,
-              vector<SingleCellData *> *sc_data);
+              vector<SingleCellData *> *sc_data,
+              bool use_geometric_mean = false);
 
     const vector<BulkDatum *> &get_data() const;
 
