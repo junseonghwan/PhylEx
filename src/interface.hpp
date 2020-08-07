@@ -57,7 +57,7 @@ class Interface {
 
     TSSBState *RunSliceSampler(const gsl_rng *random,
                                ModelParams &params);
-    
+
     void ReadBulkData();
     void ReadCnPrior();
     void ReadScRnaData();

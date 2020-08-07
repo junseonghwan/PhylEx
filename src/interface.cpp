@@ -228,6 +228,12 @@ void ProcessConfigFile(string config_file_path, Config &config, ModelParams &mod
             model_params.SetLambdaBound(true, stod(results[1]));
         } else if (results[0] == "gamma_max") {
             model_params.SetGammaBound(true, stod(results[1]));
+        } else if (results[0] == "alpha0_min") {
+            model_params.SetAlpha0Bound(false, stod(results[1]));
+        } else if (results[0] == "lambda_min") {
+            model_params.SetLambdaBound(false, stod(results[1]));
+        } else if (results[0] == "gamma_min") {
+            model_params.SetGammaBound(false, stod(results[1]));
         } else if (results[0] == "seq_err") {
             model_params.SetSequencingError(stod(results[1]));
         } else if (results[0] == "var_cp_prob") {

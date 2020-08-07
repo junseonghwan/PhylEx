@@ -94,6 +94,7 @@ void CreateNaryTree(size_t region_count,
     deque<CloneTreeNode *> queue;
     queue.push_back(root);
     root->NodeParameter().SetRootParameters();
+    
     while (!queue.empty()) {
         auto node = queue.front();
         queue.pop_front();
@@ -102,7 +103,8 @@ void CreateNaryTree(size_t region_count,
             continue;
         }
 
-        size_t branch_count = num_branches;
+        // The root to have exactly one child.
+        size_t branch_count = node->IsRoot() ? 1 : num_branches;
         if (randomize_branching) {
             branch_count = gsl_rng_uniform_int(random, num_branches - 1) + 1;
         }
