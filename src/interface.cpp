@@ -172,7 +172,10 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         }
     }
     auto end = chrono::steady_clock::now();
-    cout << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms." << endl;
+    auto time_elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+    cout << time_elapsed << " ms." << endl;
+    vector<double> timing(1, time_elapsed);
+    write_vector(config_.output_path + "/timing.txt", timing);
     
     // flush the states
     WriteBestTress(config_.output_path + "/joint", bulk_data_, joint_best);
