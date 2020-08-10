@@ -31,7 +31,7 @@ class ModelParams
     double dir_conc_multiplicative_factor_ = 10.0;
 
     double alpha0_max = 50.0;
-    double alpha0_min = 1.0;
+    double alpha0_min = 0.1;
 
     double lambda_max = 0.8;
     double lambda_min = 0.05;
