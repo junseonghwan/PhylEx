@@ -66,6 +66,7 @@ class Interface {
 public:
     Interface(string config_file);
     void Run();
+    void Print();
 };
 
 

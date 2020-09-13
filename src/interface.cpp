@@ -317,7 +317,7 @@ void ProcessBulkWithTotalCopyNumber(ifstream &dat_file,
         auto n_vars = ParseRegionalData(results[5]);
         auto n_reads = ParseRegionalData(results[6]);
         auto total_cn = ParseRegionalData(results[7]);
-        
+
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
             exit(-1);
@@ -360,6 +360,7 @@ void ProcessBulkWithGenotype(ifstream &dat_file,
         somatic_loci[mut_id] = bulk_data.size();
         bulk_data.push_back(datum);
     }
+    std::cout << "Number of SNVs: " << bulk_data.size() << std::endl;
 }
 
 void Interface::ReadBulkData()
@@ -371,13 +372,13 @@ void Interface::ReadBulkData()
         cerr << "Could not open the file: " << config_.bulk_file << endl;
         exit(-1);
     }
-    
+
     vector<string> results;
-    
+
     // Retrieve the first line to determine the input format.
     getline(dat_file, line);
     boost::split(results, line, boost::is_any_of("\t"));
-    
+
     if (results.size() == BULK_WITH_GENOTYPE_COLUMN_COUNT) {
         ProcessBulkWithGenotype(dat_file, bulk_data_, mut_id2bulk_idx_);
         cn_input_type_ = CopyNumberInputType::GENOTYPE;
@@ -572,6 +573,15 @@ Interface::Interface(string config_file) {
 void Interface::Run()
 {
     gsl_rng *random = generate_random_object(config_.seed);
-    model_params_.RandomInit(random);
+    Print();
+    model_params_.SetAlpha0(1);
+    model_params_.SetLambda(0.5);
+    model_params_.SetGamma(1);
     RunSliceSampler(random, model_params_);
+}
+
+void Interface::Print() {
+    for (size_t i = 0; i < bulk_data_.size(); i++) {
+        std::cout << bulk_data_.at(i)->GetId() << "\n";
+    }
 }
