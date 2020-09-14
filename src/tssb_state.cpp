@@ -619,18 +619,24 @@ void TSSBState::get_all_nodes(bool non_empty, CloneTreeNode *root_node, vector<C
 // the nodes are ordered by depth first traversal
 void TSSBState::get_mixture(CloneTreeNode *node, double mass, vector<pair<double, CloneTreeNode *> > &ret)
 {
+    //cout << "mass: " << mass << endl;
     double node_mass = mass * node->GetNuStick();
     ret.push_back(make_pair(node_mass, node));
     unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     double cum_prod = 1.0;
-    vector<double> weights;
+    vector<double> edges;
     for (size_t i = 0; i < children.size(); i++)
     {
-        CloneTreeNode *child = children[i].second;
         double val = cum_prod * (1 - children[i].first);
-        weights.push_back(1 - val);
+        edges.push_back(1 - val);
         cum_prod *= (1 - children[i].first);
-        get_mixture(child, (1 - node->GetNuStick()) * mass * weights[i], ret);
+    }
+    double weight_up_to_child_i = 0.0;
+    for (size_t i = 0; i < children.size(); i++) {
+        CloneTreeNode *child = children[i].second;
+        double weight = edges[i] - weight_up_to_child_i;
+        get_mixture(child, (1 - node->GetNuStick()) * mass * weight, ret);
+        weight_up_to_child_i = edges[i];
     }
 }
 

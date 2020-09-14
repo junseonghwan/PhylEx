@@ -1,8 +1,9 @@
 #define BOOST_TEST_MODULE tssb test
 #include <boost/test/unit_test.hpp>
 
-#include <math.h>
+#include <fstream>
 #include <iostream>
+#include <math.h>
 
 #include "clone_node.hpp"
 #include "single_cell.hpp"
@@ -20,6 +21,8 @@ void InitializeTestSetup() {
     model_params.SetVariantCopyProbability(VAR_CP_PROB);
     model_params.SetSingleCellDropoutAlphaParameter(0.01);
     model_params.SetSingleCellDropoutBetaParameter(0.01);
+    model_params.SetSingleCellBurstyAlphaParameter(0.01);
+    model_params.SetSingleCellBurstyBetaParameter(0.01);
 }
 
 BOOST_AUTO_TEST_CASE( TestBulkLogLikWithTotalCopyNumber )
@@ -60,6 +63,8 @@ BOOST_AUTO_TEST_CASE( TestBulkLogLikWithTotalCopyNumber )
 
 BOOST_AUTO_TEST_CASE( TestBulkLogLikWithGenotype )
 {
+    InitializeTestSetup();
+    
     vector<size_t> major_cn(1, 3);
     vector<size_t> minor_cn(1, 1);
     vector<size_t> var_read_count(1, 10);
@@ -95,6 +100,8 @@ BOOST_AUTO_TEST_CASE( TestBulkLogLikWithGenotype )
 
 BOOST_AUTO_TEST_CASE( TestScLikelihood )
 {
+    InitializeTestSetup();
+    
     double alpha = 3.0;
     double beta = 12.0;
     double dropout_prob = 0.8;
@@ -167,6 +174,8 @@ BOOST_AUTO_TEST_CASE( TestScCache )
 {
     gsl_rng *random = generate_random_object(3);
     ModelParams model_params(3, 1, 0.8, 0.01);
+    model_params.SetSingleCellBurstyAlphaParameter(0.01);
+    model_params.SetSingleCellBurstyBetaParameter(0.01);
     size_t region_count = 1;
     size_t single_cell_count = 100;
     size_t bulk_data_count = 20;
@@ -231,4 +240,85 @@ BOOST_AUTO_TEST_CASE( TestScCache )
         cout << "After move: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
         BOOST_TEST( abs(sc_log_lik - sc_log_lik_cache) < 1e-3 );
     }
+}
+
+void TestPriorAssignmentProbabilityHelper(string log_prior_assignment_path,
+                                          string nodes_path) {
+    ifstream log_prior_assignment_file (log_prior_assignment_path);
+    if (!log_prior_assignment_file.is_open())
+    {
+        cerr << "Could not open the file: " << log_prior_assignment_path << endl;
+        exit(-1);
+    }
+    
+    string line;
+    getline(log_prior_assignment_file, line);
+    double expected_log_prior_assignment = stod(line);
+    
+    ifstream nodes_file (nodes_path);
+    if (!nodes_file.is_open())
+    {
+        cerr << "Could not open the file: " << nodes_path << endl;
+        exit(-1);
+    }
+    
+    vector<string> row;
+    unordered_map<string, CloneTreeNode*> nodes;
+    // Assume that the parent node comes before any child node.
+    // Child nodes are ordered starting from 0.
+    // skip the first line.
+    getline (nodes_file, line);
+    while ( getline (nodes_file, line) ) {
+        boost::trim(line);
+        if (line == "") {
+            break;
+        }
+        boost::split(row, line, boost::is_any_of(","));
+        string child_node_name = row[0];
+        double nu = stod(row[1]);
+        double psi = stod(row[2]);
+        size_t local_data_count = stoul(row[3]);
+        string parent_node_name = CloneTreeNode::RetrieveParentString(child_node_name);
+        if (child_node_name == "0") {
+            auto node = CloneTreeNode::CreateRootNode(1);
+            node->SetNuStick(nu);
+            nodes[child_node_name] = node;
+            BOOST_TEST(local_data_count == 0);
+            continue;
+        }
+        if (nodes.count(parent_node_name) == 0) {
+            cerr << "Node names must be ordered such that the parent node comes before any child nodes.\n";
+            exit(-1);
+        }
+        auto parent_node = nodes.at(parent_node_name);
+        auto child_node = parent_node->SpawnChild(psi);
+        child_node->SetNuStick(nu);
+        for (size_t i = 0; i < local_data_count; i++) {
+            child_node->AddDatum(new BulkDatum("test", "test", 123));
+        }
+        nodes[child_node_name] = child_node;
+    }
+    nodes_file.close();
+    
+    double realized_log_prior_assignment = TSSBState::get_log_prior_assignment(nodes["0"]);
+    std::cout << "Expected: " << expected_log_prior_assignment << "\n";
+    std::cout << "Realized: " << realized_log_prior_assignment << "\n";
+    BOOST_TEST(abs(expected_log_prior_assignment - realized_log_prior_assignment) < 1e-6);
+
+}
+
+BOOST_AUTO_TEST_CASE( TestPriorAssignmentProbability )
+{
+    // Load the data/psi_sticks.txt and data/nu_sticks.txt.
+    string nodes_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/nodes_linear.txt";
+    string log_prior_assignment_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/mixture_linear.txt";
+    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
+    
+    nodes_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/nodes_binary.txt";
+    log_prior_assignment_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/mixture_binary.txt";
+    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
+    
+    nodes_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/nodes_multifurcating.txt";
+    log_prior_assignment_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/mixture_multifurcating.txt";
+    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
 }
