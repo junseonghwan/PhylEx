@@ -6,7 +6,6 @@ build/
 run
 simul
 nohup*
-data/
 .Rproj.user
 */slurm*
 configs/
