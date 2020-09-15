@@ -5,6 +5,8 @@
 #include <iostream>
 #include <math.h>
 
+#include <boost/filesystem.hpp>
+
 #include "clone_node.hpp"
 #include "single_cell.hpp"
 #include "tssb_state.hpp"
@@ -309,16 +311,17 @@ void TestPriorAssignmentProbabilityHelper(string log_prior_assignment_path,
 
 BOOST_AUTO_TEST_CASE( TestPriorAssignmentProbability )
 {
+    cout << boost::filesystem::current_path() << endl;
     // Load the data/psi_sticks.txt and data/nu_sticks.txt.
-    string nodes_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/nodes_linear.txt";
-    string log_prior_assignment_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/mixture_linear.txt";
+    string nodes_path = "data/nodes_linear.txt";
+    string log_prior_assignment_path = "data/mixture_linear.txt";
     TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
     
-    nodes_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/nodes_binary.txt";
-    log_prior_assignment_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/mixture_binary.txt";
+    nodes_path = "data/nodes_binary.txt";
+    log_prior_assignment_path = "data/mixture_binary.txt";
     TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
     
-    nodes_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/nodes_multifurcating.txt";
-    log_prior_assignment_path = "/Users/seonghwanjun/ScRNACloneEvaluation/BulkScRNAClone/data/mixture_multifurcating.txt";
+    nodes_path = "data/nodes_multifurcating.txt";
+    log_prior_assignment_path = "data/mixture_multifurcating.txt";
     TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
 }
