@@ -54,7 +54,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
 
     auto sc_lik_fn = model_params_.UseSingleCellDropoutDistribution() ?
                         ScLikelihoodWithDropout : ScLikelihood;
-    
+
     TSSBState *tree;
     switch (cn_input_type_) {
         case CopyNumberInputType::GENOTYPE:
@@ -573,7 +573,6 @@ Interface::Interface(string config_file) {
 void Interface::Run()
 {
     gsl_rng *random = generate_random_object(config_.seed);
-    Print();
     model_params_.SetAlpha0(1);
     model_params_.SetLambda(0.5);
     model_params_.SetGamma(1);

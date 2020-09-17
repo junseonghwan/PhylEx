@@ -615,7 +615,6 @@ void write_tree(string output_path,
     for (size_t i = 0; i < n_muts; i++) {
         auto p = params[i];
         auto phi = p->GetCellularPrevalences();
-        cout << bulk[i]->GetId() << "\t" << ConvertToCommaSeparatedValues(phi) << endl;
         f << bulk[i]->GetId() << "\t" << ConvertToCommaSeparatedValues(phi) << endl;
     }
     f.close();

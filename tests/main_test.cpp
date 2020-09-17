@@ -306,7 +306,6 @@ void TestPriorAssignmentProbabilityHelper(string log_prior_assignment_path,
     std::cout << "Expected: " << expected_log_prior_assignment << "\n";
     std::cout << "Realized: " << realized_log_prior_assignment << "\n";
     BOOST_TEST(abs(expected_log_prior_assignment - realized_log_prior_assignment) < 1e-6);
-
 }
 
 BOOST_AUTO_TEST_CASE( TestPriorAssignmentProbability )
