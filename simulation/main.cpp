@@ -167,19 +167,17 @@ int main(int argc, char *argv[])
     model_params.SetSingleCellBurstyAlphaParameter(simul_config.sc_bursty_alpha0);
     model_params.SetSingleCellBurstyBetaParameter(simul_config.sc_bursty_beta0);
  
-//    bool bd_process = false;
-//    if (simul_config.birth_rate > 0 && simul_config.max_cn > 2) {
-//        bd_process = true;
-//        model_params.set_birth_rate(simul_config.birth_rate);
-//        model_params.set_death_rate(simul_config.death_rate);
-//    } else if (simul_config.ref_allele_copy_prob.size() >= 1 &&
-//               simul_config.var_allele_copy_prob.size() >= 2) {
-//        bd_process = false;
-//    } else {
-//        cerr << "Error in copy number simulation configuration." << endl;
-//        cerr << "For BD simulation, specify birth, death rates, and max_cn." << endl;
-//        cerr << "For clonal copy number, specify prior over copy number with at least 3 entries." << endl;
-//    }
+    bool bd_process = false;
+    if (simul_config.birth_rate > 0 && simul_config.max_cn > 2) {
+        bd_process = true;
+    } else if (simul_config.ref_allele_copy_prob.size() >= 1 &&
+               simul_config.var_allele_copy_prob.size() >= 2) {
+        bd_process = false;
+    } else {
+        cerr << "Error in copy number simulation configuration." << endl;
+        cerr << "For BD simulation, specify birth, death rates, and max_cn." << endl;
+        cerr << "For clonal copy number, specify prior over copy number with at least 3 non-zero entries." << endl;
+    }
 
     for (size_t n = 0; n < simul_config.n_sims; n++) {
         string sim_path = simul_config.output_path + "/sim" + to_string(n);
@@ -208,7 +206,11 @@ int main(int argc, char *argv[])
         // in the BulkDatum to update the hyper parameters for each locus from file.
         // So changing it to a copy of Locus for each BulkDatum is not an option.
         auto loci = CreateSNVs(random, simul_config, data);
-        GenerateBulkData(random, simul_config, data, root_node);
+        if (bd_process) {
+            GenerateBulkDataWithBDProcess(random, simul_config, data, root_node);
+        } else {
+            GenerateBulkData(random, simul_config, data, root_node);
+        }
 
         // Generate single cells data.
         // Output all simulation data.

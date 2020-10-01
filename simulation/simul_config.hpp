@@ -28,11 +28,9 @@ public:
     vector<double> ref_allele_copy_prob;
     double var_cp_prob;
     
-    // Note: We are going to comment this out for now.
-    // Working with birth death process is left as future work.
-//    double birth_rate;
-//    double death_rate;
-//    size_t max_cn;
+    double birth_rate;
+    double death_rate;
+    size_t max_cn;
 
     // Bulk data configuration.
     size_t n_sites;

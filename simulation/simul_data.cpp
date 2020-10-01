@@ -7,88 +7,89 @@
 
 #include "simul_data.hpp"
 
-//#include "Eigen/Dense"
-//#include "Eigen/Eigenvalues"
+#include "Eigen/Dense"
+#include "Eigen/Eigenvalues"
 
 #include "data_util.hpp"
 #include "utils.hpp"
 #include "tssb_state.hpp"
 
-//size_t SampleCnProfile(const gsl_rng *random,
-//                       size_t curr,
-//                       EigenMatrixRef P)
-//{
-//    if (curr == 0) {
-//        return curr;
-//    }
-//    
-//    // sample a new state
-//    vector<double> probs;
-//    for (size_t j = 0; j < P.cols(); j++) {
-//        probs.push_back(P(curr, j));
-//    }
-//    size_t new_state = multinomial(random, probs);
-//    return new_state;
-//}
-//
-//// Returns matrix Q of dimension NxN where N = max_cn - min_cn.
-//// If min_cn = 0, then since 0 is an absorbing state, Q(0,j) = 0.
-//EigenMatrix GetCnRateMatrix(double birth_rate,
-//                            double death_rate,
-//                            size_t min_cn,
-//                            size_t max_cn)
-//{
-//    size_t n_states = max_cn - min_cn + 1;
-//    EigenMatrix Q = EigenMatrix::Zero(n_states, n_states);
-//    for (size_t i = 0; i < n_states; i++) {
-//        if (i >= 1) {
-//            Q(i,i-1) = death_rate;
-//        }
-//        if (i < n_states - 1) {
-//            Q(i,i+1) = birth_rate;
-//        }
-//    }
-//    Q.diagonal() = -Q.rowwise().sum();
-//    
-//    // We check if cn state 0 is in the rate matrix.
-//    // If so, set it as the absorbing state.
-//    if (min_cn == 0) {
-//        Q.row(0).setZero();
-//    }
-//
-//    assert(abs(Q.sum()) < 1e-6);
-//    return Q;
-//}
+size_t SampleCnProfile(const gsl_rng *random,
+                       size_t curr,
+                       Eigen::Ref<Eigen::MatrixXf> P)
+{
+    if (curr == 0) {
+        return curr;
+    }
+    
+    // sample a new state
+    vector<double> probs;
+    for (size_t j = 0; j < P.cols(); j++) {
+        probs.push_back(P(curr, j));
+    }
+    size_t new_state = multinomial(random, probs);
+    return new_state;
+}
 
-//EigenMatrix ExponentiateMatrix(EigenMatrixRef M)
-//{
-//    Eigen::EigenSolver<EigenMatrix> diagnoalization;
-//    diagnoalization.compute(M);
-//    auto evalues = diagnoalization.eigenvalues();
-//    Eigen::MatrixXcd D = Eigen::MatrixXcd::Zero(evalues.rows(), evalues.rows());
-//    for (size_t i = 0; i < evalues.rows(); i++) {
-//        D(i,i) = exp(evalues(i).real());
-//    }
-//    Eigen::MatrixXcd V = diagnoalization.eigenvectors();
-//    Eigen::MatrixXcd ret = V * D * V.inverse();
-//    EigenMatrix expM = EigenMatrix::Zero(M.rows(), M.cols());
-//    for (size_t i = 0; i < expM.rows(); i++) {
-//        for (size_t j = 0; j < expM.cols(); j++) {
-//            if (ret.coeffRef(i, j).imag() > 0) {
-//                cerr << "Imaginary number found in the transition matrix." << endl;
-//                exit(-1);
-//            }
-//            expM(i,j) = ret(i, j).real();
-//        }
-//    }
-//    auto rowsums = expM.rowwise().sum();
-//    for (size_t i = 0; i < rowsums.size(); i++) {
-//        //cout << "line 85: " << rowsums(i) << endl;
-//        assert(abs(1 - rowsums(i)) < 1e-3);
-//    }
-//
-//    return expM;
-//}
+// Returns matrix Q of dimension NxN where N = max_cn - min_cn.
+// If min_cn = 0, then since 0 is an absorbing state, Q(0,j) = 0.
+Eigen::MatrixXf GetCnRateMatrix(double birth_rate,
+                                double death_rate,
+                                size_t min_cn,
+                                size_t max_cn)
+{
+    size_t n_states = max_cn - min_cn + 1;
+    Eigen::MatrixXf Q = Eigen::MatrixXf::Zero(n_states, n_states);
+    for (size_t i = 0; i < n_states; i++) {
+        if (i >= 1) {
+            Q(i,i-1) = death_rate;
+        }
+        if (i < n_states - 1) {
+            Q(i,i+1) = birth_rate;
+        }
+    }
+    Q.diagonal() = -Q.rowwise().sum();
+    
+    // We check if cn state 0 is in the rate matrix.
+    // If so, set it as the absorbing state.
+    if (min_cn == 0) {
+        Q.row(0).setZero();
+    }
+
+    assert(abs(Q.sum()) < 1e-6);
+    return Q;
+}
+
+Eigen::MatrixXf ExponentiateMatrix(Eigen::Ref<Eigen::MatrixXf> M)
+{
+    std::cout << M << std::endl;
+    Eigen::EigenSolver<Eigen::MatrixXf> diagnoalization;
+    diagnoalization.compute(M);
+    auto evalues = diagnoalization.eigenvalues();
+    Eigen::MatrixXcf D = Eigen::MatrixXcf::Zero(evalues.rows(), evalues.rows());
+    for (size_t i = 0; i < evalues.rows(); i++) {
+        D(i,i) = exp(evalues(i).real());
+    }
+    Eigen::MatrixXcf V = diagnoalization.eigenvectors();
+    Eigen::MatrixXcf ret = V * D * V.inverse();
+    Eigen::MatrixXf expM = Eigen::MatrixXf::Zero(M.rows(), M.cols());
+    for (size_t i = 0; i < expM.rows(); i++) {
+        for (size_t j = 0; j < expM.cols(); j++) {
+            if (ret.coeffRef(i, j).imag() > 0) {
+                cerr << "Imaginary number found in the transition matrix." << endl;
+                cerr << "(" << ret.coeffRef(i, j).imag() << ", " << ret.coeffRef(i, j).real() << ")" << std::endl;
+                //exit(-1);
+            }
+            expM(i,j) = ret(i, j).real();
+        }
+    }
+    auto rowsums = expM.rowwise().sum();
+    for (size_t i = 0; i < rowsums.size(); i++) {
+        assert(abs(1 - rowsums(i)) < 1e-3);
+    }
+
+    return expM;
+}
 
 vector<Locus> CreateSNVs(gsl_rng *random,
                          const SimulationConfig &simul_config,
@@ -195,142 +196,150 @@ void GenerateBulkData(gsl_rng *random,
 }
 
 // Assumes nodes are in breadth first traversal order.
-//EigenMatrix EvolveCn(gsl_rng *random,
-//                     vector<CloneTreeNode *> &nodes,
-//                     unordered_map<CloneTreeNode *, size_t> &node2idx,
-//                     CloneTreeNode *assigned_node,
-//                     const SimulationConfig &config,
-//                     EigenMatrix P0,
-//                     EigenMatrix P1)
-//{
-//    size_t n_nodes = nodes.size();
-//
-//    // Indexing:
-//    // Rows -> nodes.
-//    // First column -> ref_cn.
-//    // Second column -> var_cn.
-//    EigenMatrix cn_profile(n_nodes, 2);
-//
-//    // Get ancestor nodes.
-//    unordered_set<CloneTreeNode *> ancestors;
-//    auto node = assigned_node;
-//    while (true) {
-//        if (node->is_root()) {
-//            break;
-//        }
-//        ancestors.insert(node);
-//        node = node->get_parent_node();
-//    }
-//
-//    size_t ref_cn = 0, var_cn = 0;
-//    for (size_t i = 0; i < nodes.size(); i++) {
-//        auto node = nodes[i];
-//        auto parent_node = node->get_parent_node();
-//        if (node->is_root()) {
-//            cn_profile(i, 0) = 2;
-//            cn_profile(i, 1) = 0;
-//            continue;
-//        }
-//
-//        // Retrieve the copy number profile of the parent
-//        auto parent_idx = node2idx[parent_node];
-//        ref_cn = cn_profile(parent_idx, 0);
-//        var_cn = cn_profile(parent_idx, 1);
-//        if (node == assigned_node) {
-//            assert(var_cn == 0 && ref_cn >= 1);
-//            // Evolve ref_cn using P1.
-//            SampleCnProfile(random, ref_cn, P1);
-//            // Sample var_cn, ensure that it is at least 1.
-//            var_cn = gsl_ran_binomial(random, config.var_cp_prob, ref_cn - 1) + 1;
-//            assert(var_cn >= 1);
-//            ref_cn -= var_cn;
-//        } else if (ancestors.count(node)) {
-//            ref_cn = SampleCnProfile(random, ref_cn, P1);
-//            assert(var_cn == 0 && ref_cn >= 1);
-//        } else {
-//            ref_cn = SampleCnProfile(random, ref_cn, P0);
-//            var_cn = SampleCnProfile(random, var_cn, P0);
-//        }
-//        assert(ref_cn <= config.max_cn && var_cn <= config.max_cn);
-//
-//        cn_profile(i, 0) = ref_cn;
-//        cn_profile(i, 1) = var_cn;
-//    }
-//
-//    return cn_profile;
-//}
+Eigen::MatrixXf EvolveCn(gsl_rng *random,
+                     vector<CloneTreeNode *> &nodes,
+                     unordered_map<CloneTreeNode *, size_t> &node2idx,
+                     CloneTreeNode *assigned_node,
+                     const SimulationConfig &config,
+                     Eigen::MatrixXf P0,
+                     Eigen::MatrixXf P1)
+{
+    size_t n_nodes = nodes.size();
 
-//void GenerateBulkDataWithBDProcess(gsl_rng *random,
-//                                   const SimulationConfig &simul_config,
-//                                   vector<BulkDatum *> &data,
-//                                   CloneTreeNode *root_node)
-//{
-//    unordered_map<CloneTreeNode*, vector<pair<size_t, size_t> > > cn_profile;
-//
-//    size_t n_data = data.size();
-//    double birth_rate = simul_config.birth_rate;
-//    double death_rate = simul_config.death_rate;
-//
-//    // Construct rate matrix for copy number profile and perform uniformization.
-//    auto Q1 = GetCnRateMatrix(birth_rate, death_rate, 1, simul_config.max_cn);
-//    auto P1 = ExponentiateMatrix(Q1);
-//
-//    auto Q0 = GetCnRateMatrix(birth_rate, death_rate, 0, simul_config.max_cn);
-//    auto P0 = ExponentiateMatrix(Q0);
-//
-//    vector<CloneTreeNode *> nodes;
-//    CloneTreeNode::breadth_first_traversal(root_node, nodes, false);
-//    unordered_map<CloneTreeNode *, size_t> node2idx;
-//    for (size_t i = 0; i < nodes.size(); i++) {
-//        auto node = nodes[i];
-//        node2idx[node] = i;
-//    }
-//
-//    // Assign data to nodes.
-//    size_t b_alleles, depth;
-//    BulkDatum *datum;
-//    for (size_t i = 0; i < n_data; i++) {
-//        // Sample a node -- +1 so that we don't sample the root node
-//        size_t node_id = discrete_uniform(random, nodes.size()-1) + 1;
-//        auto assigned_node = nodes[node_id];
-//        datum = data[i];
-//        assigned_node->add_datum(datum);
-//
-//        // Evolve copy number.
-//        auto cn_profile = EvolveCn(random,
-//                                   nodes,
-//                                   node2idx,
-//                                   assigned_node,
-//                                   simul_config,
-//                                   P0,
-//                                   P1);
-//
-//        auto node_cns = cn_profile.rowwise().sum();
-//        double total_cn = 0.0;
-//        double xi = 0.0;
-//        double sum = 0.0;
-//        // TODO: Incorporate sequencing error.
-//        for (size_t j = 0; j < nodes.size(); j++) {
-//            double eta = nodes[j]->get_node_parameter().get_clone_freq();
-//            total_cn += eta * node_cns(j);
-//            if (node_cns(j) > 0) {
-//                xi += eta * (double)cn_profile(j,1)/node_cns(j);
-//            }
-//            sum += eta;
-//        }
-//        depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
-//        cout << xi << ", " << depth << endl;
-//        b_alleles = gsl_ran_binomial(random, xi, depth);
-//        datum->SetReadCount(depth);
-//        datum->AddRegion(b_alleles);
-//        datum->SetTotalCopyNumber((size_t)round(total_cn));
-//        cout << "======" << endl;
-//        cout << "Datum " << i << endl;
-//        cout << datum->GetVariantReadCount() << "/" << datum->GetReadCount() << endl;
-//        cout << "xi: " << xi << endl;
-//        cout << "======" << endl;
-//    }
-//}
+    // Indexing:
+    // Rows -> nodes.
+    // First column -> ref_cn.
+    // Second column -> var_cn.
+    Eigen::MatrixXf cn_profile(n_nodes, 2);
+
+    // Get ancestor nodes.
+    unordered_set<CloneTreeNode *> ancestors;
+    auto node = assigned_node;
+    while (true) {
+        if (node->IsRoot()) {
+            break;
+        }
+        ancestors.insert(node);
+        node = node->GetParentNode();
+    }
+
+    size_t ref_cn = 0, var_cn = 0;
+    for (size_t i = 0; i < nodes.size(); i++) {
+        auto node = nodes[i];
+        auto parent_node = node->GetParentNode();
+        if (node->IsRoot()) {
+            cn_profile(i, 0) = 2;
+            cn_profile(i, 1) = 0;
+            continue;
+        }
+
+        // Retrieve the copy number profile of the parent
+        auto parent_idx = node2idx[parent_node];
+        ref_cn = cn_profile(parent_idx, 0);
+        var_cn = cn_profile(parent_idx, 1);
+        if (node == assigned_node) {
+            assert(var_cn == 0 && ref_cn >= 1);
+            // Evolve ref_cn using P1.
+            SampleCnProfile(random, ref_cn, P1);
+            // Sample var_cn, ensure that it is at least 1.
+            var_cn = gsl_ran_binomial(random, config.var_cp_prob, ref_cn - 1) + 1;
+            assert(var_cn >= 1);
+            ref_cn -= var_cn;
+        } else if (ancestors.count(node)) {
+            ref_cn = SampleCnProfile(random, ref_cn, P1);
+            assert(var_cn == 0 && ref_cn >= 1);
+        } else {
+            ref_cn = SampleCnProfile(random, ref_cn, P0);
+            var_cn = SampleCnProfile(random, var_cn, P0);
+        }
+        assert(ref_cn <= config.max_cn && var_cn <= config.max_cn);
+
+        cn_profile(i, 0) = ref_cn;
+        cn_profile(i, 1) = var_cn;
+    }
+
+    return cn_profile;
+}
+
+void GenerateBulkDataWithBDProcess(gsl_rng *random,
+                                   const SimulationConfig &simul_config,
+                                   vector<BulkDatum *> &data,
+                                   CloneTreeNode *root_node)
+{
+    unordered_map<CloneTreeNode*, vector<pair<size_t, size_t> > > cn_profile;
+
+    size_t n_data = data.size();
+    double birth_rate = simul_config.birth_rate;
+    double death_rate = simul_config.death_rate;
+
+    // Construct rate matrix for copy number profile and perform uniformization.
+    Eigen::MatrixXf Q1 = GetCnRateMatrix(birth_rate, death_rate, 1, simul_config.max_cn);
+    Eigen::MatrixXf P1 = ExponentiateMatrix(Q1);
+
+    Eigen::MatrixXf Q0 = GetCnRateMatrix(birth_rate, death_rate, 0, simul_config.max_cn);
+    Eigen::MatrixXf P0 = ExponentiateMatrix(Q0);
+
+    vector<CloneTreeNode *> nodes;
+    CloneTreeNode::BreadthFirstTraversal(root_node, nodes, false);
+    unordered_map<CloneTreeNode *, size_t> node2idx;
+    for (size_t i = 0; i < nodes.size(); i++) {
+        auto node = nodes[i];
+        node2idx[node] = i;
+    }
+
+    // Assign data to nodes.
+    size_t b_alleles, depth;
+    BulkDatum *datum;
+    for (size_t i = 0; i < n_data; i++) {
+        // Sample a node -- +1 so that we don't sample the root node
+        size_t node_id = discrete_uniform(random, nodes.size()-1) + 1;
+        auto assigned_node = nodes[node_id];
+        datum = data[i];
+        assigned_node->AddDatum(datum);
+
+        // Evolve copy number.
+        auto cn_profile = EvolveCn(random,
+                                   nodes,
+                                   node2idx,
+                                   assigned_node,
+                                   simul_config,
+                                   P0,
+                                   P1);
+
+        auto node_cns = cn_profile.rowwise().sum();
+        double total_cn = 0.0;
+        double variant_cn = 0.0;
+        double reference_cn = 0.0;
+        double xi = 0.0;
+        double sum = 0.0;
+        // TODO: Incorporate sequencing error.
+        for (size_t j = 0; j < nodes.size(); j++) {
+            double eta = nodes[j]->GetCloneFreqs(0);
+            total_cn += eta * node_cns(j);
+            reference_cn += eta * cn_profile(j,0);
+            variant_cn += eta * cn_profile(j,1);
+            if (node_cns(j) > 0) {
+                xi += eta * (double)cn_profile(j,1)/node_cns(j);
+            }
+            sum += eta;
+        }
+        depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
+        cout << xi << ", " << depth << endl;
+        b_alleles = gsl_ran_binomial(random, xi, depth);
+        size_t int_var_cn = (size_t)round(variant_cn);
+        size_t int_ref_cn = (size_t)round(reference_cn);
+        if (int_var_cn > int_ref_cn) {
+            datum->AddRegionData(b_alleles, depth, int_var_cn, int_ref_cn);
+        } else {
+            datum->AddRegionData(b_alleles, depth, int_ref_cn, int_var_cn);
+        }
+        cout << "======" << endl;
+        cout << "Datum " << i << endl;
+        cout << datum->GetVariantReadCount(0) << "/" << datum->GetReadCount(0) << endl;
+        cout << "xi: " << xi << endl;
+        cout << "======" << endl;
+    }
+}
 
 vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
                                           CloneTreeNode *root_node,

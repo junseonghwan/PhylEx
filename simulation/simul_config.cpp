@@ -48,6 +48,12 @@ void SimulationConfig::insert_option(string key, string val)
             this->var_allele_copy_prob = parse_cn_probs(val);
         } else if (key == "ref_allele_copy_prob") {
             this->ref_allele_copy_prob = parse_cn_probs(val);
+        } else if (key == "birth_rate") {
+            this->birth_rate = stod(val);
+        } else if (key == "death_rate") {
+            this->death_rate = stod(val);
+        } else if (key == "max_cn") {
+            this->max_cn = stoul(val);
         } else if (key == "var_cp_prob") {
             this->var_cp_prob = stod(val);
         } else if (key == "n_cells") {
