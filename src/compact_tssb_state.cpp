@@ -31,8 +31,8 @@ CompactTSSBState::CompactTSSBState(TSSBState &tssb_state)
 
 CompactTSSBState::~CompactTSSBState()
 {
-    //    if (ancestral_matrix != 0)
-    //        gsl_matrix_free(ancestral_matrix);
+    if (ancestral_matrix != 0)
+        gsl_matrix_free(ancestral_matrix);
     for (size_t i = 0; i < datum2param.size(); i++) {
         // delete the parameter since it is a copy
         // do not delete S*, since it is used globally in the program
