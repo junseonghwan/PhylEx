@@ -36,6 +36,8 @@ size_t convert_chr_to_int(string chr);
 
 bool path_exists(string path);
 void WriteLogLikToFile(string output_path, double val);
+void WriteCtsCopyNumberProfile(string output_path, const vector<BulkDatum *> &bulk,
+                               const vector<pair<double, double> > &cts_cn_profile);
 void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool output_genotype);
 void WriteBetaBinomHp(string output_path,
                       const vector<BulkDatum*> &loci);

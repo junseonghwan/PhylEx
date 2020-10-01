@@ -206,8 +206,9 @@ int main(int argc, char *argv[])
         // in the BulkDatum to update the hyper parameters for each locus from file.
         // So changing it to a copy of Locus for each BulkDatum is not an option.
         auto loci = CreateSNVs(random, simul_config, data);
+        vector<pair<double, double> > cts_cn_profile;
         if (bd_process) {
-            GenerateBulkDataWithBDProcess(random, simul_config, data, root_node);
+            GenerateBulkDataWithBDProcess(random, simul_config, data, root_node, cts_cn_profile);
         } else {
             GenerateBulkData(random, simul_config, data, root_node);
         }
@@ -224,6 +225,11 @@ int main(int argc, char *argv[])
 
             WriteBulkData(output_path + "/simul_ssm.txt", data, false);
             WriteBulkData(output_path + "/genotype_ssm.txt", data, true);
+            if (cts_cn_profile.size() > 0) {
+                WriteCtsCopyNumberProfile(output_path + "/cts_cn_profile.txt",
+                                          data,
+                                          cts_cn_profile);
+            }
 
             // Generate single cell reads.
             vector<SingleCellData *> sc_data;

@@ -264,7 +264,8 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random,
 void GenerateBulkDataWithBDProcess(gsl_rng *random,
                                    const SimulationConfig &simul_config,
                                    vector<BulkDatum *> &data,
-                                   CloneTreeNode *root_node)
+                                   CloneTreeNode *root_node,
+                                   vector<pair<double, double> > &cts_cn)
 {
     unordered_map<CloneTreeNode*, vector<pair<size_t, size_t> > > cn_profile;
 
@@ -328,10 +329,12 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
         b_alleles = gsl_ran_binomial(random, xi, depth);
         size_t int_var_cn = (size_t)round(variant_cn);
         size_t int_ref_cn = (size_t)round(reference_cn);
-        if (int_var_cn > int_ref_cn) {
+        if (variant_cn > reference_cn) {
             datum->AddRegionData(b_alleles, depth, int_var_cn, int_ref_cn);
+            cts_cn.push_back(make_pair(variant_cn, reference_cn));
         } else {
             datum->AddRegionData(b_alleles, depth, int_ref_cn, int_var_cn);
+            cts_cn.push_back(make_pair(reference_cn, variant_cn));
         }
         cout << "======" << endl;
         cout << "Datum " << i << endl;

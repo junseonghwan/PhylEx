@@ -37,7 +37,8 @@ void GenerateBulkData(gsl_rng *random,
 void GenerateBulkDataWithBDProcess(gsl_rng *random,
                                    const SimulationConfig &simul_config,
                                    vector<BulkDatum *> &data,
-                                   CloneTreeNode *root_node);
+                                   CloneTreeNode *root_node,
+                                   vector<pair<double, double> > &cts_cn);
 vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
                                           CloneTreeNode *root_node,
                                           const vector<BulkDatum *> &data,

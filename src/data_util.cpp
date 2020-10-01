@@ -206,6 +206,21 @@ string ConvertToCommaSeparatedValues(const vector<T> values) {
 //    return str;
 //}
 
+void WriteCtsCopyNumberProfile(string output_path, const vector<BulkDatum *> &bulk,
+                               const vector<pair<double, double> > &cts_cn_profile)
+{
+    ofstream f;
+    f.open(output_path, ios::out);
+    f << "ID\tMajorCN\tMinorCN" << endl;
+    for (unsigned int i = 0; i < bulk.size(); i++)
+    {
+        f << bulk[i]->GetId() << "\t";
+        f << cts_cn_profile.at(i).first << "\t";
+        f << cts_cn_profile.at(i).second << "\n";
+    }
+    f.close();
+}
+
 void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool output_genotype)
 {
     ofstream f;
