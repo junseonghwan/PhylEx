@@ -573,9 +573,9 @@ Interface::Interface(string config_file) {
 void Interface::Run()
 {
     gsl_rng *random = generate_random_object(config_.seed);
-    model_params_.SetAlpha0(1);
-    model_params_.SetLambda(0.5);
-    model_params_.SetGamma(1);
+    model_params_.SetAlpha0(model_params_.GetAlpha0Bound(true)/2);
+    model_params_.SetLambda(model_params_.GetLambdaBound(true)/2);
+    model_params_.SetGamma(model_params_.GetGammaBound(true)/2);
     RunSliceSampler(random, model_params_);
 }
 
