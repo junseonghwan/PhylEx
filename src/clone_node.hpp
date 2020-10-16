@@ -43,6 +43,7 @@ public:
     inline double GetCellularPrevalenceAtRegion(size_t region) const { return cellular_prevs_[region]; }
     void SetCloneFrequencyAtRegion(size_t idx, double val);
     void SetCellularPrevalenceAtRegion(size_t idx, double val);
+    void SetRootParameters(const gsl_rng *random);
     void SetRootParameters();
     bool IsConsistent() const;
     size_t GetRegionCount() const {
@@ -175,6 +176,8 @@ public:
         return param_.GetCloneFreqAtRegion(region);
     }
     CloneTreeNodeParam &NodeParameter();
+    void SampleNuStick(const gsl_rng *random,
+                       const ModelParams &params);
     void SampleNodeParameters(const gsl_rng *random,
                                 const ModelParams &params,
                                 CloneTreeNode *parent);

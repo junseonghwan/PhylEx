@@ -118,7 +118,7 @@ CloneTreeNode *SampleFromTssbPrior(size_t region_count,
                                    vector<BulkDatum *> &data)
 {
     CloneTreeNode *root = CloneTreeNode::CreateRootNode(region_count);
-    root->SetNuStick(0.0);
+    root->SampleNuStick(random, model_params);
     root->SampleNodeParameters(random, model_params, 0);
 
     // sample tree and latent assignment of datum to node

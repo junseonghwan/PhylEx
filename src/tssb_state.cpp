@@ -80,15 +80,8 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
 
 void TSSBState::InitializeDataAssignment(const gsl_rng *random, size_t mut_id, const ModelParams &params)
 {
-    if (root->GetChildrenCount() == 0) {
-        // Spawn one child.
-        root->InitializeChild(random, params);
-    }
-    
-    // assign the datum to the first child of root
-    assert(root->GetChildrenCount() > 0);
-    CloneTreeNode *first_child_node = root->GetChild(0).second;
-    AssignDatum(0, first_child_node, mut_id, params, false);
+    // assign the datum to the root
+    AssignDatum(0, root, mut_id, params, false);
 }
 
 void TSSBState::InitializeCacheForNode(CloneTreeNode *v)
@@ -515,7 +508,7 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
 {
     size_t n_data = node->DataCount();
     size_t total_num_data_at_desc = 0; // number of data points below this node (over all descendant nodes)
-    
+
     unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     // n_data_desc[i] stores <n_data at i, total_num_desc of i> (note: the second count does not include n_data at i)
     vector<pair<size_t, size_t> > n_data_desc;
@@ -527,15 +520,10 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
         total_num_data_at_desc += (ret.first + ret.second);
     }
     
-    // update nu-stick except for the root, which stays at 0
-    if (node == root && node->GetNuStick() == 0) {
-        // do not sample nu-stick for root
-    } else {
-        double temp = bounded_beta(random,
-                                   n_data + 1,
-                                   total_num_data_at_desc + params.ComputeAlpha(node->GetNameVector()));
-        node->SetNuStick(temp);
-    }
+    double temp = bounded_beta(random,
+                               n_data + 1,
+                               total_num_data_at_desc + params.ComputeAlpha(node->GetNameVector()));
+    node->SetNuStick(temp);
     
     // update psi-sticks
     size_t cumulative_num_data = 0;
@@ -720,8 +708,6 @@ double log_prod_beta(vector<CloneTreeNode *> &nodes, const ModelParams &params)
     double log_sum = 0.0;
     double alpha;
     for (CloneTreeNode *node : nodes) {
-        if (node->GetDepth() == 0 && node->GetNuStick() == 0) // root is assigned 0 nu-stick as it denotes healthy population that should not have any mutation assigned to it
-            continue;
         double x = node->GetNuStick();
         alpha = params.ComputeAlpha(node->GetNameVector());
         double y = log_beta_pdf(x, 1.0, alpha);

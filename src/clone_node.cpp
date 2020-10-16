@@ -36,13 +36,23 @@ bool CloneTreeNodeParam::IsConsistent() const
     return true;
 }
 
+void CloneTreeNodeParam::SetRootParameters(const gsl_rng *random)
+{
+    for (size_t i = 0; i < GetRegionCount(); i++) {
+        double curr_cellular_prev = uniform(random);
+        SetCellularPrevalenceAtRegion(i, curr_cellular_prev);
+        SetCloneFrequencyAtRegion(i, curr_cellular_prev);
+    }
+}
+
 void CloneTreeNodeParam::SetRootParameters()
 {
     for (size_t i = 0; i < GetRegionCount(); i++) {
-        clone_freqs_[i] = 1.0;
-        cellular_prevs_[i] = 1.0;
+        SetCellularPrevalenceAtRegion(i, 1.0);
+        SetCloneFrequencyAtRegion(i, 1.0);
     }
 }
+
 
 string CloneTreeNodeParam::GetCloneFreqsAsString() const
 {
@@ -99,7 +109,7 @@ CloneTreeNodeParam &CloneTreeNode::NodeParameter()
 void CloneTreeNode::SampleNodeParameters(const gsl_rng *random, const ModelParams &params,  CloneTreeNode *parent)
 {
     if (parent_node_ == 0) {
-        this->param_.SetRootParameters();
+        this->param_.SetRootParameters(random);
     } else {
         CloneTreeNode *parent_node = (CloneTreeNode *)parent;
         for (size_t i = 0; i < param_.GetRegionCount(); i++) {
@@ -422,13 +432,19 @@ void CloneTreeNode::ResampleStickOrder(const gsl_rng *random, const ModelParams 
     idx2child_ = new_map;
 }
 
+void CloneTreeNode::SampleNuStick(const gsl_rng *random,
+                                  const ModelParams &params) {
+    double nu_stick = bounded_beta(random, 1.0, params.ComputeAlpha(GetNameVector()));
+    SetNuStick(nu_stick);
+
+}
+
 void CloneTreeNode::InitializeChild(const gsl_rng *random,
                                 const ModelParams &params)
 {
     double psi_j = bounded_beta(random, 1, params.GetGamma());
     CloneTreeNode *child = this->SpawnChild(psi_j);
-    double nu_stick = bounded_beta(random, 1.0, params.ComputeAlpha(child->GetNameVector()));
-    child->SetNuStick(nu_stick);
+    child->SampleNuStick(random, params);
     child->SampleNodeParameters(random, params, this);
 }
 
@@ -748,13 +764,6 @@ double BulkLogLikWithTotalCopyNumberByRegion(const CloneTreeNode *node,
     }
     
     double seq_err = model_params.GetSequencingError();
-    if (node->GetParentNode() == 0) {
-        // this node is the root, represents the healthy population
-        return log(gsl_ran_binomial_pdf(var_reads,
-                                        seq_err,
-                                        total_reads));
-    }
-    
     double phi = cell_prev;
     double xi = 0.0;
     
@@ -764,7 +773,7 @@ double BulkLogLikWithTotalCopyNumberByRegion(const CloneTreeNode *node,
                                         xi,
                                         total_reads));
     }
-    
+
     double log_val;
     double log_prior_genotype;
     double log_lik = DOUBLE_NEG_INF;
@@ -815,11 +824,6 @@ double BulkLogLikWithCopyNumberProfileByRegion(const CloneTreeNode *node,
     }
     
     double seq_err = model_params.GetSequencingError();
-    if (node->GetParentNode() == 0) {
-        // this node is the root, represents the healthy population
-        return log(gsl_ran_binomial_pdf(var_reads, seq_err, total_reads));
-    }
-    
     double xi = 0.0;
     double log_val;
     double log_prior_genotype;
@@ -900,13 +904,7 @@ double BulkLogLikWithGenotypeByRegion(const CloneTreeNode *node,
     }
 
     double seq_err = model_params.GetSequencingError();
-    if (node->GetParentNode() == 0) {
-        // This node is the root, represents the healthy population.
-        return log(gsl_ran_binomial_pdf(var_reads,
-                                        seq_err,
-                                        total_reads));
-    }
-
+    
     size_t total_cn = major_cn + minor_cn;
     double xi = 0.0;
     

@@ -184,6 +184,7 @@ int main(int argc, char *argv[])
         gsl_rng *random = generate_random_object(gsl_rng_get(rand));
 
         auto root_node = CloneTreeNode::CreateRootNode(simul_config.n_regions);
+        root_node->SampleNodeParameters(random, model_params, 0);
         if (simul_config.num_branches == 1) {
             CreateLinearTree(simul_config.n_regions, rand, root_node, simul_config.max_depth);
         } else {
