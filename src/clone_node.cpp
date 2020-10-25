@@ -38,8 +38,8 @@ bool CloneTreeNodeParam::IsConsistent() const
 
 void CloneTreeNodeParam::SetRootParameters(const gsl_rng *random)
 {
+    double curr_cellular_prev = 1.0;
     for (size_t i = 0; i < GetRegionCount(); i++) {
-        double curr_cellular_prev = uniform(random);
         SetCellularPrevalenceAtRegion(i, curr_cellular_prev);
         SetCloneFrequencyAtRegion(i, curr_cellular_prev);
     }
@@ -106,12 +106,12 @@ CloneTreeNodeParam &CloneTreeNode::NodeParameter()
     return param_;
 }
 
-void CloneTreeNode::SampleNodeParameters(const gsl_rng *random, const ModelParams &params,  CloneTreeNode *parent)
+void CloneTreeNode::SampleNodeParameters(const gsl_rng *random, const ModelParams &params)
 {
     if (parent_node_ == 0) {
         this->param_.SetRootParameters(random);
     } else {
-        CloneTreeNode *parent_node = (CloneTreeNode *)parent;
+        CloneTreeNode *parent_node = parent_node_;
         for (size_t i = 0; i < param_.GetRegionCount(); i++) {
             double parent_clone_freq = parent_node->param_.GetCloneFreqAtRegion(i);
             double curr_cellular_prev = uniform(random) * parent_clone_freq;
@@ -445,7 +445,7 @@ void CloneTreeNode::InitializeChild(const gsl_rng *random,
     double psi_j = bounded_beta(random, 1, params.GetGamma());
     CloneTreeNode *child = this->SpawnChild(psi_j);
     child->SampleNuStick(random, params);
-    child->SampleNodeParameters(random, params, this);
+    child->SampleNodeParameters(random, params);
 }
 
 CloneTreeNode *CloneTreeNode::LocateChild(const gsl_rng *random, double &u, const ModelParams &params)

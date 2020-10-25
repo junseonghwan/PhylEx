@@ -179,8 +179,7 @@ public:
     void SampleNuStick(const gsl_rng *random,
                        const ModelParams &params);
     void SampleNodeParameters(const gsl_rng *random,
-                                const ModelParams &params,
-                                CloneTreeNode *parent);
+                                const ModelParams &params);
     CloneTreeNode *SpawnChild(double psi);
     string Print();
 
