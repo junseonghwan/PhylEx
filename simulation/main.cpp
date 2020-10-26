@@ -90,11 +90,12 @@ void CreateNaryTree(size_t region_count,
                     size_t max_depth,
                     size_t num_branches,
                     bool randomize_branching,
+                    bool randomize_cf,
                     double min_cell_fraction) {
     deque<CloneTreeNode *> queue;
     queue.push_back(root);
     root->NodeParameter().SetRootParameters();
-    
+
     while (!queue.empty()) {
         auto node = queue.front();
         queue.pop_front();
@@ -104,17 +105,24 @@ void CreateNaryTree(size_t region_count,
         }
 
         // The root to have exactly one child.
-        size_t branch_count = node->IsRoot() ? 1 : num_branches;
-        if (randomize_branching) {
-            branch_count = gsl_rng_uniform_int(random, num_branches - 1) + 1;
+        size_t branch_count;
+        if (node->IsRoot()) {
+            branch_count = 1;
+        } else {
+            if (randomize_branching) {
+                branch_count = gsl_rng_uniform_int(random, num_branches - 1) + 1;
+            } else {
+                branch_count = num_branches;
+            }
         }
+
         for (size_t i = 0; i < branch_count; i++) {
             auto child_node = (CloneTreeNode*)node->SpawnChild(0.5);
             // Set cellular prevalence.
             for (size_t region = 0; region < region_count; region++) {
                 double parent_clone_freq = node->NodeParameter().GetCloneFreqs()[region];
                 double u = 0.5;
-                if (random != 0) {
+                if (randomize_cf) {
                     u = gsl_ran_flat(random, 0, 1);
                 }
                 double cell_prev = u * parent_clone_freq;
@@ -199,11 +207,12 @@ int main(int argc, char *argv[])
                 CreateLinearTree(simul_config.n_regions, rand, root_node, simul_config.max_depth);
             } else {
                 CreateNaryTree(simul_config.n_regions,
-                               simul_config.randomize_cf ? rand : 0,
+                               random,
                                root_node,
                                simul_config.max_depth,
                                simul_config.num_branches,
                                simul_config.randomize_branching,
+                               simul_config.randomize_cf,
                                simul_config.min_cf);
             }
             
