@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
         gsl_rng_free(random);
 
         // copy the simul.config to simul.output_path
-        boost::filesystem::copy_file(config_file_path, simul_config.output_path + "/simul.config", boost::filesystem::copy_option::overwrite_if_exists);
+//        boost::filesystem::copy_file(config_file_path, simul_config.output_path + "/simul.config", boost::filesystem::copy_option::overwrite_if_exists);
     }
 
     cout << "Done!" << endl;
