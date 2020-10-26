@@ -27,6 +27,14 @@ vector<double> parse_cn_probs(string val)
     return cn_probs;
 }
 
+SimulationConfig::SimulationConfig() {
+    var_allele_copy_prob.push_back(0);
+    var_allele_copy_prob.push_back(1);
+    
+    ref_allele_copy_prob.push_back(0);
+    ref_allele_copy_prob.push_back(1);
+}
+
 void SimulationConfig::insert_option(string key, string val)
 {
     try {

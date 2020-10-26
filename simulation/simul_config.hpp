@@ -23,7 +23,9 @@ public:
     size_t num_branches;
     size_t max_depth;
 
-    // Copy number using genotype.
+    // Clonal copy number probabilities.
+    // Default values assigned to these vectors are (0, 1) for both var and ref.
+    // This means that there will be one variant and one reference copy.
     vector<double> var_allele_copy_prob;
     vector<double> ref_allele_copy_prob;
     double var_cp_prob;
@@ -59,6 +61,7 @@ public:
     double snv_sc_sparsity = 1;
 
     void insert_option(string key, string val);
+    SimulationConfig();
 };
 
 #endif /* simul_config_h */
