@@ -183,37 +183,6 @@ int main(int argc, char *argv[])
         string sim_path = simul_config.output_path + "/sim" + to_string(n);
         gsl_rng *random = generate_random_object(gsl_rng_get(rand));
 
-        auto root_node = CloneTreeNode::CreateRootNode(simul_config.n_regions);
-        root_node->SampleNodeParameters(random, model_params);
-        if (simul_config.num_branches == 1) {
-            CreateLinearTree(simul_config.n_regions, rand, root_node, simul_config.max_depth);
-        } else {
-            CreateNaryTree(simul_config.n_regions,
-                           simul_config.randomize_cf ? rand : 0,
-                           root_node,
-                           simul_config.max_depth,
-                           simul_config.num_branches,
-                           simul_config.randomize_branching,
-                           simul_config.min_cf);
-        }
-
-        vector<BulkDatum *> data;
-
-        // Create somatic SNVs: chr and pos.
-        // Each BulkDatum instance has a reference to the Locus instance.
-        // We need to keep these alive in the memory during the simulation.
-        // TODO: Consider a different approach? Shared pointer?
-        // Note that the inference program depends on Locus being a reference
-        // in the BulkDatum to update the hyper parameters for each locus from file.
-        // So changing it to a copy of Locus for each BulkDatum is not an option.
-        auto loci = CreateSNVs(random, simul_config, data);
-        vector<pair<double, double> > cts_cn_profile;
-        if (bd_process) {
-            GenerateBulkDataWithBDProcess(random, simul_config, data, root_node, cts_cn_profile);
-        } else {
-            GenerateBulkData(random, simul_config, data, root_node);
-        }
-
         // Generate single cells data.
         // Output all simulation data.
         for (size_t n = 0; n < simul_config.n_reps; n++) {
@@ -223,6 +192,37 @@ int main(int argc, char *argv[])
             // Create directories for output.
             boost::filesystem::path outpath(output_path);
             boost::filesystem::create_directories(outpath);
+            
+            auto root_node = CloneTreeNode::CreateRootNode(simul_config.n_regions);
+            root_node->SampleNodeParameters(random, model_params);
+            if (simul_config.num_branches == 1) {
+                CreateLinearTree(simul_config.n_regions, rand, root_node, simul_config.max_depth);
+            } else {
+                CreateNaryTree(simul_config.n_regions,
+                               simul_config.randomize_cf ? rand : 0,
+                               root_node,
+                               simul_config.max_depth,
+                               simul_config.num_branches,
+                               simul_config.randomize_branching,
+                               simul_config.min_cf);
+            }
+            
+            vector<BulkDatum *> data;
+            
+            // Create somatic SNVs: chr and pos.
+            // Each BulkDatum instance has a reference to the Locus instance.
+            // We need to keep these alive in the memory during the simulation.
+            // TODO: Consider a different approach? Shared pointer?
+            // Note that the inference program depends on Locus being a reference
+            // in the BulkDatum to update the hyper parameters for each locus from file.
+            // So changing it to a copy of Locus for each BulkDatum is not an option.
+            CreateSNVs(random, simul_config, data);
+            vector<pair<double, double> > cts_cn_profile;
+            if (bd_process) {
+                GenerateBulkDataWithBDProcess(random, simul_config, data, root_node, cts_cn_profile);
+            } else {
+                GenerateBulkData(random, simul_config, data, root_node);
+            }
 
             WriteBulkData(output_path + "/simul_ssm.txt", data, false);
             WriteBulkData(output_path + "/genotype_ssm.txt", data, true);

@@ -88,9 +88,9 @@ Eigen::MatrixXf ExponentiateMatrix(Eigen::Ref<Eigen::MatrixXf> M)
     return expM;
 }
 
-vector<Locus> CreateSNVs(gsl_rng *random,
-                         const SimulationConfig &simul_config,
-                         vector<BulkDatum *> &data)
+void CreateSNVs(gsl_rng *random,
+                const SimulationConfig &simul_config,
+                vector<BulkDatum *> &data)
 {
     string chr;
     size_t pos;
@@ -105,7 +105,6 @@ vector<Locus> CreateSNVs(gsl_rng *random,
         datum->SetLocuHyperParameters(alpha, beta, 0.5);
         data.push_back(datum);
     }
-    return loci;
 }
 
 CloneTreeNode *SampleFromTssbPrior(size_t region_count,
@@ -296,7 +295,7 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
         // Sample a node -- +1 so that we don't sample the root node
         size_t node_id = discrete_uniform(random, nodes.size()-1) + 1;
         auto assigned_node = nodes[node_id];
-        
+
         if (assigned_node->GetParentNode() == 0) {
             // This is an error b/c,
             // We ensured when sampling node_id to not choose the root.
