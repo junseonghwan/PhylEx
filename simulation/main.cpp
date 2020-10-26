@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     model_params.SetVariantCopyProbability(simul_config.var_cp_prob);
     model_params.SetSingleCellBurstyAlphaParameter(simul_config.sc_bursty_alpha0);
     model_params.SetSingleCellBurstyBetaParameter(simul_config.sc_bursty_beta0);
- 
+
     bool bd_process = false;
     if (simul_config.birth_rate > 0 && simul_config.max_cn > 2) {
         bd_process = true;
