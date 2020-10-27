@@ -80,8 +80,6 @@ void SimulationConfig::insert_option(string key, string val)
             this->sc_bursty_beta0 = stod(val);
         } else if (key == "beta_binomial_hp_max") {
             this->beta_binomial_hp_max = stoul(val);
-        } else if (key == "n_sims") {
-            this->n_sims = stoul(val);
         } else if (key == "n_reps") {
             this->n_reps = stoul(val);
         } else if (key == "randomize_branching") {
