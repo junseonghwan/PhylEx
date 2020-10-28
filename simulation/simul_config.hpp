@@ -49,7 +49,6 @@ public:
     double sc_bursty_beta0;
     size_t beta_binomial_hp_max;
     
-    size_t n_reps;
     string output_path;
     
     bool randomize_dropout = false;
