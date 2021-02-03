@@ -20,8 +20,8 @@ const double DEFAULT_ALPHA0_MAX = 10.0;
 const double DEFAULT_LAMBDA_MAX = 1;
 const double DEFAULT_GAMMA_MAX = 5.0;
 
-const size_t BULK_WITH_GENOTYPE_COLUMN_COUNT = 9;
-const size_t BULK_WITH_TOTAL_CN_COLUMN_COUNT = 8;
+const size_t BULK_WITH_GENOTYPE_COLUMN_COUNT = 5;
+const size_t BULK_WITH_TOTAL_CN_COLUMN_COUNT = 4;
 // Not supporting CN_PRIOR option for now.
 const size_t BULK_WITH_TOTAL_CN_PRIOR_COLUMN_COUNT = -1;
 

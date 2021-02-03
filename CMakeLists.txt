@@ -1,14 +1,14 @@
 # define the project name
-project(BulkScRNAClone)
+project(PhylEx)
 
 cmake_minimum_required (VERSION 3.12)
 
 set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS "-Wall -g" )
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED OFF)
+#set(Boost_USE_STATIC_LIBS ON)
+#set(Boost_USE_MULTITHREADED OFF)
 
 if (APPLE)
     set(OPENMP_CXX_INCLUDE_DIRS /usr/local/opt/libomp/include)

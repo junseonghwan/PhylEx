@@ -1,5 +1,7 @@
 # PhylEx: Integrated analysis of bulk and single cell RNA-seq
 
+[![Build Status](https://travis-ci.com/junseonghwan/PhylEx.svg?token=wxZvzvzdwz1aU7zpr7vw&branch=master)](https://travis-ci.com/junseonghwan/PhylEx)
+
 This software performs integrated analysis of bulk DNA-seq and single cell RNA-seq data. 
 
 ## Requirements to build the software

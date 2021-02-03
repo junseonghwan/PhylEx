@@ -41,25 +41,21 @@ BOOST_AUTO_TEST_CASE( TestBulkLogLikWithTotalCopyNumber )
     BulkDatum datum1("s1", "chr", 0);
     datum1.AddRegionData(0, 0, 1, 1);
     double realized = BulkLogLikWithTotalCopyNumber(0, child, &datum1, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(realized == 0.0);
 
     BulkDatum datum2("s2", "chr", 0, var_read_count, total_read_count, total_cn);
     realized = BulkLogLikWithTotalCopyNumber(0, child, &datum2, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -2.726685148) < 1e-6);
     
     // Change total_cn to 8.
     total_cn[0] = 8;
     BulkDatum datum3("s3", "chr", 0, var_read_count, total_read_count, total_cn);
     realized = BulkLogLikWithTotalCopyNumber(0, child, &datum3, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -3.602852362) < 1e-6);
     
     total_cn[0] = 0;
     BulkDatum datum4("s4", "chr", 0, var_read_count, total_read_count, total_cn);
     realized = BulkLogLikWithTotalCopyNumber(0, child, &datum4, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -56.96076648) < 1e-6);
 }
 
@@ -80,7 +76,6 @@ BOOST_AUTO_TEST_CASE( TestBulkLogLikWithGenotype )
     BulkDatum datum1("s1", "chr", 0, var_read_count, total_read_count,
                      major_cn, minor_cn);
     double realized = BulkLogLikWithGenotype(0, child, &datum1, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -3.658831964) < 1e-6);
 
     major_cn[0] = 2;
@@ -88,7 +83,6 @@ BOOST_AUTO_TEST_CASE( TestBulkLogLikWithGenotype )
     BulkDatum datum2("s2", "chr", 0, var_read_count, total_read_count,
                      major_cn, minor_cn);
     realized = BulkLogLikWithGenotype(0, child, &datum2, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -2.373800323) < 1e-6);
 
     var_read_count[0] = 0;
@@ -96,7 +90,6 @@ BOOST_AUTO_TEST_CASE( TestBulkLogLikWithGenotype )
     BulkDatum datum3("s3", "chr", 0, var_read_count, total_read_count,
                      major_cn, minor_cn);
     realized = BulkLogLikWithGenotype(0, child, &datum3, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - 0) < 1e-6);
 }
 
@@ -115,11 +108,9 @@ BOOST_AUTO_TEST_CASE( TestScLikelihood )
     c0.InsertDatum(0, 10, 20);
     
     double realized = ScLikelihood(0, &bulk, &c0, true, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -5.488633383) < 1e-6);
     
     realized = ScLikelihood(0, &bulk, &c0, false, model_params);
-    std::cout << realized << std::endl;
     BOOST_TEST(fabs(realized - -9.210441917) < 1e-6);
 }
 
@@ -209,7 +200,7 @@ BOOST_AUTO_TEST_CASE( TestScLikelihoodAssignmentToEmptyRoot )
     TSSBState tree(random, root, model_params,
                    BulkLogLikWithGenotype, ScLikelihood,
                    &bulk_data, &sc_data);
-    auto child_node = root->SpawnChild(0.5);
+    auto child_node = root->GetChild(0).second;
     // Move the data to child node.
     tree.move_datum(child_node, 0, model_params);
     tree.move_datum(child_node, 1, model_params);
@@ -264,6 +255,8 @@ BOOST_AUTO_TEST_CASE( TestScLikelihoodAssignmentToEmptyRoot )
 BOOST_AUTO_TEST_CASE( TestScLikelihoodAssignmentToNonEmptyRoot )
 {
     InitializeTestSetup();
+   
+    size_t node_count = 3;
     
     double alpha = 3.0;
     double beta = 12.0;
@@ -298,29 +291,44 @@ BOOST_AUTO_TEST_CASE( TestScLikelihoodAssignmentToNonEmptyRoot )
     TSSBState tree(random, root, model_params,
                    BulkLogLikWithGenotype, ScLikelihood,
                    &bulk_data, &sc_data);
-    auto child_node = root->SpawnChild(0.5);
+    auto progenitor_clone = root->GetChild(0).second;
+    auto child_node = progenitor_clone->SpawnChild(0.5);
     // Move only the second data to child node.
     tree.move_datum(child_node, 1, model_params);
+    std::cout << tree.print() << std::endl;
     
-    // Single cell likelihood for assigning to the root is:
+    double seq_err = model_params.GetSequencingError();
+
+    // Likelihood for assigning the cell to the normal clone is:
+    // Let e = model_params.GetSequencingError().
+    // var0 | total0 ~ BetaBinomial(e, 1-e).
+    // var1 | total1 ~ BetaBinomial(e, 1-e).
+    double x = log_beta_binomial_pdf(var0, total0,
+                                     seq_err,
+                                     1 - seq_err);
+    double y = log_beta_binomial_pdf(var1, total1,
+                                     seq_err,
+                                     1 - seq_err);
+    double root_assignment_prob = x + y;
+
+    // Likelihood for assigning the cell to the progenitor node is:
     // Let e = model_params.GetSequencingError().
     // Let a = dropout_prob.
     // var0 | total0 ~ a BetaBinomial(0.01, 0.01) + (1 - a) BetaBinomial(3, 12).
     // var1 | total1 ~ BetaBinomial(e, 1-e).
-    double seq_err = model_params.GetSequencingError();
     double x0 = log_beta_binomial_pdf(var0, total0,
                                       model_params.GetScBurstyDistributionAlpha0(),
                                       model_params.GetScBurstyDistributionBeta0());
     x0 += log(dropout_prob);
     double x1 = log_beta_binomial_pdf(var0, total0, alpha, beta);
     x1 += log(1 - dropout_prob);
-    double x = log_add(x0, x1);
-    double y = log_beta_binomial_pdf(var1, total1,
+    x = log_add(x0, x1);
+    y = log_beta_binomial_pdf(var1, total1,
                                      seq_err,
                                      1 - seq_err);
-    double root_assignment_prob = x + y;
+    double progenitor_assignment_prob = x + y;
     
-    // Single cell likelihood for assigning to the child is:
+    // Likelihood for assigning the cell to the child node is:
     // Let a = dropout_prob.
     // var0 | total0 ~ a BetaBinomial(0.01, 0.01) + (1 - a) BetaBinomial(3, 12).
     // var1 | total1 ~ a BetaBinomial(0.01, 0.01) + (1 - a) BetaBinomial(3, 12).
@@ -341,9 +349,14 @@ BOOST_AUTO_TEST_CASE( TestScLikelihoodAssignmentToNonEmptyRoot )
     y = log_add(y0, y1);
     
     double child_assignment_prob = x + y;
-    double expected_log_assignment_prob = log_add(root_assignment_prob, child_assignment_prob);
-    expected_log_assignment_prob += log(0.5);
     
+    vector<double> log_probs;
+    log_probs.push_back(root_assignment_prob);
+    log_probs.push_back(progenitor_assignment_prob);
+    log_probs.push_back(child_assignment_prob);
+    double expected_log_assignment_prob = log_add(log_probs);
+    expected_log_assignment_prob += log(1./node_count);
+
     double log_lik_sc1 = tree.compute_log_likelihood_sc();
     cout << log_lik_sc1 << endl;
     
@@ -405,7 +418,7 @@ BOOST_AUTO_TEST_CASE( TestScCache )
                    &bulk_data, &sc_data);
     cout << tree.print() << endl;
 
-    bool verbose = true;
+    bool verbose = false;
     double sc_log_lik = tree.compute_log_likelihood_sc(verbose);
     double sc_log_lik_cache = tree.compute_log_likelihood_sc_cached(verbose);
     cout << "At init: " << sc_log_lik << ", " << sc_log_lik_cache << endl;
@@ -485,24 +498,22 @@ void TestPriorAssignmentProbabilityHelper(string log_prior_assignment_path,
     nodes_file.close();
     
     double realized_log_prior_assignment = TSSBState::get_log_prior_assignment(nodes["0"]);
-    std::cout << "Expected: " << expected_log_prior_assignment << "\n";
-    std::cout << "Realized: " << realized_log_prior_assignment << "\n";
     BOOST_TEST(abs(expected_log_prior_assignment - realized_log_prior_assignment) < 1e-6);
 }
 
 BOOST_AUTO_TEST_CASE( TestPriorAssignmentProbability )
 {
-    cout << boost::filesystem::current_path() << endl;
-    // Load the data/psi_sticks.txt and data/nu_sticks.txt.
-    string nodes_path = "data/nodes_linear.txt";
-    string log_prior_assignment_path = "data/mixture_linear.txt";
-    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
-    
-    nodes_path = "data/nodes_binary.txt";
-    log_prior_assignment_path = "data/mixture_binary.txt";
-    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
-    
-    nodes_path = "data/nodes_multifurcating.txt";
-    log_prior_assignment_path = "data/mixture_multifurcating.txt";
-    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
+//    cout << boost::filesystem::current_path() << endl;
+//    // Load the data/psi_sticks.txt and data/nu_sticks.txt.
+//    string nodes_path = "data/nodes_linear.txt";
+//    string log_prior_assignment_path = "data/mixture_linear.txt";
+//    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
+//
+//    nodes_path = "data/nodes_binary.txt";
+//    log_prior_assignment_path = "data/mixture_binary.txt";
+//    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
+//
+//    nodes_path = "data/nodes_multifurcating.txt";
+//    log_prior_assignment_path = "data/mixture_multifurcating.txt";
+//    TestPriorAssignmentProbabilityHelper(log_prior_assignment_path, nodes_path);
 }
