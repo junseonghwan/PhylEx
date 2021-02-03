@@ -10,6 +10,7 @@ addons:
       - cmake
       - gsl
       - boost
+      - libomp
 script:
   - mkdir build
   - cd build
