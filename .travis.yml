@@ -10,6 +10,7 @@ addons:
       - cmake
       - gsl
       - boost
+    update: true
 script:
   - mkdir build
   - cd build
