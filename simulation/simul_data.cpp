@@ -177,7 +177,7 @@ void GenerateBulkData(gsl_rng *random,
             } else {
                 xi = (1 - phi) * seq_err + phi * (double)var_cn/total_allele_count;
             }
-            
+
             b_alleles = gsl_ran_binomial(random, xi, depth);
             if (ref_allele_count > var_allele_count) {
                 datum->AddRegionData(b_alleles, depth, ref_allele_count, var_allele_count);
@@ -428,6 +428,11 @@ void GenerateScRnaReads(const gsl_rng *random,
     }
     
     cout << "Number of sites expressed: " << sampled_loci_idx.size() << "\n";
+    
+    // We use parameterization so that the mean seq error rate is still simul_config.seq_err
+    // but such that the variance is smaller, meaning that it will be concentrated around simul_config.seq_err.
+    double seq_err_alpha = simul_config.seq_err * simul_config.sc_error_distn_variance_factor;
+    double seq_err_beta = (1 - simul_config.seq_err) * simul_config.sc_error_distn_variance_factor;
 
     unordered_set<Locus> snvs;
     CloneTreeNode::RetrieveLoci(node, snvs);
@@ -456,10 +461,11 @@ void GenerateScRnaReads(const gsl_rng *random,
             }
         } else {
             // We expect to see variant read only in error.
-            //cout << "SNV absent." << endl;
-            var_expr_prob = gsl_ran_beta(random, simul_config.seq_err, 1 - simul_config.seq_err);
+            var_expr_prob = gsl_ran_beta(random, seq_err_alpha, seq_err_beta);
+            cout << "SNV absent. Variant expression prob: " << var_expr_prob << endl;
         }
         var_read_count = gsl_ran_binomial(random, var_expr_prob, total_read_count);
+        cout << var_read_count << "/" << total_read_count << "\n";
         var_read_observed_count += var_read_count > 0 ? 1 : 0;
         sc.InsertDatum(locus_idx, var_read_count, total_read_count);
     }

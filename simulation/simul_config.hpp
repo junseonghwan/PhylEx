@@ -48,6 +48,7 @@ public:
     double sc_bursty_alpha0;
     double sc_bursty_beta0;
     size_t beta_binomial_hp_max;
+    double sc_error_distn_variance_factor = 1.0;
     
     string output_path;
     

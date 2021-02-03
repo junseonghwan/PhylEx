@@ -36,7 +36,7 @@ sc_absence_matrix_(bulk_data->size(), vector<double>(sc_data->size()))
 
     assert(root->GetChildrenCount() == 0);
 
-    // Create a ancestral root clone as a child of the root.
+    // Create a cancer progenitor clone as a child of the root.
     root->InitializeChild(random, params);
 
     assert(root->GetChildrenCount() == 1);
@@ -1019,9 +1019,9 @@ double sample_params_dirichlet(size_t region,
     double *new_clone_freq = new double[dim];
     double *dir_concentration_params_curr = new double[dim];
     double *dir_concentration_params_new = new double[dim];
-    
+
     get_clone_freqs(region, tree, curr_clone_freq);
-    
+
     size_t n_accepts = 0;
     double log_proposal_new = 0.0, log_proposal_curr = 0.0, log_accept, log_unif;
     for (size_t i = 0; i < n_mh_iter; i++) {
