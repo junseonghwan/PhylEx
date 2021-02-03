@@ -2,7 +2,7 @@ language: cpp
 compiler:
   - clang
 os: osx
-osx_image: xcode10.1
+osx_image: xcode11.1
 dist: trusty
 addons:
   homebrew:
@@ -10,7 +10,6 @@ addons:
       - cmake
       - gsl
       - boost
-    update: true
 script:
   - mkdir build
   - cd build
