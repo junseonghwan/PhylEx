@@ -286,17 +286,15 @@ void ProcessBulkWithTotalCopyNumberProfile(ifstream &dat_file,
     {
         boost::split(results, line, boost::is_any_of("\t"));
         string mut_id = results[0];
-        string chr = results[1];
-        size_t pos = stol(results[2]);
-        auto n_vars = ParseRegionalData(results[6]);
-        auto n_reads = ParseRegionalData(results[7]);
+        auto n_vars = ParseRegionalData(results[1]);
+        auto n_reads = ParseRegionalData(results[2]);
         
         if (mut_id2idx.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
             exit(-1);
         }
         
-        BulkDatum *datum = new BulkDatum(mut_id, chr, pos, n_vars, n_reads);
+        BulkDatum *datum = new BulkDatum(mut_id, "", 0, n_vars, n_reads);
         mut_id2idx[mut_id] = bulk_data.size();
         bulk_data.push_back(datum);
     }
@@ -311,18 +309,16 @@ void ProcessBulkWithTotalCopyNumber(ifstream &dat_file,
     {
         boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
         string mut_id = results[0];
-        string chr = results[1];
-        size_t pos = stol(results[2]);
-        auto n_vars = ParseRegionalData(results[5]);
-        auto n_reads = ParseRegionalData(results[6]);
-        auto total_cn = ParseRegionalData(results[7]);
+        auto n_vars = ParseRegionalData(results[1]);
+        auto n_reads = ParseRegionalData(results[2]);
+        auto total_cn = ParseRegionalData(results[3]);
 
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
             exit(-1);
         }
         
-        BulkDatum *datum = new BulkDatum(mut_id, chr, pos,
+        BulkDatum *datum = new BulkDatum(mut_id, "", 0,
                                          n_vars, n_reads, total_cn);
         somatic_loci[mut_id] = bulk_data.size();
         bulk_data.push_back(datum);
