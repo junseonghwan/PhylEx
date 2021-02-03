@@ -90,11 +90,12 @@ void CreateNaryTree(size_t region_count,
                     size_t max_depth,
                     size_t num_branches,
                     bool randomize_branching,
+                    bool randomize_cf,
                     double min_cell_fraction) {
     deque<CloneTreeNode *> queue;
     queue.push_back(root);
     root->NodeParameter().SetRootParameters();
-    
+
     while (!queue.empty()) {
         auto node = queue.front();
         queue.pop_front();
@@ -104,17 +105,24 @@ void CreateNaryTree(size_t region_count,
         }
 
         // The root to have exactly one child.
-        size_t branch_count = node->IsRoot() ? 1 : num_branches;
-        if (randomize_branching) {
-            branch_count = gsl_rng_uniform_int(random, num_branches - 1) + 1;
+        size_t branch_count;
+        if (node->IsRoot()) {
+            branch_count = 1;
+        } else {
+            if (randomize_branching) {
+                branch_count = gsl_rng_uniform_int(random, num_branches - 1) + 1;
+            } else {
+                branch_count = num_branches;
+            }
         }
+
         for (size_t i = 0; i < branch_count; i++) {
             auto child_node = (CloneTreeNode*)node->SpawnChild(0.5);
             // Set cellular prevalence.
             for (size_t region = 0; region < region_count; region++) {
                 double parent_clone_freq = node->NodeParameter().GetCloneFreqs()[region];
                 double u = 0.5;
-                if (random != 0) {
+                if (randomize_cf) {
                     u = gsl_ran_flat(random, 0, 1);
                 }
                 double cell_prev = u * parent_clone_freq;
@@ -157,6 +165,7 @@ int main(int argc, char *argv[])
     parse_config_file(config_file_path, simul_config);
     
     gsl_rng *rand = generate_random_object(simul_config.seed);
+    
     ModelParams model_params;
     model_params.SetAlpha0Bound(true, 10.0);
     model_params.SetLambdaBound(false, 1.0);
@@ -166,7 +175,7 @@ int main(int argc, char *argv[])
     model_params.SetVariantCopyProbability(simul_config.var_cp_prob);
     model_params.SetSingleCellBurstyAlphaParameter(simul_config.sc_bursty_alpha0);
     model_params.SetSingleCellBurstyBetaParameter(simul_config.sc_bursty_beta0);
- 
+
     bool bd_process = false;
     if (simul_config.birth_rate > 0 && simul_config.max_cn > 2) {
         bd_process = true;
@@ -179,111 +188,99 @@ int main(int argc, char *argv[])
         cerr << "For clonal copy number, specify prior over copy number with at least 3 non-zero entries." << endl;
     }
 
-    for (size_t n = 0; n < simul_config.n_sims; n++) {
-        string sim_path = simul_config.output_path + "/sim" + to_string(n);
-        gsl_rng *random = generate_random_object(gsl_rng_get(rand));
+    string output_path = simul_config.output_path;
 
-        auto root_node = CloneTreeNode::CreateRootNode(simul_config.n_regions);
-        if (simul_config.num_branches == 1) {
-            CreateLinearTree(simul_config.n_regions, rand, root_node, simul_config.max_depth);
-        } else {
-            CreateNaryTree(simul_config.n_regions,
-                           simul_config.randomize_cf ? rand : 0,
-                           root_node,
-                           simul_config.max_depth,
-                           simul_config.num_branches,
-                           simul_config.randomize_branching,
-                           simul_config.min_cf);
-        }
+    // Create directories for output.
+    boost::filesystem::path outpath(output_path);
+    boost::filesystem::create_directories(outpath);
 
-        vector<BulkDatum *> data;
-
-        // Create somatic SNVs: chr and pos.
-        // Each BulkDatum instance has a reference to the Locus instance.
-        // We need to keep these alive in the memory during the simulation.
-        // TODO: Consider a different approach? Shared pointer?
-        // Note that the inference program depends on Locus being a reference
-        // in the BulkDatum to update the hyper parameters for each locus from file.
-        // So changing it to a copy of Locus for each BulkDatum is not an option.
-        auto loci = CreateSNVs(random, simul_config, data);
-        vector<pair<double, double> > cts_cn_profile;
-        if (bd_process) {
-            GenerateBulkDataWithBDProcess(random, simul_config, data, root_node, cts_cn_profile);
-        } else {
-            GenerateBulkData(random, simul_config, data, root_node);
-        }
-
-        // Generate single cells data.
-        // Output all simulation data.
-        for (size_t n = 0; n < simul_config.n_reps; n++) {
-
-            string output_path = sim_path + "/rep" + to_string(n) + "/";
-
-            // Create directories for output.
-            boost::filesystem::path outpath(output_path);
-            boost::filesystem::create_directories(outpath);
-
-            WriteBulkData(output_path + "/simul_ssm.txt", data, false);
-            WriteBulkData(output_path + "/genotype_ssm.txt", data, true);
-            if (cts_cn_profile.size() > 0) {
-                WriteCtsCopyNumberProfile(output_path + "/cts_cn_profile.txt",
-                                          data,
-                                          cts_cn_profile);
-            }
-
-            // Generate single cell reads.
-            vector<SingleCellData *> sc_data;
-            auto cell2node = GenerateScRnaData(random,
-                                               root_node,
-                                               data,
-                                               model_params,
-                                               simul_config,
-                                               sc_data);
-            WriteScRnaData(output_path, data, sc_data);
-            WriteCell2NodeAssignment(output_path, sc_data, cell2node);
-            WriteBetaBinomHp(output_path, data);
-
-            // Output information needed for evaluation.
-            vector<CloneTreeNode *> all_nodes;
-            CloneTreeNode::BreadthFirstTraversal(root_node,
-                                                   all_nodes,
-                                                   false);
-            unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
-            CloneTreeNode::Datum2Node(all_nodes, datum2node);
-            double bulk_log_lik = 0.0;
-            for (size_t region = 0; region < simul_config.n_regions; region++) {
-                for (size_t i = 0; i < simul_config.n_sites; i++) {
-                    bulk_log_lik += BulkLogLikWithGenotype(region,
-                                                           datum2node[data[i]],
-                                                           data[i],
-                                                           model_params);
-                }
-            }
-            double sc_log_lik = ComputeSingleCellLikelihood(root_node,
-                                                            data,
-                                                            sc_data,
-                                                            model_params);
-            WriteTreeToFile(output_path, data, root_node);
-            WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
-            WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);
-
-            // output cluster labels
-            vector<unsigned int> cluster_labels;
-            CloneTreeNode::GetClusterLabels(root_node, data, cluster_labels);
-            ofstream f;
-            f.open(output_path + "/cluster_labels.txt", ios::out);
-            for (size_t i = 0; i < cluster_labels.size(); i++) {
-                f << data[i]->GetId() << "," << cluster_labels[i] << "\n";
-            }
-            f.close();
-        }
-
-        gsl_rng_free(random);
-
-        // copy the simul.config to simul.output_path
-        boost::filesystem::copy_file(config_file_path, simul_config.output_path + "/simul.config", boost::filesystem::copy_option::overwrite_if_exists);
+    auto root_node = CloneTreeNode::CreateRootNode(simul_config.n_regions);
+    root_node->SampleNodeParameters(rand, model_params);
+    if (simul_config.num_branches == 1) {
+        CreateLinearTree(simul_config.n_regions, rand, root_node, simul_config.max_depth);
+    } else {
+        CreateNaryTree(simul_config.n_regions,
+                       rand,
+                       root_node,
+                       simul_config.max_depth,
+                       simul_config.num_branches,
+                       simul_config.randomize_branching,
+                       simul_config.randomize_cf,
+                       simul_config.min_cf);
+    }
+    
+    vector<BulkDatum *> data;
+    
+    // Create somatic SNVs: chr and pos.
+    // Each BulkDatum instance has a reference to the Locus instance.
+    // We need to keep these alive in the memory during the simulation.
+    // TODO: Consider a different approach? Shared pointer?
+    // Note that the inference program depends on Locus being a reference
+    // in the BulkDatum to update the hyper parameters for each locus from file.
+    // So changing it to a copy of Locus for each BulkDatum is not an option.
+    CreateSNVs(rand, simul_config, data);
+    vector<pair<double, double> > cts_cn_profile;
+    if (bd_process) {
+        GenerateBulkDataWithBDProcess(rand, simul_config, data, root_node, cts_cn_profile);
+    } else {
+        GenerateBulkData(rand, simul_config, data, root_node);
     }
 
+    WriteBulkData(output_path + "/simul_ssm.txt", data, false);
+    WriteBulkData(output_path + "/genotype_ssm.txt", data, true);
+    if (cts_cn_profile.size() > 0) {
+        WriteCtsCopyNumberProfile(output_path + "/cts_cn_profile.txt",
+                                  data,
+                                  cts_cn_profile);
+    }
+
+    // Generate single cell reads.
+    vector<SingleCellData *> sc_data;
+    auto cell2node = GenerateScRnaData(rand,
+                                       root_node,
+                                       data,
+                                       model_params,
+                                       simul_config,
+                                       sc_data);
+    WriteScRnaData(output_path, data, sc_data);
+    WriteCell2NodeAssignment(output_path, sc_data, cell2node);
+    WriteBetaBinomHp(output_path, data);
+
+    // Output information needed for evaluation.
+    vector<CloneTreeNode *> all_nodes;
+    CloneTreeNode::BreadthFirstTraversal(root_node,
+                                           all_nodes,
+                                           false);
+    unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
+    CloneTreeNode::Datum2Node(all_nodes, datum2node);
+    double bulk_log_lik = 0.0;
+    for (size_t region = 0; region < simul_config.n_regions; region++) {
+        for (size_t i = 0; i < simul_config.n_sites; i++) {
+            bulk_log_lik += BulkLogLikWithGenotype(region,
+                                                   datum2node[data[i]],
+                                                   data[i],
+                                                   model_params);
+        }
+    }
+    double sc_log_lik = ComputeSingleCellLikelihood(root_node,
+                                                    data,
+                                                    sc_data,
+                                                    model_params);
+    WriteTreeToFile(output_path, data, root_node);
+    WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
+    WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);
+
+    // output cluster labels
+    vector<unsigned int> cluster_labels;
+    CloneTreeNode::GetClusterLabels(root_node, data, cluster_labels);
+    ofstream f;
+    f.open(output_path + "/cluster_labels.txt", ios::out);
+    for (size_t i = 0; i < cluster_labels.size(); i++) {
+        f << data[i]->GetId() << "," << cluster_labels[i] << "\n";
+    }
+    f.close();
+    
+    gsl_rng_free(rand);
     cout << "Done!" << endl;
 
     return 0;

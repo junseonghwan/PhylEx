@@ -50,7 +50,6 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
 {
     size_t region_count = bulk_data_[0]->GetRegionCount();
     CloneTreeNode *root = CloneTreeNode::CreateRootNode(region_count);
-    root->SampleNodeParameters(random, params, 0);
 
     auto sc_lik_fn = model_params_.UseSingleCellDropoutDistribution() ?
                         ScLikelihoodWithDropout : ScLikelihood;

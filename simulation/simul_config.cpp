@@ -27,6 +27,14 @@ vector<double> parse_cn_probs(string val)
     return cn_probs;
 }
 
+SimulationConfig::SimulationConfig() {
+    var_allele_copy_prob.push_back(0);
+    var_allele_copy_prob.push_back(1);
+    
+    ref_allele_copy_prob.push_back(0);
+    ref_allele_copy_prob.push_back(1);
+}
+
 void SimulationConfig::insert_option(string key, string val)
 {
     try {
@@ -72,10 +80,6 @@ void SimulationConfig::insert_option(string key, string val)
             this->sc_bursty_beta0 = stod(val);
         } else if (key == "beta_binomial_hp_max") {
             this->beta_binomial_hp_max = stoul(val);
-        } else if (key == "n_sims") {
-            this->n_sims = stoul(val);
-        } else if (key == "n_reps") {
-            this->n_reps = stoul(val);
         } else if (key == "randomize_branching") {
             this->randomize_branching = stoi(val) == 0? false : true;
         } else if (key == "randomize_cf") {

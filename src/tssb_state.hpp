@@ -30,7 +30,11 @@ using namespace std;
 
 class TSSBState
 {
+    // We will have two roots:
+    // 1. A root that represents healthy cells and
+    // 2. A child of the root that represents the root of the cancer clones.
     CloneTreeNode *root;
+    CloneTreeNode *ancestral_clone;
 
     //double log_lik = DOUBLE_NEG_INF;
     //double log_lik_bulk = DOUBLE_NEG_INF;
@@ -55,7 +59,8 @@ class TSSBState
                                  bool has_snv,
                                  const ModelParams &params) = 0;
 
-    // helper functions for initializing assignment of SNV
+    // Helper functions for initializing assignment of SNV.
+    // It assign all SNVs to the first child of root.
     void InitializeDataAssignment(const gsl_rng *random, size_t mut_id, const ModelParams &params);
     // helper functions for performing slice sampling on an SNV
     void slice_sample_data_assignment(const gsl_rng *random,
@@ -115,7 +120,9 @@ public:
     pair<size_t, size_t> descend_and_sample_sticks(const gsl_rng *random, CloneTreeNode *node, const ModelParams &params);
     void reorder_sticks(const gsl_rng *random, const ModelParams &model_params);
 
-    void resample_data_assignment(const gsl_rng *random, const ModelParams &params);
+    void resample_data_assignment(const gsl_rng *random,
+                                  const ModelParams &params,
+                                  bool use_sc = true);
     //void move_datum(CloneTreeNode *node, BulkDatum *datum, const ModelParams &model_params);
     void move_datum(CloneTreeNode *new_node, size_t mut_id, const ModelParams &model_params);
     

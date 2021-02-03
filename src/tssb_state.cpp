@@ -30,8 +30,18 @@ sc_absence_matrix_(bulk_data->size(), vector<double>(sc_data->size()))
 {
     // Pre-compute single cell likelihood.
     ProcessSingleCellData(params);
-    
-    root->SampleNodeParameters(random, params, 0);
+
+    root->SetNuStick(0.0);
+    root->SampleNodeParameters(random, params);
+
+    assert(root->GetChildrenCount() == 0);
+
+    // Create a ancestral root clone as a child of the root.
+    root->InitializeChild(random, params);
+
+    assert(root->GetChildrenCount() == 1);
+    ancestral_clone = root->GetChild(0).second;
+
     for (size_t idx = 0; idx < bulk_data->size(); idx++) {
         this->InitializeDataAssignment(random, idx, params);
     }
@@ -80,15 +90,7 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
 
 void TSSBState::InitializeDataAssignment(const gsl_rng *random, size_t mut_id, const ModelParams &params)
 {
-    if (root->GetChildrenCount() == 0) {
-        // Spawn one child.
-        root->InitializeChild(random, params);
-    }
-    
-    // assign the datum to the first child of root
-    assert(root->GetChildrenCount() > 0);
-    CloneTreeNode *first_child_node = root->GetChild(0).second;
-    AssignDatum(0, first_child_node, mut_id, params, false);
+    AssignDatum(0, ancestral_clone, mut_id, params, false);
 }
 
 void TSSBState::InitializeCacheForNode(CloneTreeNode *v)
@@ -183,14 +185,14 @@ void TSSBState::slice_sample_data_assignment(const gsl_rng *random,
 
         iter++;
         u = uniform(random, u_min, u_max);
-        new_node = CloneTreeNode::FindNode(random, u, root, model_params); // this call may generate new nodes
+        new_node = CloneTreeNode::FindNode(random, u, ancestral_clone, model_params); // this call may generate new nodes
 
         if (new_node == curr_node) {
             break; // no need to carry out further computation
         }
 
         // assign data point from curr_node to new_node
-        AssignDatum(curr_node, new_node, mut_id, model_params);
+        AssignDatum(curr_node, new_node, mut_id, model_params, false);
 
         // compute the log likelihood
         new_log_lik_bulk = LogLikDatum(new_node, datum, model_params);
@@ -244,7 +246,7 @@ void TSSBState::slice_sample_data_assignment_with_sc(const gsl_rng *random,
     while ((abs(u_max - u_min) > 1e-3)) {
         iter++;
         u = uniform(random, u_min, u_max);
-        new_node = CloneTreeNode::FindNode(random, u, root, model_params); // this call may generate new nodes
+        new_node = CloneTreeNode::FindNode(random, u, ancestral_clone, model_params); // this call may generate new nodes
         
         if (new_node == curr_node) {
             break; // no need to carry out further computation
@@ -386,6 +388,7 @@ double TSSBState::compute_log_likelihood_sc_cached(bool verbose)
     // TODO: this can be parallelized over cells -- but this is not the bottleneck.
     for (size_t c = 0; c < sc_data->size(); c++) {
         // Marginalize over the nodes.
+        //std::cout << sc_data->at(c)->GetName() << std::endl;
         double log_lik_cell = DOUBLE_NEG_INF;
         for (size_t i = 0; i < all_nodes.size(); i++) {
             CloneTreeNode *v = all_nodes[i];
@@ -423,11 +426,12 @@ double TSSBState::compute_loglik_sc(CloneTreeNode *v, size_t cell_id)
     return log_lik;
 }
 
-void TSSBState::resample_data_assignment(const gsl_rng *random, const ModelParams &params)
+void TSSBState::resample_data_assignment(const gsl_rng *random, const ModelParams &params,
+                                         bool use_sc)
 {
     for (size_t mut_id = 0; mut_id < bulk_data_->size(); mut_id++)
     {
-        if (has_sc_coverage_[mut_id]) {
+        if (use_sc && has_sc_coverage_[mut_id]) {
             slice_sample_data_assignment_with_sc(random, mut_id, params);
         } else {
             slice_sample_data_assignment(random, mut_id, params);
@@ -515,7 +519,7 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
 {
     size_t n_data = node->DataCount();
     size_t total_num_data_at_desc = 0; // number of data points below this node (over all descendant nodes)
-    
+
     unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     // n_data_desc[i] stores <n_data at i, total_num_desc of i> (note: the second count does not include n_data at i)
     vector<pair<size_t, size_t> > n_data_desc;
@@ -527,15 +531,10 @@ pair<size_t, size_t> TSSBState::descend_and_sample_sticks(const gsl_rng *random,
         total_num_data_at_desc += (ret.first + ret.second);
     }
     
-    // update nu-stick except for the root, which stays at 0
-    if (node == root && node->GetNuStick() == 0) {
-        // do not sample nu-stick for root
-    } else {
-        double temp = bounded_beta(random,
-                                   n_data + 1,
-                                   total_num_data_at_desc + params.ComputeAlpha(node->GetNameVector()));
-        node->SetNuStick(temp);
-    }
+    double temp = bounded_beta(random,
+                               n_data + 1,
+                               total_num_data_at_desc + params.ComputeAlpha(node->GetNameVector()));
+    node->SetNuStick(temp);
     
     // update psi-sticks
     size_t cumulative_num_data = 0;
@@ -600,7 +599,7 @@ void TSSBState::get_all_nodes(bool non_empty, CloneTreeNode *root_node, vector<C
                 ret.push_back(node);
                 nodes.insert(node);
             } else {
-                if (node->DataCount() > 0) {
+                if (node == root_node || node->DataCount() > 0) {
                     ret.push_back(node);
                     nodes.insert(node);
                 }
@@ -720,8 +719,6 @@ double log_prod_beta(vector<CloneTreeNode *> &nodes, const ModelParams &params)
     double log_sum = 0.0;
     double alpha;
     for (CloneTreeNode *node : nodes) {
-        if (node->GetDepth() == 0 && node->GetNuStick() == 0) // root is assigned 0 nu-stick as it denotes healthy population that should not have any mutation assigned to it
-            continue;
         double x = node->GetNuStick();
         alpha = params.ComputeAlpha(node->GetNameVector());
         double y = log_beta_pdf(x, 1.0, alpha);

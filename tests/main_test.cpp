@@ -172,6 +172,188 @@ BOOST_AUTO_TEST_CASE( TestScLikelihood2 )
     BOOST_TEST( abs(log_lik_sc1 - log_lik_sc2) < 1e-3 );
 }
 
+BOOST_AUTO_TEST_CASE( TestScLikelihoodAssignmentToEmptyRoot )
+{
+    InitializeTestSetup();
+    
+    double alpha = 3.0;
+    double beta = 12.0;
+    double dropout_prob = 0.8;
+    
+    BulkDatum bulk1("s0", "chr", 0);
+    // Bulk data doesn't matter; just some values to ensure it runs.
+    bulk1.AddRegionData(10, 20, 1, 1);
+    bulk1.SetLocuHyperParameters(alpha, beta, dropout_prob);
+    BulkDatum bulk2("s1", "chr", 1);
+    bulk2.AddRegionData(10, 20, 1, 1);
+    bulk2.SetLocuHyperParameters(alpha, beta, dropout_prob);
+    
+    vector<BulkDatum *> bulk_data;
+    bulk_data.push_back(&bulk1);
+    bulk_data.push_back(&bulk2);
+    
+    size_t loci_count = bulk_data.size();
+    
+    SingleCellData c0("c0", loci_count);
+    size_t var0 = 0, total0 = 20;
+    size_t var1 = 0, total1 = 15;
+    c0.InsertDatum(0, var0, total0);
+    c0.InsertDatum(1, var1, total1);
+    
+    vector<SingleCellData *> sc_data;
+    sc_data.push_back(&c0);
+    
+    gsl_rng *random = generate_random_object(1);
+    
+    CloneTreeNode *root = CloneTreeNode::CreateRootNode(bulk1.GetRegionCount());
+    TSSBState tree(random, root, model_params,
+                   BulkLogLikWithGenotype, ScLikelihood,
+                   &bulk_data, &sc_data);
+    auto child_node = root->SpawnChild(0.5);
+    // Move the data to child node.
+    tree.move_datum(child_node, 0, model_params);
+    tree.move_datum(child_node, 1, model_params);
+    
+    // Single cell likelihood for assigning to the root is:
+    // Let e = model_params.GetSequencingError().
+    // var0 | total0 ~ BetaBinomial(e, 1-e).
+    // var1 | total1 ~ BetaBinomial(e, 1-e).
+    double seq_err = model_params.GetSequencingError();
+    double x = log_beta_binomial_pdf(var0, total0,
+                                     seq_err,
+                                     1 - seq_err);
+    double y = log_beta_binomial_pdf(var1, total1,
+                                     seq_err,
+                                     1 - seq_err);
+    double root_assignment_prob = x + y;
+
+    // Single cell likelihood for assigning to the child is:
+    // Let a = dropout_prob.
+    // var0 | total0 ~ a BetaBinomial(0.01, 0.01) + (1 - a) BetaBinomial(3, 12).
+    // var1 | total1 ~ a BetaBinomial(0.01, 0.01) + (1 - a) BetaBinomial(3, 12).
+    double x0 = log_beta_binomial_pdf(var0, total0,
+                                      model_params.GetScBurstyDistributionAlpha0(),
+                                      model_params.GetScBurstyDistributionBeta0());
+    x0 += log(dropout_prob);
+    double x1 = log_beta_binomial_pdf(var0, total0, alpha, beta);
+    x1 += log(1 - dropout_prob);
+    x = log_add(x0, x1);
+    
+    double y0 = log_beta_binomial_pdf(var1, total1,
+                                      model_params.GetScBurstyDistributionAlpha0(),
+                                      model_params.GetScBurstyDistributionBeta0());
+    y0 += log(dropout_prob);
+    double y1 = log_beta_binomial_pdf(var1, total1, alpha, beta);
+    y1 += log(1 - dropout_prob);
+    y = log_add(y0, y1);
+    
+    double child_assignment_prob = x + y;
+    double expected_log_assignment_prob = log_add(root_assignment_prob, child_assignment_prob);
+    expected_log_assignment_prob += log(0.5);
+    
+    double log_lik_sc1 = tree.compute_log_likelihood_sc();
+    cout << log_lik_sc1 << endl;
+    
+    double log_lik_sc2 = ComputeSingleCellLikelihood(root, bulk_data, sc_data, model_params);
+    cout << log_lik_sc2 << endl;
+    
+    BOOST_TEST( abs(log_lik_sc1 - expected_log_assignment_prob) < 1e-3 );
+    BOOST_TEST( abs(log_lik_sc1 - log_lik_sc2) < 1e-3 );
+}
+
+BOOST_AUTO_TEST_CASE( TestScLikelihoodAssignmentToNonEmptyRoot )
+{
+    InitializeTestSetup();
+    
+    double alpha = 3.0;
+    double beta = 12.0;
+    double dropout_prob = 0.8;
+
+    BulkDatum bulk1("s0", "chr", 0);
+    // Bulk data doesn't matter; just some values to ensure it runs.
+    bulk1.AddRegionData(10, 20, 1, 1);
+    bulk1.SetLocuHyperParameters(alpha, beta, dropout_prob);
+    BulkDatum bulk2("s1", "chr", 1);
+    bulk2.AddRegionData(10, 20, 1, 1);
+    bulk2.SetLocuHyperParameters(alpha, beta, dropout_prob);
+    
+    vector<BulkDatum *> bulk_data;
+    bulk_data.push_back(&bulk1);
+    bulk_data.push_back(&bulk2);
+    
+    size_t loci_count = bulk_data.size();
+    
+    SingleCellData c0("c0", loci_count);
+    size_t var0 = 0, total0 = 20;
+    size_t var1 = 0, total1 = 15;
+    c0.InsertDatum(0, var0, total0);
+    c0.InsertDatum(1, var1, total1);
+    
+    vector<SingleCellData *> sc_data;
+    sc_data.push_back(&c0);
+    
+    gsl_rng *random = generate_random_object(1);
+    
+    CloneTreeNode *root = CloneTreeNode::CreateRootNode(bulk1.GetRegionCount());
+    TSSBState tree(random, root, model_params,
+                   BulkLogLikWithGenotype, ScLikelihood,
+                   &bulk_data, &sc_data);
+    auto child_node = root->SpawnChild(0.5);
+    // Move only the second data to child node.
+    tree.move_datum(child_node, 1, model_params);
+    
+    // Single cell likelihood for assigning to the root is:
+    // Let e = model_params.GetSequencingError().
+    // Let a = dropout_prob.
+    // var0 | total0 ~ a BetaBinomial(0.01, 0.01) + (1 - a) BetaBinomial(3, 12).
+    // var1 | total1 ~ BetaBinomial(e, 1-e).
+    double seq_err = model_params.GetSequencingError();
+    double x0 = log_beta_binomial_pdf(var0, total0,
+                                      model_params.GetScBurstyDistributionAlpha0(),
+                                      model_params.GetScBurstyDistributionBeta0());
+    x0 += log(dropout_prob);
+    double x1 = log_beta_binomial_pdf(var0, total0, alpha, beta);
+    x1 += log(1 - dropout_prob);
+    double x = log_add(x0, x1);
+    double y = log_beta_binomial_pdf(var1, total1,
+                                     seq_err,
+                                     1 - seq_err);
+    double root_assignment_prob = x + y;
+    
+    // Single cell likelihood for assigning to the child is:
+    // Let a = dropout_prob.
+    // var0 | total0 ~ a BetaBinomial(0.01, 0.01) + (1 - a) BetaBinomial(3, 12).
+    // var1 | total1 ~ a BetaBinomial(0.01, 0.01) + (1 - a) BetaBinomial(3, 12).
+    x0 = log_beta_binomial_pdf(var0, total0,
+                               model_params.GetScBurstyDistributionAlpha0(),
+                               model_params.GetScBurstyDistributionBeta0());
+    x0 += log(dropout_prob);
+    x1 = log_beta_binomial_pdf(var0, total0, alpha, beta);
+    x1 += log(1 - dropout_prob);
+    x = log_add(x0, x1);
+    
+    double y0 = log_beta_binomial_pdf(var1, total1,
+                                      model_params.GetScBurstyDistributionAlpha0(),
+                                      model_params.GetScBurstyDistributionBeta0());
+    y0 += log(dropout_prob);
+    double y1 = log_beta_binomial_pdf(var1, total1, alpha, beta);
+    y1 += log(1 - dropout_prob);
+    y = log_add(y0, y1);
+    
+    double child_assignment_prob = x + y;
+    double expected_log_assignment_prob = log_add(root_assignment_prob, child_assignment_prob);
+    expected_log_assignment_prob += log(0.5);
+    
+    double log_lik_sc1 = tree.compute_log_likelihood_sc();
+    cout << log_lik_sc1 << endl;
+    
+    double log_lik_sc2 = ComputeSingleCellLikelihood(root, bulk_data, sc_data, model_params);
+    cout << log_lik_sc2 << endl;
+    
+    BOOST_TEST( abs(log_lik_sc1 - expected_log_assignment_prob) < 1e-3 );
+    BOOST_TEST( abs(log_lik_sc1 - log_lik_sc2) < 1e-3 );
+}
+
 BOOST_AUTO_TEST_CASE( TestScCache )
 {
     gsl_rng *random = generate_random_object(3);

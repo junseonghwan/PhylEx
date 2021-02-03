@@ -18,10 +18,6 @@ size_t SampleCnProfile(const gsl_rng *random,
                        size_t curr,
                        Eigen::Ref<Eigen::MatrixXf> P)
 {
-    if (curr == 0) {
-        return curr;
-    }
-    
     // sample a new state
     vector<double> probs;
     for (size_t j = 0; j < P.cols(); j++) {
@@ -38,10 +34,11 @@ Eigen::MatrixXf GetCnRateMatrix(double birth_rate,
                                 size_t min_cn,
                                 size_t max_cn)
 {
-    size_t n_states = max_cn - min_cn + 1;
+    //size_t n_states = max_cn - min_cn + 1;
+    size_t n_states = max_cn + 1; // states are from 0 ... max_cn
     Eigen::MatrixXf Q = Eigen::MatrixXf::Zero(n_states, n_states);
-    for (size_t i = 0; i < n_states; i++) {
-        if (i >= 1) {
+    for (size_t i = min_cn; i < n_states; i++) {
+        if (i > min_cn) {
             Q(i,i-1) = death_rate;
         }
         if (i < n_states - 1) {
@@ -91,9 +88,9 @@ Eigen::MatrixXf ExponentiateMatrix(Eigen::Ref<Eigen::MatrixXf> M)
     return expM;
 }
 
-vector<Locus> CreateSNVs(gsl_rng *random,
-                         const SimulationConfig &simul_config,
-                         vector<BulkDatum *> &data)
+void CreateSNVs(gsl_rng *random,
+                const SimulationConfig &simul_config,
+                vector<BulkDatum *> &data)
 {
     string chr;
     size_t pos;
@@ -108,7 +105,6 @@ vector<Locus> CreateSNVs(gsl_rng *random,
         datum->SetLocuHyperParameters(alpha, beta, 0.5);
         data.push_back(datum);
     }
-    return loci;
 }
 
 CloneTreeNode *SampleFromTssbPrior(size_t region_count,
@@ -118,8 +114,8 @@ CloneTreeNode *SampleFromTssbPrior(size_t region_count,
                                    vector<BulkDatum *> &data)
 {
     CloneTreeNode *root = CloneTreeNode::CreateRootNode(region_count);
-    root->SetNuStick(0.0);
-    root->SampleNodeParameters(random, model_params, 0);
+    root->SampleNuStick(random, model_params);
+    root->SampleNodeParameters(random, model_params);
 
     // sample tree and latent assignment of datum to node
     for (size_t i = 0; i < n_data; i++) {
@@ -150,6 +146,14 @@ void GenerateBulkData(gsl_rng *random,
         // Sample a node -- +1 so that we don't sample the root node
         size_t node_id = discrete_uniform(random, all_nodes.size()-1) + 1;
         auto node = all_nodes[node_id];
+        
+        if (node->GetParentNode() == 0) {
+            // This is an error b/c,
+            // We ensured when sampling node_id to not choose the root.
+            cerr << "Error: we sampled the root node." << endl;
+            exit(-1);
+        }
+
         datum = data[i];
         node->AddDatum(datum);
         
@@ -159,27 +163,21 @@ void GenerateBulkData(gsl_rng *random,
             double total_cn = 2;
             size_t total_allele_count, var_allele_count, ref_allele_count, var_cn;
 
-            if (node->GetParentNode() == 0) {
-                // This is an error b/c,
-                // We ensured when sampling node_id to not choose the root.
-                cerr << "Error: we sampled the root node." << endl;
-                exit(-1);
+            // Sample clonal copy number.
+            var_allele_count = discrete(random, simul_config.var_allele_copy_prob);
+            ref_allele_count = discrete(random, simul_config.ref_allele_copy_prob);
+            total_allele_count = var_allele_count + ref_allele_count;
+            double phi = node->NodeParameter().GetCellularPrevalences()[region];
+            total_cn = phi * total_allele_count + (1 - phi) * 2;
+            depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
+            // Ensure var_cn >= 1.
+            var_cn = gsl_ran_binomial(random, simul_config.var_cp_prob, var_allele_count - 1) + 1;
+            if (var_cn == total_allele_count) {
+                xi = (1 - phi) * seq_err + phi * (1 - seq_err);
             } else {
-                // Sample clonal copy number.
-                var_allele_count = discrete(random, simul_config.var_allele_copy_prob);
-                ref_allele_count = discrete(random, simul_config.ref_allele_copy_prob);
-                total_allele_count = var_allele_count + ref_allele_count;
-                double phi = node->NodeParameter().GetCellularPrevalences()[region];
-                total_cn = phi * total_allele_count + (1 - phi) * 2;
-                depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
-                // Ensure var_cn >= 1.
-                var_cn = gsl_ran_binomial(random, simul_config.var_cp_prob, var_allele_count - 1) + 1;
-                if (var_cn == total_allele_count) {
-                    xi = (1 - phi) * seq_err + phi * (1 - seq_err);
-                } else {
-                    xi = (1 - phi) * seq_err + phi * (double)var_cn/total_allele_count;
-                }
+                xi = (1 - phi) * seq_err + phi * (double)var_cn/total_allele_count;
             }
+            
             b_alleles = gsl_ran_binomial(random, xi, depth);
             if (ref_allele_count > var_allele_count) {
                 datum->AddRegionData(b_alleles, depth, ref_allele_count, var_allele_count);
@@ -276,6 +274,8 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
     // Construct rate matrix for copy number profile and perform uniformization.
     Eigen::MatrixXf Q1 = GetCnRateMatrix(birth_rate, death_rate, 1, simul_config.max_cn);
     Eigen::MatrixXf P1 = ExponentiateMatrix(Q1);
+    
+    std::cout << P1 << std::endl;
 
     Eigen::MatrixXf Q0 = GetCnRateMatrix(birth_rate, death_rate, 0, simul_config.max_cn);
     Eigen::MatrixXf P0 = ExponentiateMatrix(Q0);
@@ -295,52 +295,62 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
         // Sample a node -- +1 so that we don't sample the root node
         size_t node_id = discrete_uniform(random, nodes.size()-1) + 1;
         auto assigned_node = nodes[node_id];
+
+        if (assigned_node->GetParentNode() == 0) {
+            // This is an error b/c,
+            // We ensured when sampling node_id to not choose the root.
+            cerr << "Error: we sampled the root node." << endl;
+            exit(-1);
+        }
+
         datum = data[i];
         assigned_node->AddDatum(datum);
 
-        // Evolve copy number.
-        auto cn_profile = EvolveCn(random,
-                                   nodes,
-                                   node2idx,
-                                   assigned_node,
-                                   simul_config,
-                                   P0,
-                                   P1);
+        for (size_t region = 0; region < simul_config.n_regions; region++) {
+            // Evolve copy number.
+            auto cn_profile = EvolveCn(random,
+                                       nodes,
+                                       node2idx,
+                                       assigned_node,
+                                       simul_config,
+                                       P0,
+                                       P1);
 
-        auto node_cns = cn_profile.rowwise().sum();
-        double total_cn = 0.0;
-        double variant_cn = 0.0;
-        double reference_cn = 0.0;
-        double xi = 0.0;
-        double sum = 0.0;
-        // TODO: Incorporate sequencing error.
-        for (size_t j = 0; j < nodes.size(); j++) {
-            double eta = nodes[j]->GetCloneFreqs(0);
-            total_cn += eta * node_cns(j);
-            reference_cn += eta * cn_profile(j,0);
-            variant_cn += eta * cn_profile(j,1);
-            if (node_cns(j) > 0) {
-                xi += eta * (double)cn_profile(j,1)/node_cns(j);
+            auto node_cns = cn_profile.rowwise().sum();
+            double total_cn = 0.0;
+            double variant_cn = 0.0;
+            double reference_cn = 0.0;
+            double xi = 0.0;
+            double sum = 0.0;
+            for (size_t j = 0; j < nodes.size(); j++) {
+                double eta = nodes[j]->GetCloneFreqs(0);
+                total_cn += eta * node_cns(j);
+                reference_cn += eta * cn_profile(j,0);
+                variant_cn += eta * cn_profile(j,1);
+                if (node_cns(j) > 0) {
+                    xi += eta * (double)cn_profile(j,1)/node_cns(j);
+                }
+                sum += eta;
             }
-            sum += eta;
+            xi += simul_config.seq_err;
+            depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
+            cout << xi << ", " << depth << endl;
+            b_alleles = gsl_ran_binomial(random, xi, depth);
+            size_t int_var_cn = (size_t)round(variant_cn);
+            size_t int_ref_cn = (size_t)round(reference_cn);
+            if (variant_cn > reference_cn) {
+                datum->AddRegionData(b_alleles, depth, int_var_cn, int_ref_cn);
+                cts_cn.push_back(make_pair(variant_cn, reference_cn));
+            } else {
+                datum->AddRegionData(b_alleles, depth, int_ref_cn, int_var_cn);
+                cts_cn.push_back(make_pair(reference_cn, variant_cn));
+            }
+            cout << "======" << endl;
+            cout << "Datum " << i << endl;
+            cout << datum->GetVariantReadCount(region) << "/" << datum->GetReadCount(region) << endl;
+            cout << "xi: " << xi << endl;
+            cout << "======" << endl;
         }
-        depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
-        cout << xi << ", " << depth << endl;
-        b_alleles = gsl_ran_binomial(random, xi, depth);
-        size_t int_var_cn = (size_t)round(variant_cn);
-        size_t int_ref_cn = (size_t)round(reference_cn);
-        if (variant_cn > reference_cn) {
-            datum->AddRegionData(b_alleles, depth, int_var_cn, int_ref_cn);
-            cts_cn.push_back(make_pair(variant_cn, reference_cn));
-        } else {
-            datum->AddRegionData(b_alleles, depth, int_ref_cn, int_var_cn);
-            cts_cn.push_back(make_pair(reference_cn, variant_cn));
-        }
-        cout << "======" << endl;
-        cout << "Datum " << i << endl;
-        cout << datum->GetVariantReadCount(0) << "/" << datum->GetReadCount(0) << endl;
-        cout << "xi: " << xi << endl;
-        cout << "======" << endl;
     }
 }
 
