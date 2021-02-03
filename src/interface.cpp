@@ -339,21 +339,19 @@ void ProcessBulkWithGenotype(ifstream &dat_file,
     {
         boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
         string mut_id = results[0];
-        string chr = results[1];
-        size_t pos = stol(results[2]);
         
-        vector<size_t> var_reads = ParseRegionalData(results[5]);
-        vector<size_t> total_reads = ParseRegionalData(results[6]);
+        vector<size_t> var_reads = ParseRegionalData(results[1]);
+        vector<size_t> total_reads = ParseRegionalData(results[2]);
         
-        vector<size_t> major_cns = ParseRegionalData(results[7]);
-        vector<size_t> minor_cns = ParseRegionalData(results[8]);
+        vector<size_t> major_cns = ParseRegionalData(results[3]);
+        vector<size_t> minor_cns = ParseRegionalData(results[4]);
         
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
             exit(-1);
         }
         
-        BulkDatum *datum = new BulkDatum(mut_id, chr, pos,
+        BulkDatum *datum = new BulkDatum(mut_id, "", 0,
                                          var_reads, total_reads,
                                          major_cns, minor_cns);
         somatic_loci[mut_id] = bulk_data.size();

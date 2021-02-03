@@ -1,0 +1,18 @@
+language: cpp
+compiler:
+  - clang
+os: osx
+osx_image: xcode10.1
+dist: trusty
+addons:
+  homebrew:
+    packages:
+      - cmake
+      - gsl
+      - boost
+script:
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make
+  - ctest
