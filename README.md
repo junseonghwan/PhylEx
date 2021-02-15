@@ -8,6 +8,7 @@ This software performs integrated analysis of bulk DNA-seq and single cell RNA-s
 + gsl
 + boost
 + cmake
++ libomp
 
 ```c++
 make build
