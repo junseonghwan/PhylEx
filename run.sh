@@ -6,4 +6,4 @@
 #SBATCH --mem 8G
 #SBATCH -J scRNA
 
-./../run -c $1
+./run -c $1

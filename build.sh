@@ -12,8 +12,9 @@ wait
 module load GSL/2.4-nsc1
 wait
 
-cd build/
-cmake -DCMAKE_INSTALL_PREFIX:PATH=/home/x_seoju ..
+mkdir build
+cd build || exit
+cmake -DCMAKE_INSTALL_PREFIX:PATH=/home/x_vitza/opt ..
 wait
 
 make install
