@@ -23,9 +23,9 @@
 #include "numerical_utils.hpp"
 #include "utils.hpp"
 
-void WriteBestTress(string output_path,
-                      const vector<BulkDatum *> &bulk,
-                      vector<pair<double, shared_ptr<CompactTSSBState > > > &best_states)
+void WriteBestTrees(string output_path,
+                    const vector<BulkDatum *> &bulk,
+                    vector<pair<double, shared_ptr<CompactTSSBState > > > &best_states)
 {
     size_t n_trees = best_states.size();
     for (size_t i = 0; i < best_states.size(); i++)
@@ -162,7 +162,8 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         }
 
         if ((iter % config_.output_interval) == 0) {
-            WriteBestTress(config_.output_path + "/joint", bulk_data_, joint_best);
+            // show progress on the output
+            WriteBestTrees(config_.output_path + "/joint", bulk_data_, joint_best);
             for (size_t i = n_trees; i < states.size(); i++) {
                 write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second.get());
                 WriteLogLikToFile(config_.output_path + "/states/tree" + to_string(n_trees) + "/log_lik.txt", states[i].first);
@@ -177,7 +178,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
     write_vector(config_.output_path + "/timing.txt", timing);
     
     // flush the states
-    WriteBestTress(config_.output_path + "/joint", bulk_data_, joint_best);
+    WriteBestTrees(config_.output_path + "/joint", bulk_data_, joint_best);
     for (size_t i = n_trees; i < states.size(); i++) {
         write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second.get());
         WriteLogLikToFile(config_.output_path + "/states/tree" + to_string(n_trees) + "/log_lik.txt", states[i].first);

@@ -72,7 +72,7 @@ bool has_empty_subtree(Node<BulkDatum,CloneTreeNodeParam> *node)
         child = children[i].second;
 
         bool ret = has_empty_subtree(child);
-        // if any of the child has an empy subtree, return true immediately
+        // if any of the child has an empty subtree, return true immediately
         if (ret) {
             return true;
         }
