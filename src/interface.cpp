@@ -11,17 +11,15 @@
 #include <chrono>
 #include <cmath>
 #include <fstream>
-#include <iterator>
 #include <iostream>
 #include <stdio.h>
+#include <memory>
 #include <string>
 #include <unordered_map>
 
 #include <gsl/gsl_statistics.h>
 
 #include "data_util.hpp"
-#include "numerical_utils.hpp"
-#include "utils.hpp"
 
 void WriteBestTrees(string output_path,
                     const vector<BulkDatum *> &bulk,
@@ -34,7 +32,7 @@ void WriteBestTrees(string output_path,
         size_t idx = n_trees-i-1;
         write_tree(path,
                              bulk,
-                             *best_states[idx].second.get());
+                             *best_states[idx].second);
         WriteLogLikToFile(path + "/log_lik.txt", best_states[idx].first);
     }
 }
@@ -143,12 +141,13 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         alpha0.push_back(params.GetAlpha0());
         lambda.push_back(params.GetLambda());
         gamma.push_back(params.GetGamma());
-        
+
+        auto compact_state = std::make_shared<CompactTSSBState >(*tree);
+
+        // update top-5
         if (joint_best.size() < state_count) {
-            auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree));
-            joint_best.push_back(make_pair(log_lik, compact_state));
+            joint_best.emplace_back(log_lik, compact_state);
         } else {
-            auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree));
             if (log_lik > joint_best[0].first) {
                 joint_best[0] = make_pair(log_lik, compact_state);
                 sort(joint_best.begin(), joint_best.end(), comp_states);
@@ -157,15 +156,14 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         
         if ((iter % config_.thinning) == 0 || (iter + 1) == n_iter) {
             // store current tree
-            auto compact_state = shared_ptr<CompactTSSBState >(new  CompactTSSBState(*tree));
-            states.push_back(make_pair(log_lik, compact_state));
+            states.emplace_back(log_lik, compact_state);
         }
 
         if ((iter % config_.output_interval) == 0) {
             // show progress on the output
             WriteBestTrees(config_.output_path + "/joint", bulk_data_, joint_best);
             for (size_t i = n_trees; i < states.size(); i++) {
-                write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second.get());
+                write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second);
                 WriteLogLikToFile(config_.output_path + "/states/tree" + to_string(n_trees) + "/log_lik.txt", states[i].first);
                 n_trees++;
             }
@@ -180,7 +178,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
     // flush the states
     WriteBestTrees(config_.output_path + "/joint", bulk_data_, joint_best);
     for (size_t i = n_trees; i < states.size(); i++) {
-        write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second.get());
+        write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second);
         WriteLogLikToFile(config_.output_path + "/states/tree" + to_string(n_trees) + "/log_lik.txt", states[i].first);
         n_trees++;
     }
