@@ -13,6 +13,13 @@
 
 #include "simul_config.hpp"
 
+/**
+ * Parse the copy number probabilities from a string with
+ * comma-separated values. Values must sum to 1.
+ *
+ * @param val configuration value
+ * @return probability vector for var/ref copy number of size `max_cn + 1`
+ */
 vector<double> parse_cn_probs(string val)
 {
     vector<double> cn_probs;
@@ -35,7 +42,7 @@ SimulationConfig::SimulationConfig() {
     ref_allele_copy_prob.push_back(1);
 }
 
-void SimulationConfig::insert_option(string key, string val)
+void SimulationConfig::insert_option(const string& key, const string& val)
 {
     try {
         if (key == "seed") {
@@ -71,7 +78,7 @@ void SimulationConfig::insert_option(string key, string val)
         } else if (key == "dropout_rate") {
             this->dropout_rate = stod(val);
         } else if (key == "randomize_dropout") {
-            this->randomize_dropout = stoi(val) == 0? false : true;
+            this->randomize_dropout = stoi(val) != 0;
         } else if (key == "bursty_prob") {
             this->bursty_prob = stod(val);
         } else if (key == "sc_bursty_alpha0") {
@@ -83,9 +90,9 @@ void SimulationConfig::insert_option(string key, string val)
         } else if (key == "beta_binomial_hp_max") {
             this->beta_binomial_hp_max = stoul(val);
         } else if (key == "randomize_branching") {
-            this->randomize_branching = stoi(val) == 0? false : true;
+            this->randomize_branching = stoi(val) != 0;
         } else if (key == "randomize_cf") {
-            this->randomize_cf = stoi(val) == 0? false : true;
+            this->randomize_cf = stoi(val) != 0;
         } else if (key == "min_cf") {
             this->min_cf = stod(val);
         } else if (key == "snv_sc_sparsity") {

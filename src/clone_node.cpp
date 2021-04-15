@@ -38,6 +38,8 @@ bool CloneTreeNodeParam::IsConsistent() const
 
 void CloneTreeNodeParam::SetRootParameters(const gsl_rng *random)
 {
+    // FIXME not actually random, this implementation is identical
+    //  to `CloneTreeNodeParam::SetRootParameters()`
     double curr_cellular_prev = 1.0;
     for (size_t i = 0; i < GetRegionCount(); i++) {
         SetCellularPrevalenceAtRegion(i, curr_cellular_prev);
@@ -45,6 +47,7 @@ void CloneTreeNodeParam::SetRootParameters(const gsl_rng *random)
     }
 }
 
+// Initialize root cellular prevalence and clone frequency both to 1.
 void CloneTreeNodeParam::SetRootParameters()
 {
     for (size_t i = 0; i < GetRegionCount(); i++) {
@@ -154,7 +157,7 @@ CloneTreeNode *CloneTreeNode::SpawnChild(double psi)
 {
     size_t j = GetIdx2Child().size();
     //CloneTreeNode *child = new CloneTreeNode(j, this, tssb);
-    CloneTreeNode *child = new CloneTreeNode(j, this);
+    auto child = new CloneTreeNode(j, this);
     idx2child_[j] = make_pair(psi, child);
     return child;
 }
@@ -663,6 +666,37 @@ gsl_matrix *CloneTreeNode::GetAncestralMatrix(CloneTreeNode *root,
     }
     
     return A;
+}
+
+bool CloneTreeNode::operator==(const CloneTreeNode &other) const {
+    if (this->parent_node_ != other.parent_node_)
+        return false;
+    if (name_.size() != other.name_.size())
+        return false;
+    size_t n = name_.size();
+    return (name_[n-1] == other.name_[n-1]);
+}
+
+bool operator<(const CloneTreeNode &lhs, const CloneTreeNode &rhs) {
+    vector<string> lhs_arr, rhs_arr;
+    boost::split(lhs_arr, lhs.name_, boost::is_any_of("_"));
+    boost::split(rhs_arr, rhs.name_, boost::is_any_of("_"));
+    if (lhs_arr.size() < rhs_arr.size())
+        return true;
+    else if (lhs_arr.size() > rhs_arr.size())
+        return false;
+    else {
+        // same length, compare one by one
+        for (size_t i = 0; i < lhs_arr.size(); i++) {
+            if (stoi(lhs_arr[i]) < stoi(rhs_arr[i])) {
+                return true;
+            } else if (stoi(lhs_arr[i]) > stoi(rhs_arr[i])) {
+                return false;
+            }
+        }
+        return false;
+    }
+    //return tie(lhs.name) < tie(rhs.name);
 }
 
 double ScLikelihoodWithDropout(size_t loci_idx,

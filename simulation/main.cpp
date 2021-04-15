@@ -19,7 +19,14 @@
 
 using namespace std;
 
-void parse_config_file(string config_file_path, SimulationConfig &config)
+/**
+ * Parse configuration file. The format is `key: value` for each line
+ * and must contain all the necessary parameters.
+ *
+ * @param[in] config_file_path where the configuration file is located
+ * @param[out] config object saving the parameters
+ */
+void parse_config_file(const string& config_file_path, SimulationConfig &config)
 {
     string line;
     ifstream config_file(config_file_path);
@@ -30,8 +37,7 @@ void parse_config_file(string config_file_path, SimulationConfig &config)
     }
     
     vector<string> results;
-    vector<double> dat;
-    
+
     while ( getline (config_file, line) )
     {
         boost::split(results, line, boost::is_any_of(":"));
@@ -101,12 +107,14 @@ void CreateNaryTree(size_t region_count,
         queue.pop_front();
         if (node->GetDepth() >= max_depth ||
             BelowMinimumCellFraction(node, min_cell_fraction)) {
+            // develop other branches in the queue
             continue;
         }
 
-        // The root to have exactly one child.
+        // define number of children
         size_t branch_count;
         if (node->IsRoot()) {
+            // root always has exactly one child
             branch_count = 1;
         } else {
             if (randomize_branching) {
@@ -126,7 +134,9 @@ void CreateNaryTree(size_t region_count,
                     u = gsl_ran_flat(random, 0, 1);
                 }
                 double cell_prev = u * parent_clone_freq;
+                // clone frequency is equal to cell prevalence for leaf nodes
                 child_node->SetCloneFrequencyAtRegion(region, cell_prev);
+
                 child_node->SetCellularPrevalenceAtRegion(region, cell_prev);
                 node->SetCloneFrequencyAtRegion(region, parent_clone_freq - cell_prev);
             }
@@ -135,8 +145,8 @@ void CreateNaryTree(size_t region_count,
     }
     vector<CloneTreeNode *> nodes;
     CloneTreeNode::BreadthFirstTraversal(root, nodes);
-    for (size_t i = 0; i < nodes.size(); i++) {
-        cout << nodes[i]->Print() << endl;
+    for (auto & node : nodes) {
+        cout << node->Print() << endl;
     }
 }
 

@@ -35,6 +35,7 @@ class CloneTreeNodeParam
 {
     vector<double> clone_freqs_;
     vector<double> cellular_prevs_;
+
 public:
     CloneTreeNodeParam(size_t region_count);
     inline const vector<double> &GetCloneFreqs() const { return clone_freqs_; }
@@ -65,15 +66,7 @@ class CloneTreeNode
 
     // map: child branch idx -> pair<psi_stick, Node *>
     unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child_;
-    bool operator==(const CloneTreeNode &other) const
-    {
-        if (this->parent_node_ != other.parent_node_)
-            return false;
-        if (name_.size() != other.name_.size())
-            return false;
-        size_t n = name_.size();
-        return (name_[n-1] == other.name_[n-1]);
-    }
+    bool operator==(const CloneTreeNode &other) const;
 
     // change the last part of the node's name to j -- used extensively by reorder_sticks
     void EditName(size_t j);
@@ -83,9 +76,9 @@ class CloneTreeNode
     // For creating non-root node.
     // Assumption: parent != 0.
     CloneTreeNode(size_t child_idx, CloneTreeNode *parent);
+
 public:
     ~CloneTreeNode();
-
     bool IsCacheAllocated(size_t cell_count);
     void AllocateCache(size_t cell_count);
     void UpdateCache(size_t c, double val);
@@ -144,27 +137,7 @@ public:
                                           const unordered_map<const BulkDatum *, CloneTreeNode *> &datum2node);
 
     static bool Less(CloneTreeNode *l, CloneTreeNode *r);
-    friend bool operator<(const CloneTreeNode& lhs, const CloneTreeNode& rhs) {
-        vector<string> lhs_arr, rhs_arr;
-        boost::split(lhs_arr, lhs.name_, boost::is_any_of("_"));
-        boost::split(rhs_arr, rhs.name_, boost::is_any_of("_"));
-        if (lhs_arr.size() < rhs_arr.size())
-            return true;
-        else if (lhs_arr.size() > rhs_arr.size())
-            return false;
-        else {
-            // same length, compare one by one
-            for (size_t i = 0; i < lhs_arr.size(); i++) {
-                if (stoi(lhs_arr[i]) < stoi(rhs_arr[i])) {
-                    return true;
-                } else if (stoi(lhs_arr[i]) > stoi(rhs_arr[i])) {
-                    return false;
-                }
-            }
-            return false;
-        }
-        //return tie(lhs.name) < tie(rhs.name);
-    }
+    friend bool operator<(const CloneTreeNode& lhs, const CloneTreeNode& rhs);
     friend bool operator> (const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return rhs < lhs; }
     friend bool operator<=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs > rhs); }
     friend bool operator>=(const CloneTreeNode& lhs, const CloneTreeNode& rhs){ return !(lhs < rhs); }

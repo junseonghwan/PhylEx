@@ -166,6 +166,13 @@ void multinomial_sample_indices(const gsl_rng *random, unsigned int N, const vec
     delete [] uvec;
 }
 
+/**
+ * Discrete distribution sampler
+ *
+ * @param random rng object
+ * @param probs probability mass function
+ * @return outcome of the random event
+ */
 size_t discrete(const gsl_rng *random, vector<double> probs)
 {
     double u = gsl_ran_flat(random, 0, 1);

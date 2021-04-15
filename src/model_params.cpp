@@ -105,6 +105,11 @@ void ModelParams::SetDirichletConcentrationFactor(double val)
     this->dir_conc_multiplicative_factor_ = val;
 }
 
+/**
+ * Uniform initialization for `alpha0_`, `lambda_` and `gamma_`
+ *
+ * @param random rng object
+ */
 void ModelParams::RandomInit(gsl_rng *random)
 {
     alpha0_ = gsl_ran_flat(random, alpha0_min, alpha0_max);

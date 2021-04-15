@@ -59,7 +59,7 @@ public:
     
     double snv_sc_sparsity = 1;
 
-    void insert_option(string key, string val);
+    void insert_option(const string& key, const string& val);
     SimulationConfig();
 };
 
