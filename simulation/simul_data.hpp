@@ -10,6 +10,7 @@
 
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_matrix.h>
+#include <gene.hpp>
 
 #include "bulk_datum.hpp"
 #include "clone_node.hpp"
@@ -39,18 +40,31 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
                                    vector<BulkDatum *> &data,
                                    CloneTreeNode *root_node,
                                    vector<pair<double, double> > &cts_cn);
-vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
-                                          CloneTreeNode *root_node,
-                                          const vector<BulkDatum *> &data,
-                                          const ModelParams &model_params,
-                                          const SimulationConfig &simul_config,
-                                          vector<SingleCellData *> &sc_data);
+vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_node, const vector<BulkDatum *> &data,
+                                          const ModelParams &model_params, const SimulationConfig &simul_config,
+                                          vector<SingleCellData *> &sc_data,
+                                          vector<SingleCellExpression *> sc_expr_data);
 void GenerateScRnaReads(const gsl_rng *random,
                         const SimulationConfig &simul_config,
                         CloneTreeNode *node,
                         const vector<BulkDatum*> &somatic_loci,
                         vector<size_t> &bulk_sc_coverage,
                         SingleCellData &sc);
+
+
+void GenerateGenes(
+        const gsl_rng *rng,
+        const SimulationConfig &simul_config,
+        vector<Gene *> &gene_set
+);
+
+void GenerateScRnaExpression(
+        const gsl_rng *rng,
+        const SimulationConfig &simul_config,
+        CloneTreeNode *node,
+        SingleCellExpression &sc,
+        vector<Gene *> &gene_set
+);
 
 //void GenerateScRnaReads(const gsl_rng *random,
 //                        const SimulationConfig &simul_config,

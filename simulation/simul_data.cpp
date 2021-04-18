@@ -354,12 +354,12 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
     }
 }
 
-vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
-                                          CloneTreeNode *root_node,
+vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_node,
                                           const vector<BulkDatum *> &data,
                                           const ModelParams &model_params,
                                           const SimulationConfig &simul_config,
-                                          vector<SingleCellData *> &sc_data)
+                                          vector<SingleCellData *> &sc_data,
+                                          vector<SingleCellExpression *> sc_expr_data)
 {
     vector<size_t> bulk_sc_coverage(data.size(), 0);
     // We subselect bulk to have single cell coverage.
@@ -368,6 +368,10 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
             bulk_sc_coverage[i] = 1;
         }
     }
+
+    // generate genes for scRNA expression data
+    vector<Gene *> gene_set(simul_config.n_genes);
+    GenerateGenes(random, simul_config, gene_set);
 
     // Retrieve all nodes/clones with at least one SNV assigned.
     vector<CloneTreeNode *> non_empty_nodes;
@@ -381,14 +385,24 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random,
         cell2node.push_back(node);
 
         cout << "Cell " << c << " assigned to " << node->GetName() << endl;
-        SingleCellData *sc = new SingleCellData("c" + to_string(c), data.size());
+
+        string cell_name = "c" + to_string(c);
+        auto sc = new SingleCellData(cell_name, data.size());
         GenerateScRnaReads(random,
                             simul_config,
                             node,
                             data,
                             bulk_sc_coverage,
                             *sc);
-        
+
+        auto sc_expr = new SingleCellExpression(cell_name);
+        GenerateScRnaExpression(
+                random,
+                simul_config,
+                node,
+                *sc_expr,
+                gene_set);
+
         sc_data.push_back(sc);
         cout << "=====" << endl;
     }
@@ -473,3 +487,75 @@ void GenerateScRnaReads(const gsl_rng *random,
     cout << var_read_observed_count << "/" << var_loci_expr_count << " sites with variant reads observed.\n";
 }
 
+void EvolveCloneSpecificCN(
+        const gsl_rng *rng,
+        const SimulationConfig &simul_config,
+        CloneTreeNode *root,
+        Eigen::MatrixXf &P1
+        ) {
+    vector<CloneTreeNode *> sorted_nodes;
+    CloneTreeNode::BreadthFirstTraversal(root, sorted_nodes);
+
+    for (CloneTreeNode *node: sorted_nodes) {
+        auto parent = node->GetParentNode();
+        if (parent == nullptr) {
+            // root node has copy number 2
+            node->setCnProfile(vector<size_t>(simul_config.n_genes, 2));
+        } else {
+            vector<size_t> new_cn_profile(simul_config.n_genes);
+            for (int g = 0; g < simul_config.n_genes; ++g) {
+                size_t curr_cn = parent->getCnProfile()[g];
+                new_cn_profile[g] = SampleCnProfile(rng, curr_cn, P1);
+            }
+            node->setCnProfile(new_cn_profile);
+        }
+    }
+}
+
+/**
+ * Creates a set of genes with randomized per-copy expression.
+ *
+ * @param rng GSL random number generator object
+ * @param simul_config configuration parameters
+ * @param gene_set vector of pointers to `Gene` objects. If empty, also the ID
+ *      and all other attributes are sampled.
+ */
+void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vector<Gene *> &gene_set) {
+    if (gene_set.empty()) {
+        // TODO simulate chromosome, position and id in a way that no overlap is possible
+        for (int g = 0; g < simul_config.n_genes; ++g) {
+            string ensembl_id = "ENSG" + to_string(g);
+            string chr = convert_chr_to_string(gsl_rng_uniform_int(rng, 23) + 1);
+            size_t start_pos = gsl_rng_uniform_int(rng, 10000000);
+            size_t end_pos = start_pos + gsl_ran_poisson(rng, 100);
+            gene_set.push_back(new Gene(ensembl_id, chr, start_pos, end_pos));
+        }
+    }
+    // simulate per-copy expression
+    for (int g = 0; g < simul_config.n_genes; ++g) {
+        // normal prior
+        gene_set[g]->setPerCopyExpr(exp(gsl_ran_gaussian(rng,1)));
+    }
+}
+
+void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *node,
+                             SingleCellExpression &sc, vector<Gene *> &gene_set) {
+
+    // retrieve clone-specific copy number profile
+    vector<size_t> expr_reads(simul_config.n_genes);
+    for (int g = 0; g < simul_config.n_genes; ++g) {
+        bool zero_inflation = gsl_ran_bernoulli(rng, simul_config.zero_inflation_prob);
+        if (zero_inflation) {
+            expr_reads[g] = 0;
+        } else {
+            // NB expressed in terms of mean/var
+            double nb_mean = gene_set[g]->getPerCopyExpr() * node->getCnProfile()[g];
+            double nb_var = nb_mean + (nb_mean * nb_mean / simul_config.nb_inverse_dispersion);
+
+            // derive p parameter
+            double p = (nb_var - nb_mean) / nb_var;
+            expr_reads[g] = gsl_ran_negative_binomial(rng, p, simul_config.nb_inverse_dispersion);
+        }
+    }
+    sc.setExprReads(expr_reads);
+}
