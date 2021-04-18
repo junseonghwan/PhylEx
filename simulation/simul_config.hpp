@@ -59,7 +59,12 @@ public:
     bool randomize_cf = true;
     double min_cf = 0.01;
     
-    double snv_sc_sparsity = 1;
+    double snv_sc_sparsity = 1; // ratio of bulk DNA SNVs expressed in scRNA data
+
+    // gene expression configuration
+    size_t n_genes;
+    double zero_inflation_prob; // rho
+    double nb_inverse_dispersion; // r
 
     void insert_option(const string& key, const string& val);
     SimulationConfig();
