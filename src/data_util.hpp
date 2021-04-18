@@ -44,9 +44,14 @@ void WriteBetaBinomHp(string output_path,
 void WriteScRnaData(string output_path,
                     const vector<BulkDatum*> &bulk_data,
                     const vector<SingleCellData *> &sc_data);
-void WriteCell2NodeAssignment(string output_path,
+void WriteCell2NodeAssignment(const string& output_path,
                               const vector<SingleCellData *> &sc_data,
                               const vector<CloneTreeNode *> &cell2node);
+void WriteScRnaExpressionData(
+        const string& output_path,
+        const vector<SingleCellExpression *> &sc_expr,
+        const vector<Gene *> &gene_set
+);
 void write_tree(string output_path,
                 const vector<BulkDatum *> &bulk,
                 CompactTSSBState &state);

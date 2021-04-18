@@ -293,7 +293,37 @@ void WriteScRnaData(string output_path,
     f.close();
 }
 
-void WriteCell2NodeAssignment(string output_path,
+void WriteScRnaExpressionData(const string &output_path, const vector<SingleCellExpression *> &sc_expr,
+                              const vector<Gene *> &gene_set) {
+    ofstream f;
+    f.open(output_path + "/simul_fc.txt", ios::out);
+    for (int i = 0; i < gene_set.size() + 1; ++i) {
+        // TODO implement
+    }
+//    f << "ID\tCell\ta\td\tSampleName\n";
+//    for (unsigned int i = 0; i < sc_data.size(); i++)
+//    {
+//        SingleCellData *sc = (SingleCellData *)sc_data[i];
+//        for (size_t loci_idx = 0; loci_idx < bulk_data.size(); loci_idx++)
+//        {
+//            auto bulk_datum = bulk_data[loci_idx];
+//            size_t b = sc_data[i]->GetVariantReads(loci_idx);
+//            size_t d = sc_data[i]->GetTotalReads(loci_idx);
+//
+//            // write to file only if it contains non-zero reads.
+//            if (d == 0) {
+//                continue;
+//            }
+//
+//            f << bulk_datum->GetLocus().get_mutation_id() << "\t";
+//            f << sc->GetName() << "\t";
+//            f << (d - b) << "\t" << d << "\tNA\n";
+//        }
+//    }
+    f.close();
+}
+
+void WriteCell2NodeAssignment(const string& output_path,
                               const vector<SingleCellData *> &sc_data,
                               const vector<CloneTreeNode *> &cell2node) {
     ofstream f;
