@@ -66,6 +66,10 @@ class CloneTreeNode
 
     // map: child branch idx -> pair<psi_stick, Node *>
     unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child_;
+
+    // clone-specific copy number per each gene
+    vector<size_t> cn_profile;
+
     bool operator==(const CloneTreeNode &other) const;
 
     // change the last part of the node's name to j -- used extensively by reorder_sticks
@@ -91,6 +95,10 @@ public:
     CloneTreeNode *GetParentNode() const;
     const unordered_set<const BulkDatum *> &GetData() const;
     const pair<double, CloneTreeNode *> &GetChild(size_t child_idx) const;
+
+    const vector<size_t> &getCnProfile() const;
+
+    void setCnProfile(const vector<size_t> &cnProfile);
 
     size_t GetChildrenCount() const;
     bool IsRoot() const;

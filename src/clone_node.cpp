@@ -510,6 +510,13 @@ bool CloneTreeNode::Less(CloneTreeNode *lhs, CloneTreeNode *rhs)
     }
 }
 
+/**
+ * Breadth first traversal starting from `root_node`.
+ *
+ * @param[in] root_node
+ * @param[out] ret sequence vector of traversed nodes
+ * @param non_empty if true, only nodes with SNVs assigned to it are selected
+ */
 void CloneTreeNode::BreadthFirstTraversal(CloneTreeNode *root_node, vector<CloneTreeNode *> &ret, bool non_empty)
 {
     // get nodes in the subtree rooted at root
@@ -699,6 +706,14 @@ bool operator<(const CloneTreeNode &lhs, const CloneTreeNode &rhs) {
         return false;
     }
     //return tie(lhs.name) < tie(rhs.name);
+}
+
+const vector<size_t> &CloneTreeNode::getCnProfile() const {
+    return cn_profile;
+}
+
+void CloneTreeNode::setCnProfile(const vector<size_t> &cnProfile) {
+    cn_profile = cnProfile;
 }
 
 double ScLikelihoodWithDropout(size_t loci_idx,
