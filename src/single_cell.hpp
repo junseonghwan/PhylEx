@@ -13,6 +13,7 @@
 #include <unordered_map>
 
 #include "loci.hpp"
+#include "gene.hpp"
 
 using namespace std;
 
@@ -51,6 +52,30 @@ public:
     }
     void InsertDatum(size_t loci_idx, size_t var_reads, size_t total_reads);
     string Print() const;
+};
+
+class SingleCellExpression {
+    string cell_name;
+
+    // gene expression data
+    vector<size_t> gene_idxs; // maps expression read to specific gene
+    vector<size_t> expr_reads;
+
+public:
+    SingleCellExpression(const string &cellName);
+
+public:
+    const string &getCellName() const;
+
+    void setCellName(const string &cellName);
+
+    const vector<size_t> &getGeneIdxs() const;
+
+    void setGeneIdxs(const vector<size_t> &geneIdxs);
+
+    const vector<size_t> &getExprReads() const;
+
+    void setExprReads(const vector<size_t> &exprReads);
 };
 
 #endif /* single_cell_dna_hpp */

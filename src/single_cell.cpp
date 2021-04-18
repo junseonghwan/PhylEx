@@ -51,3 +51,29 @@ void SingleCellData::InsertDatum(size_t loci_idx,
     var_reads_[loci_idx] = var_reads;
     total_reads_[loci_idx] = total_reads;
 }
+
+const string &SingleCellExpression::getCellName() const {
+    return cell_name;
+}
+
+void SingleCellExpression::setCellName(const string &cellName) {
+    cell_name = cellName;
+}
+
+const vector<size_t> &SingleCellExpression::getGeneIdxs() const {
+    return gene_idxs;
+}
+
+void SingleCellExpression::setGeneIdxs(const vector<size_t> &geneIdxs) {
+    gene_idxs = geneIdxs;
+}
+
+const vector<size_t> &SingleCellExpression::getExprReads() const {
+    return expr_reads;
+}
+
+void SingleCellExpression::setExprReads(const vector<size_t> &exprReads) {
+    expr_reads = exprReads;
+}
+
+SingleCellExpression::SingleCellExpression(const string &cellName) : cell_name(cellName) {}
