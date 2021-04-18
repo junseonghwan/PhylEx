@@ -533,9 +533,11 @@ void CloneTreeNode::BreadthFirstTraversal(CloneTreeNode *root_node, vector<Clone
         q.pop();
         if (!nodes.count(node)) {
             if (!non_empty) {
+                // complete bft
                 ret.push_back(node);
                 nodes.insert(node);
             } else {
+                // select only nodes with SNVs assigned to it
                 if (node->DataCount() > 0) {
                     ret.push_back(node);
                     nodes.insert(node);

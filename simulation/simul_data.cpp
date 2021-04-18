@@ -11,7 +11,6 @@
 #include "Eigen/Eigenvalues"
 
 #include "data_util.hpp"
-#include "utils.hpp"
 #include "tssb_state.hpp"
 
 size_t SampleCnProfile(const gsl_rng *random,
@@ -60,14 +59,14 @@ Eigen::MatrixXf GetCnRateMatrix(double birth_rate,
 Eigen::MatrixXf ExponentiateMatrix(Eigen::Ref<Eigen::MatrixXf> M)
 {
     std::cout << M << std::endl;
-    Eigen::EigenSolver<Eigen::MatrixXf> diagnoalization;
-    diagnoalization.compute(M);
-    auto evalues = diagnoalization.eigenvalues();
+    Eigen::EigenSolver<Eigen::MatrixXf> diagonalization;
+    diagonalization.compute(M);
+    auto evalues = diagonalization.eigenvalues();
     Eigen::MatrixXcf D = Eigen::MatrixXcf::Zero(evalues.rows(), evalues.rows());
     for (size_t i = 0; i < evalues.rows(); i++) {
         D(i,i) = exp(evalues(i).real());
     }
-    Eigen::MatrixXcf V = diagnoalization.eigenvectors();
+    Eigen::MatrixXcf V = diagonalization.eigenvectors();
     Eigen::MatrixXcf ret = V * D * V.inverse();
     Eigen::MatrixXf expM = Eigen::MatrixXf::Zero(M.rows(), M.cols());
     for (size_t i = 0; i < expM.rows(); i++) {
@@ -102,6 +101,7 @@ void CreateSNVs(gsl_rng *random,
         size_t alpha = gsl_rng_uniform_int(random, simul_config.beta_binomial_hp_max - 1) + 1;
         size_t beta = gsl_rng_uniform_int(random, simul_config.beta_binomial_hp_max - 1) + 1;
         BulkDatum *datum = new BulkDatum("s" + to_string(i), chr, pos);
+        // FIXME dropout probability is fixed to 0.5 and not to the value specified in the config file
         datum->SetLocuHyperParameters(alpha, beta, 0.5);
         data.push_back(datum);
     }
@@ -238,7 +238,7 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random,
         if (node == assigned_node) {
             assert(var_cn == 0 && ref_cn >= 1);
             // Evolve ref_cn using P1.
-            SampleCnProfile(random, ref_cn, P1);
+            SampleCnProfile(random, ref_cn, P1); // FIXME new state is sampled but not saved anywhere
             // Sample var_cn, ensure that it is at least 1.
             var_cn = gsl_ran_binomial(random, config.var_cp_prob, ref_cn - 1) + 1;
             assert(var_cn >= 1);
@@ -280,7 +280,7 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
     Eigen::MatrixXf Q0 = GetCnRateMatrix(birth_rate, death_rate, 0, simul_config.max_cn);
     Eigen::MatrixXf P0 = ExponentiateMatrix(Q0);
 
-    vector<CloneTreeNode *> nodes;
+    vector<CloneTreeNode *> nodes;  // output of the BFT
     CloneTreeNode::BreadthFirstTraversal(root_node, nodes, false);
     unordered_map<CloneTreeNode *, size_t> node2idx;
     for (size_t i = 0; i < nodes.size(); i++) {
@@ -296,7 +296,7 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
         size_t node_id = discrete_uniform(random, nodes.size()-1) + 1;
         auto assigned_node = nodes[node_id];
 
-        if (assigned_node->GetParentNode() == 0) {
+        if (assigned_node->GetParentNode() == nullptr) {
             // This is an error b/c,
             // We ensured when sampling node_id to not choose the root.
             cerr << "Error: we sampled the root node." << endl;
@@ -340,10 +340,10 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
             size_t int_ref_cn = (size_t)round(reference_cn);
             if (variant_cn > reference_cn) {
                 datum->AddRegionData(b_alleles, depth, int_var_cn, int_ref_cn);
-                cts_cn.push_back(make_pair(variant_cn, reference_cn));
+                cts_cn.emplace_back(variant_cn, reference_cn);
             } else {
                 datum->AddRegionData(b_alleles, depth, int_ref_cn, int_var_cn);
-                cts_cn.push_back(make_pair(reference_cn, variant_cn));
+                cts_cn.emplace_back(reference_cn, variant_cn);
             }
             cout << "======" << endl;
             cout << "Datum " << i << endl;

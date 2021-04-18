@@ -22,6 +22,8 @@ using namespace std;
 class SingleCellData
 {
     string cell_name;
+
+    // allelic imbalance data
     vector<size_t> var_reads_;
     vector<size_t> total_reads_;
     vector<size_t> loci_idxs_;
