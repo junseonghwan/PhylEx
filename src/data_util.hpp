@@ -49,9 +49,11 @@ void WriteCell2NodeAssignment(const string& output_path,
                               const vector<CloneTreeNode *> &cell2node);
 void WriteScRnaExpressionData(
         const string& output_path,
-        const vector<SingleCellExpression *> &sc_expr,
+        const vector<SingleCellExpression *> &sc_expr_data,
         const vector<Gene *> &gene_set
 );
+void WriteClonalCNProfiles(const string &output_path, const vector<CloneTreeNode *> &nodes,
+                           const vector<Gene *> &gene_set);
 void write_tree(string output_path,
                 const vector<BulkDatum *> &bulk,
                 CompactTSSBState &state);
