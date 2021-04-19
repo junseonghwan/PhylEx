@@ -15,32 +15,8 @@
 
 #include "simul_data.hpp"
 
+namespace po = boost::program_options;
 using namespace std;
-
-/**
- * Parse configuration file. The format is `key: value` for each line
- * and must contain all the necessary parameters.
- *
- * @param[in] config_file_path where the configuration file is located
- * @param[out] config object saving the parameters
- */
-void parse_config_file(const string &config_file_path, SimulationConfig &config) {
-    string line;
-    ifstream config_file(config_file_path);
-    if (!config_file.is_open()) {
-        cerr << "Could not open the file: " << config_file_path << endl;
-        exit(-1);
-    }
-
-    vector<string> results;
-
-    while (getline(config_file, line)) {
-        boost::split(results, line, boost::is_any_of(":"));
-        boost::algorithm::trim(results[1]);
-        config.insert_option(results[0], results[1]);
-    }
-    config_file.close();
-}
 
 void CreateLinearTree(size_t region_count,
                       gsl_rng *random,
@@ -147,25 +123,32 @@ void CreateNaryTree(size_t region_count,
 
 int main(int argc, char *argv[]) {
     string config_file_path;
+    SimulationConfig simul_config;
+    try {
+        po::options_description desc("Program options");
+        desc.add_options()
+                ("help,h",
+                 "Configuration file with all parameters is needed. You can see the required parameters in the"
+                 " sample config file.")
+                ("config,c", po::value<string>(&config_file_path)->required(), "Path to config file.");
 
-    namespace po = boost::program_options;
-    po::options_description desc("Program options");
-    desc.add_options()
-            ("help", "Put a help message here.")
-            ("config,c", po::value<string>(&config_file_path)->required(), "path to config file.");
+        po::variables_map vm;
+        po::store(po::parse_command_line(argc, argv, desc), vm);
 
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
+        if (vm.count("help")) {
+            cout << desc << "\n";
+            return 1;
+        }
 
-    if (vm.count("help")) {
-        cout << desc << "\n";
+        po::notify(vm);
+
+        // Parse the config file
+        simul_config = *SimulationConfig::parse_config_file(config_file_path);
+
+    } catch (exception &e) {
+        cerr << "Error: " << e.what() << endl;
         return 1;
     }
-
-    // Parse the config file.
-    SimulationConfig simul_config;
-    parse_config_file(config_file_path, simul_config);
 
     gsl_rng *rand = generate_random_object(simul_config.seed);
 

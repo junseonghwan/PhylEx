@@ -9,13 +9,16 @@
 #define simul_config_h
 
 #include <string>
+#include <set>
+#include <fstream>
+#include <boost/program_options.hpp>
 
 #include "single_cell.hpp"
 
 using namespace std;
+namespace po = boost::program_options;
 
-class SimulationConfig
-{
+class SimulationConfig {
 public:
     size_t seed;
 
@@ -29,7 +32,7 @@ public:
     vector<double> var_allele_copy_prob;
     vector<double> ref_allele_copy_prob;
     double var_cp_prob;
-    
+
     double birth_rate;
     double death_rate;
     size_t max_cn;
@@ -51,14 +54,14 @@ public:
 
     // error rate is parametrized with low variance
     double sc_error_distn_variance_factor = 1.0;
-    
+
     string output_path;
-    
+
     bool randomize_dropout = false;
     bool randomize_branching = false;
     bool randomize_cf = true;
     double min_cf = 0.01;
-    
+
     double snv_sc_sparsity = 1; // ratio of bulk DNA SNVs expressed in scRNA data
 
     // gene expression configuration
@@ -66,8 +69,9 @@ public:
     double zero_inflation_prob; // rho
     double nb_inverse_dispersion; // r
 
-    void insert_option(const string& key, const string& val);
     SimulationConfig();
+    static SimulationConfig *parse_config_file(const string &config_file_path);
+    void insert_option(const string &key, const string &val);
 };
 
 #endif /* simul_config_h */
