@@ -2,7 +2,6 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
-#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -13,7 +12,6 @@
 #include "single_cell.hpp"
 #include "simul_config.hpp"
 #include "tssb_state.hpp"
-#include "utils.hpp"
 
 #include "simul_data.hpp"
 
@@ -26,20 +24,17 @@ using namespace std;
  * @param[in] config_file_path where the configuration file is located
  * @param[out] config object saving the parameters
  */
-void parse_config_file(const string& config_file_path, SimulationConfig &config)
-{
+void parse_config_file(const string &config_file_path, SimulationConfig &config) {
     string line;
     ifstream config_file(config_file_path);
-    if (!config_file.is_open())
-    {
+    if (!config_file.is_open()) {
         cerr << "Could not open the file: " << config_file_path << endl;
         exit(-1);
     }
-    
+
     vector<string> results;
 
-    while ( getline (config_file, line) )
-    {
+    while (getline(config_file, line)) {
         boost::split(results, line, boost::is_any_of(":"));
         boost::algorithm::trim(results[1]);
         config.insert_option(results[0], results[1]);
@@ -55,7 +50,7 @@ void CreateLinearTree(size_t region_count,
     nodes.push_back(root);
     auto node = root;
     for (size_t i = 0; i < max_depth; i++) {
-        node = (CloneTreeNode*)node->SpawnChild(1);
+        node = (CloneTreeNode *) node->SpawnChild(1);
         nodes.push_back(node);
     }
     size_t n_nodes = max_depth + 1;
@@ -66,10 +61,10 @@ void CreateLinearTree(size_t region_count,
         cell_prev[0] = 1.0;
         cell_prev[1] = gsl_ran_flat(random, 0.5, 1.0);
         for (size_t i = 2; i < n_nodes; i++) {
-            cell_prev[i] = cell_prev[i-1]/2;
+            cell_prev[i] = cell_prev[i - 1] / 2;
         }
         for (size_t i = 0; i < n_nodes; i++) {
-            clone_freq[i] = cell_prev[i] - cell_prev[i+1];
+            clone_freq[i] = cell_prev[i] - cell_prev[i + 1];
             nodes[i]->SetCellularPrevalenceAtRegion(region, cell_prev[i]);
             nodes[i]->SetCloneFrequencyAtRegion(region, clone_freq[i]);
         }
@@ -125,7 +120,7 @@ void CreateNaryTree(size_t region_count,
         }
 
         for (size_t i = 0; i < branch_count; i++) {
-            auto child_node = (CloneTreeNode*)node->SpawnChild(0.5);
+            auto child_node = (CloneTreeNode *) node->SpawnChild(0.5);
             // Set cellular prevalence.
             for (size_t region = 0; region < region_count; region++) {
                 double parent_clone_freq = node->NodeParameter().GetCloneFreqs()[region];
@@ -145,21 +140,19 @@ void CreateNaryTree(size_t region_count,
     }
     vector<CloneTreeNode *> nodes;
     CloneTreeNode::BreadthFirstTraversal(root, nodes);
-    for (auto & node : nodes) {
+    for (auto &node : nodes) {
         cout << node->Print() << endl;
     }
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     string config_file_path;
 
     namespace po = boost::program_options;
     po::options_description desc("Program options");
     desc.add_options()
-    ("help", "Put a help message here.")
-    ("config,c", po::value<string>(&config_file_path)->required(), "path to config file.")
-    ;
+            ("help", "Put a help message here.")
+            ("config,c", po::value<string>(&config_file_path)->required(), "path to config file.");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -173,9 +166,9 @@ int main(int argc, char *argv[])
     // Parse the config file.
     SimulationConfig simul_config;
     parse_config_file(config_file_path, simul_config);
-    
+
     gsl_rng *rand = generate_random_object(simul_config.seed);
-    
+
     ModelParams model_params;
     model_params.SetAlpha0Bound(true, 10.0);
     model_params.SetLambdaBound(false, 1.0);
@@ -218,9 +211,9 @@ int main(int argc, char *argv[])
                        simul_config.randomize_cf,
                        simul_config.min_cf);
     }
-    
+
     vector<BulkDatum *> data;
-    
+
     // Create somatic SNVs: chr and pos.
     // Each BulkDatum instance has a reference to the Locus instance.
     // We need to keep these alive in the memory during the simulation.
@@ -261,12 +254,15 @@ int main(int argc, char *argv[])
     WriteScRnaExpressionData(output_path, sc_expr_data, gene_set);
 
     // Output information needed for evaluation.
-    vector<CloneTreeNode *> all_nodes;
+    vector<CloneTreeNode *> sorted_nodes;
     CloneTreeNode::BreadthFirstTraversal(root_node,
-                                           all_nodes,
-                                           false);
+                                         sorted_nodes,
+                                         false);
+
+    WriteClonalCNProfiles(output_path, sorted_nodes, gene_set);
+
     unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
-    CloneTreeNode::Datum2Node(all_nodes, datum2node);
+    CloneTreeNode::Datum2Node(sorted_nodes, datum2node);
     double bulk_log_lik = 0.0;
     for (size_t region = 0; region < simul_config.n_regions; region++) {
         for (size_t i = 0; i < simul_config.n_sites; i++) {
@@ -293,7 +289,7 @@ int main(int argc, char *argv[])
         f << data[i]->GetId() << "," << cluster_labels[i] << "\n";
     }
     f.close();
-    
+
     gsl_rng_free(rand);
     cout << "Done!" << endl;
 
