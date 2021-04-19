@@ -7,9 +7,6 @@
 
 #include "simul_data.hpp"
 
-#include "Eigen/Dense"
-#include "Eigen/Eigenvalues"
-
 #include "data_util.hpp"
 #include "tssb_state.hpp"
 
@@ -194,14 +191,9 @@ void GenerateBulkData(gsl_rng *random,
 }
 
 // Assumes nodes are in breadth first traversal order.
-Eigen::MatrixXf EvolveCn(gsl_rng *random,
-                     vector<CloneTreeNode *> &nodes,
-                     unordered_map<CloneTreeNode *, size_t> &node2idx,
-                     CloneTreeNode *assigned_node,
-                     const SimulationConfig &config,
-                     Eigen::MatrixXf P0,
-                     Eigen::MatrixXf P1)
-{
+Eigen::MatrixXf EvolveCn(gsl_rng *random, vector<CloneTreeNode *> &nodes, unordered_map<CloneTreeNode *,
+                         size_t> &node2idx, CloneTreeNode *assigned_node, const SimulationConfig &config,
+                         Eigen::MatrixXf P0, Eigen::MatrixXf P1) {
     size_t n_nodes = nodes.size();
 
     // Indexing:
@@ -259,6 +251,14 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random,
     return cn_profile;
 }
 
+/**
+ * Create SNVs and evolve copy numbers
+ * @param random GSL RNG object
+ * @param simul_config parameters
+ * @param data vector of `BulkDatum`
+ * @param root_node
+ * @param cts_cn reference and variant copy number profile for each SNV
+ */
 void GenerateBulkDataWithBDProcess(gsl_rng *random,
                                    const SimulationConfig &simul_config,
                                    vector<BulkDatum *> &data,
@@ -287,6 +287,11 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
         auto node = nodes[i];
         node2idx[node] = i;
     }
+
+    // generate clonal copy number profiles
+    // TODO merge copy number evolutions (single positions and genes/bins)
+    //  in order to have consistent data
+    EvolveCloneSpecificCN(random, simul_config, root_node, P1);
 
     // Assign data to nodes.
     size_t b_alleles, depth;
@@ -359,7 +364,8 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_n
                                           const ModelParams &model_params,
                                           const SimulationConfig &simul_config,
                                           vector<SingleCellData *> &sc_data,
-                                          vector<SingleCellExpression *> sc_expr_data)
+                                          vector<SingleCellExpression *> &sc_expr_data,
+                                          vector<Gene *> &gene_set)
 {
     vector<size_t> bulk_sc_coverage(data.size(), 0);
     // We subselect bulk to have single cell coverage.
@@ -368,10 +374,6 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_n
             bulk_sc_coverage[i] = 1;
         }
     }
-
-    // generate genes for scRNA expression data
-    vector<Gene *> gene_set(simul_config.n_genes);
-    GenerateGenes(random, simul_config, gene_set);
 
     // Retrieve all nodes/clones with at least one SNV assigned.
     vector<CloneTreeNode *> non_empty_nodes;
@@ -404,6 +406,7 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_n
                 gene_set);
 
         sc_data.push_back(sc);
+        sc_expr_data.push_back(sc_expr);
         cout << "=====" << endl;
     }
     
@@ -487,12 +490,8 @@ void GenerateScRnaReads(const gsl_rng *random,
     cout << var_read_observed_count << "/" << var_loci_expr_count << " sites with variant reads observed.\n";
 }
 
-void EvolveCloneSpecificCN(
-        const gsl_rng *rng,
-        const SimulationConfig &simul_config,
-        CloneTreeNode *root,
-        Eigen::MatrixXf &P1
-        ) {
+void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *root,
+                           Eigen::MatrixXf &P1) {
     vector<CloneTreeNode *> sorted_nodes;
     CloneTreeNode::BreadthFirstTraversal(root, sorted_nodes);
 

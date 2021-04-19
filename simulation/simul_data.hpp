@@ -18,6 +18,8 @@
 #include "model_params.hpp"
 #include "single_cell.hpp"
 #include "simul_config.hpp"
+#include "Eigen/Dense"
+#include "Eigen/Eigenvalues"
 
 CloneTreeNode *SampleFromTssbPrior(size_t region_count,
                                    const gsl_rng *random,
@@ -43,7 +45,8 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
 vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_node, const vector<BulkDatum *> &data,
                                           const ModelParams &model_params, const SimulationConfig &simul_config,
                                           vector<SingleCellData *> &sc_data,
-                                          vector<SingleCellExpression *> sc_expr_data);
+                                          vector<SingleCellExpression *> &sc_expr_data,
+                                          vector<Gene *> &gene_set);
 void GenerateScRnaReads(const gsl_rng *random,
                         const SimulationConfig &simul_config,
                         CloneTreeNode *node,
@@ -64,6 +67,21 @@ void GenerateScRnaExpression(
         CloneTreeNode *node,
         SingleCellExpression &sc,
         vector<Gene *> &gene_set
+);
+
+Eigen::MatrixXf EvolveCn(gsl_rng *random,
+                         vector<CloneTreeNode *> &nodes,
+                         unordered_map<CloneTreeNode *, size_t> &node2idx,
+                         CloneTreeNode *assigned_node,
+                         const SimulationConfig &config,
+                         Eigen::MatrixXf P0,
+                         Eigen::MatrixXf P1);
+
+void EvolveCloneSpecificCN(
+        const gsl_rng *rng,
+        const SimulationConfig &simul_config,
+        CloneTreeNode *root,
+        Eigen::MatrixXf &P1
 );
 
 //void GenerateScRnaReads(const gsl_rng *random,
