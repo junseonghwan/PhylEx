@@ -74,7 +74,7 @@ void SimulationConfig::insert_option(const string& key, const string& val)
         } else if (key == "n_cells") {
             this->n_cells = stoul(val);
         } else if (key == "sc_mean_depth") {
-            this->sc_mean_depth = stoul(val);
+            this->sc_mean_depth = stod(val);
         } else if (key == "dropout_rate") {
             this->dropout_rate = stod(val);
         } else if (key == "randomize_dropout") {
@@ -97,6 +97,12 @@ void SimulationConfig::insert_option(const string& key, const string& val)
             this->min_cf = stod(val);
         } else if (key == "snv_sc_sparsity") {
             this->snv_sc_sparsity = stod(val);
+        } else if (key == "n_genes") {
+            this->n_genes = stoul(val);
+        }else if (key == "zero_inflation_prob") {
+            this->zero_inflation_prob = stod(val);
+        }else if (key == "nb_inverse_dispersion") {
+            this->nb_inverse_dispersion = stod(val);
         } else if (key == "output_path") {
             this->output_path = val;
         } else {
