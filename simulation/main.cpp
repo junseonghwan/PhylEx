@@ -243,18 +243,22 @@ int main(int argc, char *argv[])
                                   data,
                                   cts_cn_profile);
     }
+    // generate or sample a gene set for expression data
+    // TODO sample `gene_set` from real genes
+    vector<Gene *> gene_set;
+    GenerateGenes(rand, simul_config, gene_set);
 
     // Generate single cell reads.
     vector<SingleCellData *> sc_data;
-    auto cell2node = GenerateScRnaData(rand,
-                                       root_node,
-                                       data,
-                                       model_params,
-                                       simul_config,
-                                       sc_data);
+    vector<SingleCellExpression *> sc_expr_data;
+    auto cell2node = GenerateScRnaData(rand, root_node, data, model_params, simul_config,
+                                       sc_data,
+                                       sc_expr_data,
+                                       gene_set);
     WriteScRnaData(output_path, data, sc_data);
     WriteCell2NodeAssignment(output_path, sc_data, cell2node);
     WriteBetaBinomHp(output_path, data);
+    WriteScRnaExpressionData(output_path, sc_expr_data, gene_set);
 
     // Output information needed for evaluation.
     vector<CloneTreeNode *> all_nodes;
