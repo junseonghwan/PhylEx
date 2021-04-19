@@ -68,6 +68,7 @@ public:
     size_t n_genes;
     double zero_inflation_prob; // rho
     double nb_inverse_dispersion; // r
+    // TODO simulate gene-specific rho and r
 
     SimulationConfig();
     static SimulationConfig *parse_config_file(const string &config_file_path);

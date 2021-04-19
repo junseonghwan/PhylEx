@@ -34,10 +34,10 @@ using namespace std;
 class Config {
 public:
     size_t seed;
-    string bulk_file = "";
-    string scRNA_file = "";
-    string sc_hyperparam_file = "";
-    string cn_prior_path = "";
+    string bulk_file;
+    string scRNA_file;
+    string sc_hyperparam_file;
+    string cn_prior_path;
     string output_path;
     size_t n_mcmc_iter = 2500;
     size_t n_mh_iter = 5000;
@@ -62,6 +62,7 @@ class Interface {
     void ReadCnPrior();
     void ReadScRnaData();
     void ReadScRnaHyperparams();
+    // TODO add gene set reading function
 
 public:
     Interface(string config_file);
