@@ -520,9 +520,10 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
     }
     vector<CloneTreeNode *> ret;
     CloneTreeNode::BreadthFirstTraversal(clone_root, ret);
-    for (size_t i = 0; i < ret.size(); i++) {
-        cout << ret.at(i)->Print() << endl;
-    }
+    // TODO add printing with logger
+//    for (size_t i = 0; i < ret.size(); i++) {
+//        cout << ret.at(i)->Print() << endl;
+//    }
   
     gsl_rng *random = generate_random_object(1);
     ModelParams model_params(1, 0.5, 0.5, 0.001);

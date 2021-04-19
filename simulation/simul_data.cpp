@@ -55,7 +55,11 @@ Eigen::MatrixXf GetCnRateMatrix(double birth_rate,
 
 Eigen::MatrixXf ExponentiateMatrix(Eigen::Ref<Eigen::MatrixXf> M)
 {
-    std::cout << M << std::endl;
+    if (verbose) {
+        // TODO replace if statement with logger class (e.g. GLOG)
+        std::cout << "Rate matrix" << std::endl;
+        std::cout << M << std::endl;
+    }
     Eigen::EigenSolver<Eigen::MatrixXf> diagonalization;
     diagonalization.compute(M);
     auto evalues = diagonalization.eigenvalues();
@@ -181,11 +185,13 @@ void GenerateBulkData(gsl_rng *random,
             } else {
                 datum->AddRegionData(b_alleles, depth, var_allele_count, ref_allele_count);
             }
-            cout << "======" << endl;
-            cout << "Datum " << i << endl;
-            cout << datum->GetVariantReadCount()[region] << "/" << datum->GetReadCount()[region] << endl;
-            cout << "xi: " << xi << endl;
-            cout << "======" << endl;
+            if (verbose) {
+                cout << "======" << endl;
+                cout << "Datum " << i << endl;
+                cout << datum->GetVariantReadCount()[region] << "/" << datum->GetReadCount()[region] << endl;
+                cout << "xi: " << xi << endl;
+                cout << "======" << endl;
+            }
         }
     }
 }
@@ -274,8 +280,11 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
     // Construct rate matrix for copy number profile and perform uniformization.
     Eigen::MatrixXf Q1 = GetCnRateMatrix(birth_rate, death_rate, 1, simul_config.max_cn);
     Eigen::MatrixXf P1 = ExponentiateMatrix(Q1);
-    
-    std::cout << P1 << std::endl;
+
+    if (verbose) {
+        std::cout << "Transition matrix P1" << std::endl;
+        std::cout << P1 << std::endl;
+    }
 
     Eigen::MatrixXf Q0 = GetCnRateMatrix(birth_rate, death_rate, 0, simul_config.max_cn);
     Eigen::MatrixXf P0 = ExponentiateMatrix(Q0);
@@ -339,7 +348,9 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
             }
             xi += simul_config.seq_err;
             depth = gsl_ran_poisson(random, simul_config.bulk_mean_depth * total_cn/2);
-            cout << xi << ", " << depth << endl;
+            if (verbose) {
+                cout << xi << ", " << depth << endl;
+            }
             b_alleles = gsl_ran_binomial(random, xi, depth);
             size_t int_var_cn = (size_t)round(variant_cn);
             size_t int_ref_cn = (size_t)round(reference_cn);
@@ -350,11 +361,13 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
                 datum->AddRegionData(b_alleles, depth, int_ref_cn, int_var_cn);
                 cts_cn.emplace_back(reference_cn, variant_cn);
             }
-            cout << "======" << endl;
-            cout << "Datum " << i << endl;
-            cout << datum->GetVariantReadCount(region) << "/" << datum->GetReadCount(region) << endl;
-            cout << "xi: " << xi << endl;
-            cout << "======" << endl;
+            if (verbose) {
+                cout << "======" << endl;
+                cout << "Datum " << i << endl;
+                cout << datum->GetVariantReadCount(region) << "/" << datum->GetReadCount(region) << endl;
+                cout << "xi: " << xi << endl;
+                cout << "======" << endl;
+            }
         }
     }
 }
@@ -386,7 +399,9 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_n
         node = non_empty_nodes[idx];
         cell2node.push_back(node);
 
-        cout << "Cell " << c << " assigned to " << node->GetName() << endl;
+        if (verbose) {
+            cout << "Cell " << c << " assigned to " << node->GetName() << endl;
+        }
 
         string cell_name = "c" + to_string(c);
         auto sc = new SingleCellData(cell_name, data.size());
@@ -407,7 +422,9 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_n
 
         sc_data.push_back(sc);
         sc_expr_data.push_back(sc_expr);
-        cout << "=====" << endl;
+        if (verbose) {
+            cout << "=====" << endl;
+        }
     }
     
     return cell2node;
@@ -443,9 +460,10 @@ void GenerateScRnaReads(const gsl_rng *random,
             sampled_loci_idx.insert(locus_idx);
         }
     }
-    
-    cout << "Number of sites expressed: " << sampled_loci_idx.size() << "\n";
-    
+
+    if (verbose) {
+        cout << "Number of sites expressed: " << sampled_loci_idx.size() << "\n";
+    }
     // We use parameterization so that the mean seq error rate is still simul_config.seq_err
     // but such that the variance is smaller, meaning that it will be concentrated around simul_config.seq_err.
     double seq_err_alpha = simul_config.seq_err * simul_config.sc_error_distn_variance_factor;
@@ -479,15 +497,21 @@ void GenerateScRnaReads(const gsl_rng *random,
         } else {
             // We expect to see variant read only in error.
             var_expr_prob = gsl_ran_beta(random, seq_err_alpha, seq_err_beta);
-            cout << "SNV absent. Variant expression prob: " << var_expr_prob << endl;
+            if (verbose) {
+                cout << "SNV absent. Variant expression prob: " << var_expr_prob << endl;
+            }
         }
         var_read_count = gsl_ran_binomial(random, var_expr_prob, total_read_count);
-        cout << var_read_count << "/" << total_read_count << "\n";
+        if (verbose) {
+            cout << var_read_count << "/" << total_read_count << "\n";
+        }
         var_read_observed_count += var_read_count > 0 ? 1 : 0;
         sc.InsertDatum(locus_idx, var_read_count, total_read_count);
     }
-    cout << var_loci_expr_count << "/" << snvs.size() << " variants expressed.\n";
-    cout << var_read_observed_count << "/" << var_loci_expr_count << " sites with variant reads observed.\n";
+    if (verbose) {
+        cout << var_loci_expr_count << "/" << snvs.size() << " variants expressed.\n";
+        cout << var_read_observed_count << "/" << var_loci_expr_count << " sites with variant reads observed.\n";
+    }
 }
 
 void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *root,
