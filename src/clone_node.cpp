@@ -716,6 +716,8 @@ void CloneTreeNode::setCnProfile(const vector<size_t> &cnProfile) {
     cn_profile = cnProfile;
 }
 
+// TODO incorporate gene expression data in likelihood functions
+
 double ScLikelihoodWithDropout(size_t loci_idx,
                     const BulkDatum *bulk,
                     const SingleCellData *sc,

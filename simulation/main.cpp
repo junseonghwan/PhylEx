@@ -116,9 +116,10 @@ void CreateNaryTree(size_t region_count,
     }
     vector<CloneTreeNode *> nodes;
     CloneTreeNode::BreadthFirstTraversal(root, nodes);
-    for (auto &node : nodes) {
-        cout << node->Print() << endl;
-    }
+    // TODO add logger
+//    for (auto &node : nodes) {
+//        cout << node->Print() << endl;
+//    }
 }
 
 int main(int argc, char *argv[]) {

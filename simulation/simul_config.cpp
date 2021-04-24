@@ -129,7 +129,7 @@ SimulationConfig *SimulationConfig::parse_config_file(const string &config_file_
                                    "randomize_branching", "randomize_cf", "min_cf", "snv_sc_sparsity", "n_genes",
                                    "zero_inflation_prob", "nb_inverse_dispersion", "output_path"};
 
-    // create the config singleton object
+    // create the config object
     auto config = new SimulationConfig();
     string line;
     ifstream config_file(config_file_path);

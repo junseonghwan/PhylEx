@@ -315,8 +315,10 @@ void WriteScRnaExpressionData(const string &output_path, const vector<SingleCell
     }
     f.close();
 }
+
 /**
  * Writes copy number for each gene and for each clone in TSV file
+ *
  * @param output_path data path
  * @param nodes vector of nodes sorted in the desired way
  */
@@ -333,7 +335,7 @@ void WriteClonalCNProfiles(const string &output_path, const vector<CloneTreeNode
             f << endl;
         } else {
             // write copy numbers
-            f << gene_set[i-1] << "\t";
+            f << gene_set[i-1]->getEnsemblId() << "\t";
             for (auto n: nodes) {
                 f << n->getCnProfile()[i-1] << "\t";
             }

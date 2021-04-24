@@ -53,7 +53,7 @@ Eigen::MatrixXf GetCnRateMatrix(double birth_rate,
     return Q;
 }
 
-Eigen::MatrixXf ExponentiateMatrix(Eigen::Ref<Eigen::MatrixXf> M)
+Eigen::MatrixXf ExponentiateMatrix(const Eigen::Ref<Eigen::MatrixXf>& M)
 {
     if (verbose) {
         // TODO replace if statement with logger class (e.g. GLOG)
@@ -561,6 +561,15 @@ void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vec
     }
 }
 
+/**
+ * Simulate the expression reads for a single cell assigned to a specific node
+ *
+ * @param rng GSL RNG object
+ * @param simul_config simulation parameters object
+ * @param node node to which the cell is assigned
+ * @param sc reference to the empty SC expression object
+ * @param gene_set set of genes of which expression must be simulated
+ */
 void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *node,
                              SingleCellExpression &sc, vector<Gene *> &gene_set) {
 

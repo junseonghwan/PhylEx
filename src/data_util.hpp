@@ -66,6 +66,8 @@ void WriteCopyNumberProfileToFile(string output_path,
                       CloneTreeNode *root_node,
                       unordered_map<CloneTreeNode *, vector<pair<size_t, size_t> > > &cn_profile);
 
+// TODO add writers for all simulated latent variables i.e. mu_g, rho_cg, r_g, s_c
+
 // output related functions
 void write_vector(string path, const vector<unsigned int> &data);
 void write_vector(string path, const vector<double> &data);

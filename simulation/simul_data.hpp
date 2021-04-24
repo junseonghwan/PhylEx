@@ -10,8 +10,8 @@
 
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_matrix.h>
-#include <gene.hpp>
 
+#include "gene.hpp"
 #include "bulk_datum.hpp"
 #include "clone_node.hpp"
 #include "tssb_state.hpp"
