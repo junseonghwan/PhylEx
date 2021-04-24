@@ -61,10 +61,16 @@ class SingleCellExpression {
     vector<size_t> gene_idxs; // maps expression read to specific gene
     vector<size_t> expr_reads;
 
-public:
-    SingleCellExpression(const string &cellName);
+    // parameters
+    double depth_size; // s_c, or library size
+    vector<double> zero_inflation_probs; // rho_gc
 
 public:
+
+    explicit SingleCellExpression(string cellName);
+
+    SingleCellExpression(string cellName, double depth_size);
+
     const string &getCellName() const;
 
     void setCellName(const string &cellName);
@@ -76,6 +82,16 @@ public:
     const vector<size_t> &getExprReads() const;
 
     void setExprReads(const vector<size_t> &exprReads);
+
+    const vector<double> &getZeroInflationProbs() const;
+
+    void setZeroInflationProbs(const vector<double> &zeroInflationProbs);
+
+    double getDepthSize() const;
+
+    void setDepthSize(double depthSize);
+
+    void print();
 };
 
 #endif /* single_cell_dna_hpp */

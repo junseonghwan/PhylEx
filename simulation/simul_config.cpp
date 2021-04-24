@@ -97,10 +97,20 @@ void SimulationConfig::insert_option(const string &key, const string &val) {
             this->snv_sc_sparsity = stod(val);
         } else if (key == "n_genes") {
             this->n_genes = stoul(val);
-        } else if (key == "zero_inflation_prob") {
-            this->zero_inflation_prob = stod(val);
-        } else if (key == "nb_inverse_dispersion") {
-            this->nb_inverse_dispersion = stod(val);
+        } else if (key == "zero_inflation_alpha") {
+            this->zero_inflation_alpha = stod(val);
+        } else if (key == "zero_inflation_beta") {
+            this->zero_inflation_beta = stod(val);
+        } else if (key == "nb_inv_dispersion_shape") {
+            this->nb_inv_dispersion_shape = stod(val);
+        } else if (key == "nb_inv_dispersion_scale") {
+            this->nb_inv_dispersion_scale = stod(val);
+        } else if (key == "depth_size_min") {
+            this->depth_size_min = stod(val);
+        } else if (key == "depth_size_max") {
+            this->depth_size_max = stod(val);
+        } else if (key == "genecode_path") {
+            this->genecode_path = val;
         } else if (key == "output_path") {
             this->output_path = val;
         } else {
@@ -127,7 +137,8 @@ SimulationConfig *SimulationConfig::parse_config_file(const string &config_file_
                                    "randomize_dropout", "bursty_prob", "sc_bursty_alpha0", "sc_bursty_beta0",
                                    "sc_error_distn_variance_factor", "beta_binomial_hp_max",
                                    "randomize_branching", "randomize_cf", "min_cf", "snv_sc_sparsity", "n_genes",
-                                   "zero_inflation_prob", "nb_inverse_dispersion", "output_path"};
+                                   "zero_inflation_alpha", "zero_inflation_beta", "nb_inv_dispersion_shape",
+                                   "nb_inv_dispersion_scale", "depth_size_max", "depth_size_min", "output_path"};
 
     // create the config object
     auto config = new SimulationConfig();

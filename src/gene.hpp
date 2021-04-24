@@ -6,6 +6,10 @@
 #define PHYLEX_GENE_HPP
 
 #include <string>
+#include <vector>
+#include <utility>
+#include <fstream>
+#include <iostream>
 
 using namespace std;
 
@@ -14,17 +18,21 @@ class Gene {
     size_t start_pos;
     size_t end_pos;
     string ensembl_id;
+    string name;
 
-    double per_copy_expr{}; // mu
+    double per_copy_expr; // mu_g
+    double nb_inv_dispersion; // r_g
 
 public:
 
-    Gene(string ensembl_id, string chr, size_t start_pos, size_t end_pos);
-    Gene(string ensembl_id, string chr, size_t start_pos, size_t end_pos, double per_copy_expr);
+    Gene(string ensemblId, string chr, size_t startPos, size_t endPos, string name);
+
+    Gene(string ensembl_id, string chr, size_t start_pos, size_t end_pos, double per_copy_expr,
+         double nb_inv_dispersion, string name);
 
     const string &getChr() const;
 
-    void setChr(const string &chr);
+    void setChr(const string &chromosome);
 
     size_t getStartPos() const;
 
@@ -41,6 +49,16 @@ public:
     double getPerCopyExpr() const;
 
     void setPerCopyExpr(double perCopyExpr);
+
+    const string &getName() const;
+
+    void setName(const string &name);
+
+    double getNbInvDispersion() const;
+
+    void setNbInvDispersion(double nbInvDispersion);
+
+    static vector<Gene *> readGeneCodeFromFile(const string &path);
 };
 
 

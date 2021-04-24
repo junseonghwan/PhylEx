@@ -56,6 +56,7 @@ public:
     double sc_error_distn_variance_factor = 1.0;
 
     string output_path;
+    string genecode_path; // for reading gene codes
 
     bool randomize_dropout = false;
     bool randomize_branching = false;
@@ -66,13 +67,20 @@ public:
 
     // gene expression configuration
     size_t n_genes;
-    double zero_inflation_prob; // rho
-    double nb_inverse_dispersion; // r
-    // TODO simulate gene-specific rho and r
+    // rho simulated with beta dist
+    double zero_inflation_alpha;
+    double zero_inflation_beta;
+    // r simulated with gamma dist
+    double nb_inv_dispersion_shape;
+    double nb_inv_dispersion_scale;
+    // depth size s uniform parameters
+    double depth_size_min;
+    double depth_size_max;
 
     SimulationConfig();
     static SimulationConfig *parse_config_file(const string &config_file_path);
     void insert_option(const string &key, const string &val);
+
 };
 
 #endif /* simul_config_h */

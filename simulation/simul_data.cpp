@@ -423,6 +423,7 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_n
         sc_data.push_back(sc);
         sc_expr_data.push_back(sc_expr);
         if (verbose) {
+            sc_expr->print();
             cout << "=====" << endl;
         }
     }
@@ -544,20 +545,33 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
  *      and all other attributes are sampled.
  */
 void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vector<Gene *> &gene_set) {
-    if (gene_set.empty()) {
-        // TODO simulate chromosome, position and id in a way that no overlap is possible
+
+    if (simul_config.genecode_path.empty()) {
         for (int g = 0; g < simul_config.n_genes; ++g) {
             string ensembl_id = "ENSG" + to_string(g);
             string chr = convert_chr_to_string(gsl_rng_uniform_int(rng, 23) + 1);
             size_t start_pos = gsl_rng_uniform_int(rng, 10000000);
             size_t end_pos = start_pos + gsl_ran_poisson(rng, 100);
-            gene_set.push_back(new Gene(ensembl_id, chr, start_pos, end_pos));
+            gene_set.push_back(new Gene(ensembl_id, chr, start_pos, end_pos, ""));
+        }
+    } else {
+        auto genecode = Gene::readGeneCodeFromFile(simul_config.genecode_path);
+        // sample n_genes from the genecode
+        auto idxs = new size_t[genecode.size()];
+        for (size_t i = 0; i < genecode.size(); ++i) {idxs[i] = i;}
+        auto samples = new size_t[simul_config.n_genes];
+        gsl_ran_choose(rng, samples, simul_config.n_genes, idxs, genecode.size(), sizeof(size_t));
+        // push the sampled genes into the gene_set
+        for (int g = 0; g < simul_config.n_genes; ++g) {
+            gene_set.push_back(genecode[samples[g]]);
         }
     }
     // simulate per-copy expression
     for (int g = 0; g < simul_config.n_genes; ++g) {
-        // normal prior
-        gene_set[g]->setPerCopyExpr(exp(gsl_ran_gaussian(rng,1)));
+        // std normal prior
+        gene_set[g]->setPerCopyExpr(exp(gsl_ran_gaussian(rng, 1)));
+        gene_set[g]->setNbInvDispersion(gsl_ran_gamma(rng, simul_config.nb_inv_dispersion_shape,
+                                                      simul_config.nb_inv_dispersion_scale));
     }
 }
 
@@ -572,22 +586,38 @@ void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vec
  */
 void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *node,
                              SingleCellExpression &sc, vector<Gene *> &gene_set) {
+    // simulate depth/library size
+    sc.setDepthSize(gsl_ran_flat(rng, simul_config.depth_size_min, simul_config.depth_size_max));
+
+    double norm_factor = 0;
+    vector<double> unnormalized_means(simul_config.n_genes);
+    for (int g = 0; g < simul_config.n_genes; ++g) {
+        unnormalized_means[g] = gene_set[g]->getPerCopyExpr() * node->getCnProfile()[g];
+        norm_factor += unnormalized_means[g];
+    }
 
     // retrieve clone-specific copy number profile
     vector<size_t> expr_reads(simul_config.n_genes);
+    vector<double> zero_inflation_probs(simul_config.n_genes);
+    // sample expression reads
     for (int g = 0; g < simul_config.n_genes; ++g) {
-        bool zero_inflation = gsl_ran_bernoulli(rng, simul_config.zero_inflation_prob);
+        zero_inflation_probs[g] = gsl_ran_beta(rng, simul_config.zero_inflation_alpha, simul_config.zero_inflation_beta);
+        bool zero_inflation = gsl_ran_bernoulli(rng, zero_inflation_probs[g]);
+        // simulate the zero inflation probability
         if (zero_inflation) {
             expr_reads[g] = 0;
         } else {
             // NB expressed in terms of mean/var
-            double nb_mean = gene_set[g]->getPerCopyExpr() * node->getCnProfile()[g];
-            double nb_var = nb_mean + (nb_mean * nb_mean / simul_config.nb_inverse_dispersion);
+            // compute mean with clonealign formula (without covariates)
+            double nb_mean = sc.getDepthSize() * unnormalized_means[g] / norm_factor;
+            double r = gene_set[g]->getNbInvDispersion();
+            // derive p NB parameter
+            double p = r/(nb_mean + r);
 
-            // derive p parameter
-            double p = (nb_var - nb_mean) / nb_var;
-            expr_reads[g] = gsl_ran_negative_binomial(rng, p, simul_config.nb_inverse_dispersion);
+            // sample read for gene g
+            expr_reads[g] = gsl_ran_negative_binomial(rng, p, r);
         }
     }
+    sc.setZeroInflationProbs(zero_inflation_probs);
     sc.setExprReads(expr_reads);
 }
