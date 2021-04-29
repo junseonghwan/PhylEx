@@ -67,8 +67,10 @@ class CloneTreeNode
     // map: child branch idx -> pair<psi_stick, Node *>
     unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child_;
 
-    // clone-specific copy number per each gene
+    // clone-specific copy number per each gene/bin
     vector<size_t> cn_profile;
+    // bin-set
+    shared_ptr<vector<Bin>> bins;
 
     bool operator==(const CloneTreeNode &other) const;
 
@@ -99,6 +101,10 @@ public:
     const vector<size_t> &getCnProfile() const;
 
     void setCnProfile(const vector<size_t> &cnProfile);
+
+    const shared_ptr<vector<Bin>> &getBins() const;
+
+    void setBins(const shared_ptr<vector<Bin>> &bins);
 
     size_t GetChildrenCount() const;
     bool IsRoot() const;

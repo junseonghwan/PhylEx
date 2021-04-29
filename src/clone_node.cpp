@@ -716,6 +716,14 @@ void CloneTreeNode::setCnProfile(const vector<size_t> &cnProfile) {
     cn_profile = cnProfile;
 }
 
+const shared_ptr<vector<Bin>> &CloneTreeNode::getBins() const {
+    return bins;
+}
+
+void CloneTreeNode::setBins(const shared_ptr<vector<Bin>> &bins) {
+    CloneTreeNode::bins = bins;
+}
+
 // TODO incorporate gene expression data in likelihood functions
 
 double ScLikelihoodWithDropout(size_t loci_idx,
