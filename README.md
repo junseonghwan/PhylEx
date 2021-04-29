@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/junseonghwan/PhylEx.svg?token=wxZvzvzdwz1aU7zpr7vw&branch=master)](https://travis-ci.com/junseonghwan/PhylEx)
 
-This software performs integrated analysis of bulk DNA-seq and single cell RNA-seq data. 
+This software performs integrated analysis of bulk DNA-seq and single cell RNA-seq data.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ cmake ../src
 make install
 ```
 
-then execute 
+then execute
 
 ```bash
 ./run -c <config_file>
@@ -30,9 +30,15 @@ then execute
 
 An example of the configuration file is provided in a separate repository for analysis [here](https://github.com/junseonghwan/PhylExAnalysis).
 
+_Note_: this will install `libtssb.a` library file in your `local/bin` directory
+unless you specify it with the `cmake` command option
+```bash
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/opt ../src
+```
+
 ## Simulation and tests
 
-To compile the simulation code, it is required first to 
+To compile the simulation code, it is first required to
 initialize [eigen](https://gitlab.com/libeigen/eigen) submodule
 
 ```bash
@@ -43,7 +49,6 @@ git submodule update
 then one can build all components with
 
 ```bash
-cd PhylEx
 mkdir build
 cd build
 cmake ..
