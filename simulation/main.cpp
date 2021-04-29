@@ -195,9 +195,32 @@ int main(int argc, char *argv[]) {
                        simul_config.randomize_cf,
                        simul_config.min_cf);
     }
+    vector<CloneTreeNode *> sorted_nodes;
+    CloneTreeNode::BreadthFirstTraversal(root_node,
+                                         sorted_nodes,
+                                         false);
 
+    // generate or sample a gene set for expression data
+    vector<Gene *> gene_set;
+    GenerateGenes(rand, simul_config, gene_set);
+
+    auto bins = make_shared<vector<Bin>>(Bin::generateBinsFromGenes(gene_set, 500000));
+    // give a reference of the bins to each node
+    for (auto node: sorted_nodes) {
+        node->setBins(bins);
+    }
+    if (verbose) {
+        for (auto b: *bins) {
+            if (!b.getGenes().empty()) {
+                cout << b.toString() << " <- ";
+                for (auto g: b.getGenes()) {
+                    cout << g->toString() << ",";
+                }
+                cout << endl;
+            }
+        }
+    }
     vector<BulkDatum *> data;
-
     // Create somatic SNVs: chr and pos.
     // Each BulkDatum instance has a reference to the Locus instance.
     // We need to keep these alive in the memory during the simulation.
@@ -220,10 +243,6 @@ int main(int argc, char *argv[]) {
                                   data,
                                   cts_cn_profile);
     }
-    // generate or sample a gene set for expression data
-    // TODO sample `gene_set` from real genes
-    vector<Gene *> gene_set;
-    GenerateGenes(rand, simul_config, gene_set);
 
     // Generate single cell reads.
     vector<SingleCellData *> sc_data;
@@ -238,11 +257,6 @@ int main(int argc, char *argv[]) {
     WriteScRnaExpressionData(output_path, sc_expr_data, gene_set);
 
     // Output information needed for evaluation.
-    vector<CloneTreeNode *> sorted_nodes;
-    CloneTreeNode::BreadthFirstTraversal(root_node,
-                                         sorted_nodes,
-                                         false);
-
     WriteClonalCNProfiles(output_path, sorted_nodes, gene_set);
 
     unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;

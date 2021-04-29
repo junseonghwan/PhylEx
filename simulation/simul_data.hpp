@@ -79,6 +79,9 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random,
                          Eigen::MatrixXf P0,
                          Eigen::MatrixXf P1);
 
+Eigen::MatrixXf SampleRefVarCn(gsl_rng *rng, const SimulationConfig &simulationConfig, const vector<CloneTreeNode *> &sortedNodes,
+                               CloneTreeNode *assignedNode, int binIdx);
+
 void EvolveCloneSpecificCN(
         const gsl_rng *rng,
         const SimulationConfig &simul_config,

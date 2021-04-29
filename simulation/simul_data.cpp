@@ -10,6 +10,13 @@
 #include "data_util.hpp"
 #include "tssb_state.hpp"
 
+/**
+ * Sample the next state given the current using the transition matrix P
+ * @param random GSL RNG object
+ * @param curr current state
+ * @param P transition matrix
+ * @return next state
+ */
 size_t SampleCnProfile(const gsl_rng *random,
                        size_t curr,
                        Eigen::Ref<Eigen::MatrixXf> P)
@@ -94,7 +101,6 @@ void CreateSNVs(gsl_rng *random,
 {
     string chr;
     size_t pos;
-    vector<Locus> loci;
     for (size_t i = 0; i < simul_config.n_sites; i++)
     {
         chr = convert_chr_to_string(gsl_rng_uniform_int(random, 23) + 1);
@@ -234,21 +240,92 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random, vector<CloneTreeNode *> &nodes, unorde
         ref_cn = cn_profile(parent_idx, 0);
         var_cn = cn_profile(parent_idx, 1);
         if (node == assigned_node) {
+            // up to here the var_cn of the parent must have been 0, because the change occurs here
             assert(var_cn == 0 && ref_cn >= 1);
             // Evolve ref_cn using P1.
             SampleCnProfile(random, ref_cn, P1); // FIXME new state is sampled but not saved anywhere
-            // Sample var_cn, ensure that it is at least 1.
+            // Sample var_cn, ensure that it is at least 1
+            // there must be at least one variant copy because an SNV has been assigned
             var_cn = gsl_ran_binomial(random, config.var_cp_prob, ref_cn - 1) + 1;
             assert(var_cn >= 1);
             ref_cn -= var_cn;
         } else if (ancestors.count(node)) {
+            // the ancestors do not have the SNV yet
             ref_cn = SampleCnProfile(random, ref_cn, P1);
             assert(var_cn == 0 && ref_cn >= 1);
         } else {
+            // down the assigned node, the copy number can also be 0
             ref_cn = SampleCnProfile(random, ref_cn, P0);
             var_cn = SampleCnProfile(random, var_cn, P0);
         }
         assert(ref_cn <= config.max_cn && var_cn <= config.max_cn);
+
+        cn_profile(i, 0) = ref_cn;
+        cn_profile(i, 1) = var_cn;
+    }
+
+    return cn_profile;
+}
+
+/**
+ * Sample variant and reference copy numbers for all sortedNodes
+ * given the total copy numbers at a certain bin
+ *
+ * @param rng GSL RNG object
+ * @param simulationConfig simulation parameters object
+ * @param sortedNodes nodes in breadth first order
+ * @param assignedNode node to which the SNV is assigned
+ * @param binIdx index of the bin in which the SNV is located
+ * @return reference and variant copy number for each node at that SNV
+ */
+Eigen::MatrixXf SampleRefVarCn(gsl_rng *rng, const SimulationConfig &simulationConfig,
+                               const vector<CloneTreeNode *> &sortedNodes, CloneTreeNode *assignedNode, int binIdx) {
+    size_t n_nodes = sortedNodes.size();
+
+    // Indexing:
+    // Rows -> nodes.
+    // First column -> ref_cn.
+    // Second column -> var_cn.
+    Eigen::MatrixXf cn_profile(n_nodes, 2);
+    // Get ancestor nodes.
+    unordered_set<CloneTreeNode *> ancestors;
+    auto node = assignedNode;
+    while (true) {
+        if (node->IsRoot()) {
+            break;
+        }
+        ancestors.insert(node);
+        node = node->GetParentNode();
+    }
+
+    size_t ref_cn, var_cn;
+    for (size_t i = 0; i < sortedNodes.size(); i++) {
+        auto currNode = sortedNodes[i];
+        auto parent_node = currNode->GetParentNode();
+        if (currNode->IsRoot()) {
+            cn_profile(i, 0) = 2;
+            cn_profile(i, 1) = 0;
+            continue;
+        }
+        // retrieve the total copy number of the bin in which the SNV is located
+        size_t tot_cn = currNode->getCnProfile().at(binIdx);
+        if (currNode == assignedNode) {
+            // sample var_cn, ensure that it is at least 1
+            // there must be at least one variant copy because an SNV has been assigned
+            var_cn = gsl_ran_binomial(rng, simulationConfig.var_cp_prob, tot_cn - 1) + 1;
+            assert(var_cn >= 1);
+            ref_cn = tot_cn - var_cn;
+        } else if (ancestors.count(currNode)) {
+            // the ancestors do not have the SNV yet
+            var_cn = 0;
+            ref_cn = tot_cn;
+            assert(var_cn == 0 && ref_cn >= 1);
+        } else {
+            // down the assigned currNode, the copy number can also be 0
+            var_cn = gsl_ran_binomial(rng, simulationConfig.var_cp_prob, tot_cn);
+            ref_cn = tot_cn - var_cn;
+        }
+        assert(ref_cn <= simulationConfig.max_cn && var_cn <= simulationConfig.max_cn);
 
         cn_profile(i, 0) = ref_cn;
         cn_profile(i, 1) = var_cn;
@@ -265,11 +342,8 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random, vector<CloneTreeNode *> &nodes, unorde
  * @param root_node
  * @param cts_cn reference and variant copy number profile for each SNV
  */
-void GenerateBulkDataWithBDProcess(gsl_rng *random,
-                                   const SimulationConfig &simul_config,
-                                   vector<BulkDatum *> &data,
-                                   CloneTreeNode *root_node,
-                                   vector<pair<double, double> > &cts_cn)
+void GenerateBulkDataWithBDProcess(gsl_rng *random, const SimulationConfig &simul_config, vector<BulkDatum *> &data,
+                                   CloneTreeNode *root_node, vector<pair<double, double> > &cts_cn)
 {
     unordered_map<CloneTreeNode*, vector<pair<size_t, size_t> > > cn_profile;
 
@@ -320,15 +394,27 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random,
         datum = data[i];
         assigned_node->AddDatum(datum);
 
+        size_t bin_idx;
+        for (int b = 0; b < assigned_node->getBins()->size(); ++b) {
+            if (assigned_node->getBins()->at(b).containsSNV(datum)) {
+                bin_idx = b;
+                break;
+            }
+        }
+
         for (size_t region = 0; region < simul_config.n_regions; region++) {
             // Evolve copy number.
-            auto cn_profile = EvolveCn(random,
-                                       nodes,
-                                       node2idx,
-                                       assigned_node,
-                                       simul_config,
-                                       P0,
-                                       P1);
+//            auto cn_profile = EvolveCn(random,
+//                                       nodes,
+//                                       node2idx,
+//                                       assigned_node,
+//                                       simul_config,
+//                                       P0,
+//                                       P1);
+            auto cn_profile = SampleRefVarCn(random, simul_config, nodes, assigned_node, bin_idx);
+            // TODO replace EvolveCn with SampleRefVarCn
+            // get the copy numbers (var and ref) for each node at this snv
+            // sampling them having the total copy number for each bin
 
             auto node_cns = cn_profile.rowwise().sum();
             double total_cn = 0.0;
@@ -522,14 +608,15 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
 
     for (CloneTreeNode *node: sorted_nodes) {
         auto parent = node->GetParentNode();
+        size_t n_bins = node->getBins()->size();
         if (parent == nullptr) {
             // root node has copy number 2
-            node->setCnProfile(vector<size_t>(simul_config.n_genes, 2));
+            node->setCnProfile(vector<size_t>(n_bins, 2));
         } else {
-            vector<size_t> new_cn_profile(simul_config.n_genes);
-            for (int g = 0; g < simul_config.n_genes; ++g) {
-                size_t curr_cn = parent->getCnProfile()[g];
-                new_cn_profile[g] = SampleCnProfile(rng, curr_cn, P1);
+            vector<size_t> new_cn_profile(n_bins);
+            for (int b = 0; b < n_bins; ++b) {
+                size_t curr_cn = parent->getCnProfile()[b];
+                new_cn_profile[b] = SampleCnProfile(rng, curr_cn, P1);
             }
             node->setCnProfile(new_cn_profile);
         }
