@@ -95,21 +95,22 @@ Eigen::MatrixXf ExponentiateMatrix(const Eigen::Ref<Eigen::MatrixXf>& M)
     return expM;
 }
 
-void CreateSNVs(gsl_rng *random,
-                const SimulationConfig &simul_config,
-                vector<BulkDatum *> &data)
-{
+void CreateSNVs(gsl_rng *random, const SimulationConfig &simul_config, vector<BulkDatum *> &data,
+           const vector<Bin> &bins) {
     string chr;
     size_t pos;
-    for (size_t i = 0; i < simul_config.n_sites; i++)
-    {
-        chr = convert_chr_to_string(gsl_rng_uniform_int(random, 23) + 1);
-        pos = gsl_rng_uniform_int(random, 10000000);
+    size_t n_bins = bins.size();
+    for (size_t i = 0; i < simul_config.n_sites; i++) {
+        // sample the bin in which the SNV is going to fall
+        size_t binIdx = gsl_rng_uniform_int(random, n_bins);
+        chr = bins.at(binIdx).getChr();
+        // pick a pos in between the bin
+        pos = gsl_rng_uniform_int(random, bins[binIdx].getEndPos() - bins[binIdx].getStartPos())
+                + bins[binIdx].getStartPos();
         size_t alpha = gsl_rng_uniform_int(random, simul_config.beta_binomial_hp_max - 1) + 1;
         size_t beta = gsl_rng_uniform_int(random, simul_config.beta_binomial_hp_max - 1) + 1;
         BulkDatum *datum = new BulkDatum("s" + to_string(i), chr, pos);
-        // FIXME dropout probability is fixed to 0.5 and not to the value specified in the config file
-        datum->SetLocuHyperParameters(alpha, beta, 0.5);
+        datum->SetLocuHyperParameters(alpha, beta, simul_config.dropout_rate);
         data.push_back(datum);
     }
 }
@@ -279,7 +280,7 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random, vector<CloneTreeNode *> &nodes, unorde
  * @return reference and variant copy number for each node at that SNV
  */
 Eigen::MatrixXf SampleRefVarCn(gsl_rng *rng, const SimulationConfig &simulationConfig,
-                               const vector<CloneTreeNode *> &sortedNodes, CloneTreeNode *assignedNode, int binIdx) {
+                               const vector<CloneTreeNode *> &sortedNodes, CloneTreeNode *assignedNode, size_t binIdx) {
     size_t n_nodes = sortedNodes.size();
 
     // Indexing:
@@ -394,8 +395,8 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random, const SimulationConfig &simu
         datum = data[i];
         assigned_node->AddDatum(datum);
 
-        size_t bin_idx;
-        for (int b = 0; b < assigned_node->getBins()->size(); ++b) {
+        size_t bin_idx = 0;
+        for (size_t b = 0; b < assigned_node->getBins()->size(); ++b) {
             if (assigned_node->getBins()->at(b).containsSNV(datum)) {
                 bin_idx = b;
                 break;

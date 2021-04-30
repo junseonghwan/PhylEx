@@ -228,7 +228,7 @@ int main(int argc, char *argv[]) {
     // Note that the inference program depends on Locus being a reference
     // in the BulkDatum to update the hyper parameters for each locus from file.
     // So changing it to a copy of Locus for each BulkDatum is not an option.
-    CreateSNVs(rand, simul_config, data);
+    CreateSNVs(rand, simul_config, data, *bins);
     vector<pair<double, double> > cts_cn_profile;
     if (bd_process) {
         GenerateBulkDataWithBDProcess(rand, simul_config, data, root_node, cts_cn_profile);
