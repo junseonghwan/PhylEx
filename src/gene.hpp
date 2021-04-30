@@ -63,6 +63,7 @@ class Gene : public NASequence {
 
     double per_copy_expr; // mu_g
     double nb_inv_dispersion; // r_g
+    double gene_copy_prob; // delta_g
 
 public:
 
@@ -98,6 +99,10 @@ public:
     double getNbInvDispersion() const;
 
     void setNbInvDispersion(double nbInvDispersion);
+
+    double getGeneCopyProb() const;
+
+    void setGeneCopyProb(double geneCopyProb);
 
     static vector<Gene *> readGeneCodeFromFile(const string &path);
 };

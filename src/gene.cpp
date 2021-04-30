@@ -5,6 +5,7 @@
 #include "gene.hpp"
 #include <boost/algorithm/string.hpp>
 #include <utility>
+#include <queue>
 
 Gene::Gene(string ensemblId, string chr, size_t startPos, size_t endPos, string name) :
         NASequence(chr, startPos, endPos),
@@ -100,6 +101,14 @@ vector<Gene *> Gene::readGeneCodeFromFile(const string &path) {
     return genecode;
 }
 
+double Gene::getGeneCopyProb() const {
+    return gene_copy_prob;
+}
+
+void Gene::setGeneCopyProb(double geneCopyProb) {
+    gene_copy_prob = geneCopyProb;
+}
+
 vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &gene_set, size_t bin_size) {
 
     // sort gene set (improves speed)
@@ -116,23 +125,25 @@ vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &gene_set, size_t bi
 
     // create bins
     vector<Bin> bin_set;
+    queue<Gene *> sortedGeneQueue(deque(sortedGeneSet.begin(), sortedGeneSet.end()));
+    // chrMaxPos is ordered by chromosomes
     for (size_t c = 0; c < chrMaxPos.size(); ++c) {
         int n_bins = chrMaxPos[c] / bin_size + 1;
         for (int i = 0; i < n_bins; ++i) {
             size_t start_pos = bin_size * i + 1;
-            bin_set.push_back(Bin(c + 1, start_pos, start_pos + bin_size));
+            Bin bin = Bin(c + 1, start_pos, start_pos + bin_size);
+            // only save bins in which there is at least one gene
+            bool containsGene = false;
+            while (bin.contains(*sortedGeneQueue.front())) {
+                bin.insertGene(sortedGeneQueue.front());
+                sortedGeneQueue.pop();
+                containsGene = true;
+            }
+            if (containsGene) {
+                bin_set.push_back(bin);
+            }
         }
     }
-
-    // insert all the genes in their own bin
-    size_t bin_idx = 0;
-    for (auto g: sortedGeneSet) {
-        while (!bin_set[bin_idx].contains(*g)) {
-            bin_idx++;
-        }
-        bin_set[bin_idx].insertGene(g);
-    }
-
     return bin_set;
 }
 
