@@ -57,8 +57,7 @@ public:
 class SingleCellExpression {
     string cell_name;
 
-    // gene expression data
-    vector<size_t> gene_idxs; // maps expression read to specific gene
+    // maps expression read to specific gene
     vector<size_t> expr_reads;
 
     // parameters
@@ -74,10 +73,6 @@ public:
     const string &getCellName() const;
 
     void setCellName(const string &cellName);
-
-    const vector<size_t> &getGeneIdxs() const;
-
-    void setGeneIdxs(const vector<size_t> &geneIdxs);
 
     const vector<size_t> &getExprReads() const;
 

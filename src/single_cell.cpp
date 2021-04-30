@@ -54,14 +54,6 @@ void SingleCellExpression::setCellName(const string &cellName) {
     cell_name = cellName;
 }
 
-const vector<size_t> &SingleCellExpression::getGeneIdxs() const {
-    return gene_idxs;
-}
-
-void SingleCellExpression::setGeneIdxs(const vector<size_t> &geneIdxs) {
-    gene_idxs = geneIdxs;
-}
-
 const vector<size_t> &SingleCellExpression::getExprReads() const {
     return expr_reads;
 }
