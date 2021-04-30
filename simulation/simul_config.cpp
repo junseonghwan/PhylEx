@@ -107,6 +107,10 @@ void SimulationConfig::insert_option(const string &key, const string &val) {
             this->nb_inv_dispersion_scale = stod(val);
         } else if (key == "depth_size_min") {
             this->depth_size_min = stod(val);
+        } else if (key == "gene_copy_expr_prob_alpha") {
+            this->gene_copy_expr_prob_alpha = stod(val);
+        } else if (key == "gene_copy_expr_prob_beta") {
+            this->gene_copy_expr_prob_beta = stod(val);
         } else if (key == "depth_size_max") {
             this->depth_size_max = stod(val);
         } else if (key == "genecode_path") {
@@ -138,7 +142,8 @@ SimulationConfig *SimulationConfig::parse_config_file(const string &config_file_
                                    "sc_error_distn_variance_factor", "beta_binomial_hp_max",
                                    "randomize_branching", "randomize_cf", "min_cf", "snv_sc_sparsity", "n_genes",
                                    "zero_inflation_alpha", "zero_inflation_beta", "nb_inv_dispersion_shape",
-                                   "nb_inv_dispersion_scale", "depth_size_max", "depth_size_min", "output_path"};
+                                   "nb_inv_dispersion_scale", "gene_copy_expr_prob_alpha", "gene_copy_expr_prob_beta",
+                                   "depth_size_max", "depth_size_min", "output_path"};
 
     // create the config object
     auto config = new SimulationConfig();

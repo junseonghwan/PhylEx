@@ -659,6 +659,8 @@ void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vec
         gene_set[g]->setPerCopyExpr(exp(gsl_ran_gaussian(rng, 1)));
         gene_set[g]->setNbInvDispersion(gsl_ran_gamma(rng, simul_config.nb_inv_dispersion_shape,
                                                       simul_config.nb_inv_dispersion_scale));
+        gene_set[g]->setGeneCopyProb(gsl_ran_beta(rng, simul_config.gene_copy_expr_prob_alpha,
+                                                  simul_config.gene_copy_expr_prob_beta));
     }
 }
 

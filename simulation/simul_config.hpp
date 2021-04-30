@@ -76,6 +76,9 @@ public:
     // depth size s uniform parameters
     double depth_size_min;
     double depth_size_max;
+    // gene copy expression probability beta params
+    double gene_copy_expr_prob_alpha;
+    double gene_copy_expr_prob_beta;
 
     SimulationConfig();
     static SimulationConfig *parse_config_file(const string &config_file_path);
