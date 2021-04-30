@@ -46,45 +46,33 @@ void SingleCellData::InsertDatum(size_t loci_idx,
     total_reads_[loci_idx] = total_reads;
 }
 
-const string &SingleCellExpression::getCellName() const {
-    return cell_name;
-}
-
-void SingleCellExpression::setCellName(const string &cellName) {
-    cell_name = cellName;
-}
-
-const vector<size_t> &SingleCellExpression::getExprReads() const {
+const vector<size_t> &SingleCellData::getExprReads() const {
     return expr_reads;
 }
 
-void SingleCellExpression::setExprReads(const vector<size_t> &exprReads) {
+void SingleCellData::setExprReads(const vector<size_t> &exprReads) {
     expr_reads = exprReads;
 }
 
-SingleCellExpression::SingleCellExpression(string cellName, double depth_size) : cell_name(std::move(cellName)),
-                                                                                 depth_size(depth_size) {}
-
-const vector<double> &SingleCellExpression::getZeroInflationProbs() const {
+const vector<double> &SingleCellData::getZeroInflationProbs() const {
     return zero_inflation_probs;
 }
 
-void SingleCellExpression::setZeroInflationProbs(const vector<double> &zeroInflationProbs) {
+void SingleCellData::setZeroInflationProbs(const vector<double> &zeroInflationProbs) {
     zero_inflation_probs = zeroInflationProbs;
 }
 
-SingleCellExpression::SingleCellExpression(string cellName) : cell_name(std::move(cellName)) {}
-
-double SingleCellExpression::getDepthSize() const {
+double SingleCellData::getDepthSize() const {
     return depth_size;
 }
 
-void SingleCellExpression::setDepthSize(double depthSize) {
+void SingleCellData::setDepthSize(double depthSize) {
     depth_size = depthSize;
 }
 
-void SingleCellExpression::print() {
-    cout << "[sce] cell " << cell_name << ", sn " << depth_size << endl;
+void SingleCellData::print() {
+    // TODO extend with single cell allelic imbalance data
+    cout << "[sc] cell " << cell_name << ", sn " << depth_size << endl;
     cout << "- expr: [";
     for (auto it: expr_reads) {
         cout << it << ", ";
@@ -92,6 +80,14 @@ void SingleCellExpression::print() {
     cout << "]" << endl << "- ZI probs: [";
     for (auto it: zero_inflation_probs) {
         cout << it << ", ";
+    }
+    cout << "]" << endl << "- loci: [";
+    for (auto it: loci_idxs_) {
+        cout << it << ", ";
+    }
+    cout << "]" << endl << "- var|ref: [";
+    for (int i = 0; i < var_reads_.size(); ++i) {
+        cout << var_reads_[i] << "|" << total_reads_[i] << ", ";
     }
     cout << "]" << endl;
 }

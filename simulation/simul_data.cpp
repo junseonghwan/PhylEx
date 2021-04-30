@@ -373,8 +373,6 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random, const SimulationConfig &simu
     }
 
     // generate clonal copy number profiles
-    // TODO merge copy number evolutions (single positions and genes/bins)
-    //  in order to have consistent data
     EvolveCloneSpecificCN(random, simul_config, root_node, P1);
 
     // Assign data to nodes.
@@ -413,7 +411,6 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random, const SimulationConfig &simu
 //                                       P0,
 //                                       P1);
             auto cn_profile = SampleRefVarCn(random, simul_config, nodes, assigned_node, bin_idx);
-            // TODO replace EvolveCn with SampleRefVarCn
             // get the copy numbers (var and ref) for each node at this snv
             // sampling them having the total copy number for each bin
 
@@ -459,13 +456,9 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random, const SimulationConfig &simu
     }
 }
 
-vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_node,
-                                          const vector<BulkDatum *> &data,
-                                          const ModelParams &model_params,
-                                          const SimulationConfig &simul_config,
-                                          vector<SingleCellData *> &sc_data,
-                                          vector<SingleCellExpression *> &sc_expr_data,
-                                          vector<Gene *> &gene_set)
+vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_node, const vector<BulkDatum *> &data,
+                                          const ModelParams &model_params, const SimulationConfig &simul_config,
+                                          vector<SingleCellData *> &sc_data, vector<Gene *> &gene_set)
 {
     vector<size_t> bulk_sc_coverage(data.size(), 0);
     // We subselect bulk to have single cell coverage.
@@ -498,19 +491,16 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_n
                             data,
                             bulk_sc_coverage,
                             *sc);
-
-        auto sc_expr = new SingleCellExpression(cell_name);
         GenerateScRnaExpression(
                 random,
                 simul_config,
                 node,
-                *sc_expr,
+                *sc,
                 gene_set);
 
         sc_data.push_back(sc);
-        sc_expr_data.push_back(sc_expr);
         if (verbose) {
-            sc_expr->print();
+            sc->print();
             cout << "=====" << endl;
         }
     }
@@ -675,7 +665,7 @@ void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vec
  * @param gene_set set of genes of which expression must be simulated
  */
 void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *node,
-                             SingleCellExpression &sc, vector<Gene *> &gene_set) {
+                             SingleCellData &sc, vector<Gene *> &gene_set) {
     // simulate depth/library size
     sc.setDepthSize(gsl_ran_flat(rng, simul_config.depth_size_min, simul_config.depth_size_max));
 

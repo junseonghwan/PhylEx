@@ -293,21 +293,21 @@ void WriteScRnaData(string output_path,
     f.close();
 }
 
-void WriteScRnaExpressionData(const string &output_path, const vector<SingleCellExpression *> &sc_expr_data,
+void WriteScRnaExpressionData(const string &output_path, const vector<SingleCellData *> &sc_data,
                               const vector<Gene *> &gene_set) {
     ofstream f;
     f.open(output_path + "/simul_fc.txt", ios::out);
     for (int i = 0; i < gene_set.size() + 1; ++i) {
         if (i == 0) {
             // write header
-            for (auto c: sc_expr_data) {
-                f << c->getCellName() << "\t";
+            for (auto c: sc_data) {
+                f << c->GetName() << "\t";
             }
             f << endl;
         } else {
             // write genes expressions
             f << gene_set[i-1]->getEnsemblId() << "\t";
-            for (auto c: sc_expr_data) {
+            for (auto c: sc_data) {
                 f << c->getExprReads()[i-1] << "\t";
             }
             f << endl;

@@ -29,6 +29,13 @@ class SingleCellData
     vector<size_t> total_reads_;
     vector<size_t> loci_idxs_;
 
+    // gene expression data
+    // maps expression read to specific gene
+    vector<size_t> expr_reads;
+    // parameters
+    double depth_size; // s_c, or library size
+    vector<double> zero_inflation_probs; // rho_gc
+
 public:
     SingleCellData(string cell_name, size_t loci_count);
     SingleCellData(string cell_name,
@@ -50,29 +57,6 @@ public:
     inline const vector<size_t> &GetLoci() const {
         return loci_idxs_;
     }
-    void InsertDatum(size_t loci_idx, size_t var_reads, size_t total_reads);
-    string Print() const;
-};
-
-class SingleCellExpression {
-    string cell_name;
-
-    // maps expression read to specific gene
-    vector<size_t> expr_reads;
-
-    // parameters
-    double depth_size; // s_c, or library size
-    vector<double> zero_inflation_probs; // rho_gc
-
-public:
-
-    explicit SingleCellExpression(string cellName);
-
-    SingleCellExpression(string cellName, double depth_size);
-
-    const string &getCellName() const;
-
-    void setCellName(const string &cellName);
 
     const vector<size_t> &getExprReads() const;
 
@@ -87,6 +71,9 @@ public:
     void setDepthSize(double depthSize);
 
     void print();
+
+    void InsertDatum(size_t loci_idx, size_t var_reads, size_t total_reads);
+    string Print() const;
 };
 
 #endif /* single_cell_dna_hpp */
