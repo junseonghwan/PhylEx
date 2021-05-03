@@ -273,10 +273,12 @@ int main(int argc, char *argv[]) {
 //                                           data,
 //                                           sc_data,
 //                                           model_params);
-    double sc_log_lik = computeTotSCLogLik(root_node, data, sc_data, sortedGeneSet);
+// FIXME
+//  computeTotSCLogLik takes ages
+// double sc_log_lik = computeTotSCLogLik(root_node, data, sc_data, sortedGeneSet);
     WriteTreeToFile(output_path, data, root_node);
     WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
-    WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);
+    WriteLogLikToFile(output_path + "/log_lik_sc.txt", 0);
 
     // output cluster labels
     vector<unsigned int> cluster_labels;

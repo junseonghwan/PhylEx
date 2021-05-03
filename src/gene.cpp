@@ -109,15 +109,15 @@ vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &sortedGeneSet, size
     queue<Gene *> sortedGeneQueue(deque(sortedGeneSet.begin(), sortedGeneSet.end()));
     size_t geneIdx = 0;
     // chrMaxPos is ordered by chromosomes
-    for (size_t c = 0; c < chrMaxPos.size(); ++c) {
-        int n_bins = chrMaxPos[c] / bin_size + 1;
+    for (size_t chr = 0; chr < chrMaxPos.size(); ++chr) {
+        int n_bins = chrMaxPos[chr] / bin_size + 1;
         for (int i = 0; i < n_bins; ++i) {
             size_t start_pos = bin_size * i + 1;
-            Bin bin = Bin(c + 1, start_pos, start_pos + bin_size);
+            Bin bin = Bin(chr + 1, start_pos, start_pos + bin_size);
             // only save bins in which there is at least one gene
             bool containsGene = false;
 
-            while (bin.contains(*sortedGeneQueue.front())) {
+            while (!sortedGeneQueue.empty() && bin.contains(*sortedGeneQueue.front())) {
                 bin.insertGene(sortedGeneQueue.front(), geneIdx++);
                 sortedGeneQueue.pop();
                 containsGene = true;
@@ -127,6 +127,7 @@ vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &sortedGeneSet, size
             }
         }
     }
+
     assert(geneIdx == sortedGeneSet.size());
     return bin_set;
 }
@@ -169,18 +170,8 @@ NASequence::NASequence(const string &chr, size_t start_pos, size_t end_pos) : ch
 }
 
 bool NASequence::operator<(const NASequence &rhs) const {
-    if (numChr < rhs.numChr) {
-        return true;
-    } else if (numChr == rhs.numChr) {
-        if (start_pos < rhs.end_pos) {
-            // check that there are no overlapping genes
-            assert(end_pos < rhs.end_pos);
-            return true;
-        }
-    }
-    return false;
-
-//    return a.chr < b.chr || (a.chr == b.chr && a.start_pos < b.end_pos);
+    // FIXME genes can overlap, this might be an issue
+    return numChr < rhs.numChr || (numChr == rhs.numChr && start_pos < rhs.start_pos);
 }
 
 const string &NASequence::getChr() const {
