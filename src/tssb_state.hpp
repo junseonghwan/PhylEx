@@ -77,7 +77,7 @@ class TSSBState
     double compute_loglik_sc(CloneTreeNode *v, size_t cell_id);
 
     // N x C matrix storing likelihood of single cell reads for mutation n, cell c
-    // when the cell carries the mutation (presnce) and when it doesn't (absence).
+    // when the cell carries the mutation (presence) and when it doesn't (absence).
     DoubleMatrix sc_presence_matrix_, sc_absence_matrix_;
     // Pre-compute single cell likelihoods and determine SNVs that don't have
     // any single cell coverage.
@@ -176,8 +176,13 @@ double sample_params_dirichlet(const gsl_rng *random,
 void cull(CloneTreeNode *root);
 bool check_clone_freq(size_t region, CloneTreeNode *root);
 double ComputeSingleCellLikelihood(CloneTreeNode *root,
-                    vector<BulkDatum *> &bulk_data,
-                    vector<SingleCellData *> &sc_data,
-                    const ModelParams &model_params);
+                          vector<BulkDatum *> &bulk_data,
+                          vector<SingleCellData *> &sc_data,
+                          const ModelParams &model_params);
+
+double computeTotSCLogLik(CloneTreeNode *root,
+                          vector<BulkDatum *> &bulk_data,
+                          vector<SingleCellData *> &sc_data,
+                          const vector<Gene *> &geneSet);
 
 #endif /* tssb_state_hpp */

@@ -814,6 +814,79 @@ double ScLikelihood(size_t loci_idx,
     return log_lik;
 }
 
+/**
+ * Log likelihood of a single cell for all genes and SNVs in a bin
+ *
+ * @param bin_idx
+ * @param bulk_data
+ * @param sc
+ * @return
+ */
+double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_data, const SingleCellData *sc,
+                              const CloneTreeNode *node, const vector<Gene *> &geneSet) {
+    // precompute the normalization factor for the mean
+    double normFactor = computeNormFactor(node);
+
+    // for each gene in the bin
+    double binLogLik = 0.0;
+    for (auto geneIdx: node->getBins()->at(bin_idx).getGeneIdxs()) {
+        double geneLogLik = DOUBLE_NEG_INF;
+        int total_cn = node->getCnProfile()[bin_idx];
+        for (int e = 1; e < total_cn; ++e) {
+            // marginalize the number of expressed copies `e`
+            double allImbLogLik = 0.0; // when no snv is present in the gene
+            for (auto loc_idx: sc->GetLoci()) {
+                // find snv in gene (if any)
+                // TODO can be optimized saving SNVs in bins/genes
+                if (geneSet[geneIdx]->containsSNV(bulk_data[loc_idx])) {
+                    // if SNV is present in the gene, compute the allelic imbalance prob
+                    // marginalizing over variant copy number
+                    size_t var_reads = sc->GetVariantReads(loc_idx);
+                    size_t total_reads = sc->GetTotalReads(loc_idx);
+                    allImbLogLik = DOUBLE_NEG_INF;
+                    for (int v = 0; v < e; ++v) {
+                        // compute sc snv probability
+                        double binomLogLik = gsl_ran_binomial_pdf(var_reads, (double) v / e, total_reads);
+                        allImbLogLik = log_add(binLogLik, allImbLogLik);
+                    }
+                    break;
+                }
+            }
+            // compute gene expression prob (ZINB dist) multiplied by the prior for `e` (binomial)
+            double exprLogLik = log(gsl_ran_binomial_pdf(e, geneSet[geneIdx]->getGeneCopyProb(), total_cn)); // binom
+            // clonealign formula
+            double mean = sc->getDepthSize() * geneSet[geneIdx]->getPerCopyExpr() * e / normFactor;
+            exprLogLik += log(zinb_pdf(sc->getExprReads()[geneIdx], mean,
+                                   geneSet[geneIdx]->getNbInvDispersion(),
+                                   sc->getZeroInflationProbs()[geneIdx])); // gene expr likelihood
+            exprLogLik += allImbLogLik; // add allelic imbalance component (can be 0)
+
+            geneLogLik = log_add(geneLogLik, exprLogLik); // addend of the outer sum
+        }
+        // sum all the log likelihoods of each gene in the bin
+        binLogLik += geneLogLik;
+    }
+    return binLogLik;
+}
+
+/**
+ * Compute the normalization factor required for mean computation
+ * in the clonealign formula for single cell $c$, node $v$
+ *  $\sum_{g'=1}^G \mu_{g'} D_{b(g')v} \delta_{g'}$
+ *
+ * @param node node to which the single cell is assigned
+ * @return normalization factor (just the denominator)
+ */
+double computeNormFactor(const CloneTreeNode *node) {
+    double sum = 0.0;
+    for (int b = 0; b < node->getBins()->size(); ++b) {
+        for (auto gene: node->getBins()->at(b).getGenes()) {
+            sum += gene->getPerCopyExpr() * node->getCnProfile()[b] * gene->getGeneCopyProb();
+        }
+    }
+    return sum;
+}
+
 double BulkLogLikWithTotalCopyNumberByRegion(const CloneTreeNode *node,
                                              const ModelParams &model_params,
                                              size_t var_reads,

@@ -67,7 +67,7 @@ class CloneTreeNode
     // map: child branch idx -> pair<psi_stick, Node *>
     unordered_map<size_t, pair<double, CloneTreeNode *> > idx2child_;
 
-    // clone-specific copy number per each gene/bin
+    // clone-specific total copy number per each bin
     vector<size_t> cn_profile;
     // bin-set
     shared_ptr<vector<Bin>> bins;
@@ -184,6 +184,9 @@ double ScLikelihood(size_t loci_idx,
                     const SingleCellData *sc,
                     bool has_snv,
                     const ModelParams &model_params);
+double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_data, const SingleCellData *sc,
+                              const CloneTreeNode *node, const vector<Gene *> &geneSet);
+double computeNormFactor(const CloneTreeNode *node);
 double ScLikelihoodWithDropout(size_t loci_idx,
                                const BulkDatum *bulk,
                                const SingleCellData *sc,

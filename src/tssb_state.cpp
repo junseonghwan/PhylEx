@@ -1116,9 +1116,9 @@ void cull(CloneTreeNode *root)
 }
 
 double ComputeSingleCellLikelihood(CloneTreeNode *root,
-                                   vector<BulkDatum *> &bulk_data,
-                                   vector<SingleCellData *> &sc_data,
-                                   const ModelParams &model_params)
+                          vector<BulkDatum *> &bulk_data,
+                          vector<SingleCellData *> &sc_data,
+                          const ModelParams &model_params)
 {
     vector<CloneTreeNode *> nodes;
     TSSBState::get_all_nodes(true, root, nodes);
@@ -1136,8 +1136,9 @@ double ComputeSingleCellLikelihood(CloneTreeNode *root,
         double log_lik_cell = DOUBLE_NEG_INF;
         for (auto node : nodes) {
             double log_lik_node = 0.0;
+            // TODO change for each bin and gene instead of for each locus
             for (size_t loci_idx : sc_data.at(c)->GetLoci()) {
-                has_snv = node2snvs.at(node).count(bulk_data.at(loci_idx)) ? true : false;
+                has_snv = node2snvs.at(node).count(bulk_data.at(loci_idx)) != 0;
                 log_val = ScLikelihood(loci_idx,
                                        bulk_data.at(loci_idx),
                                        sc_data.at(c),
@@ -1147,6 +1148,52 @@ double ComputeSingleCellLikelihood(CloneTreeNode *root,
             }
             log_lik_cell = log_add(log_lik_cell, log_lik_node);
         }
+        log_lik += (log_lik_cell + log_prior);
+    }
+    return log_lik;
+}
+
+/**
+ * Joint log likelihood of the dataset S,
+ * including both allelic imbalance data and gene expression data.
+ * Takes into account also the copy number variation.
+ *
+ * @param root
+ * @param bulk_data
+ * @param sc_data
+ * @param geneSet
+ * @return
+ */
+double computeTotSCLogLik(CloneTreeNode *root,
+                          vector<BulkDatum *> &bulk_data,
+                          vector<SingleCellData *> &sc_data,
+                          const vector<Gene *> &geneSet)
+{
+    vector<CloneTreeNode *> nodes;
+    TSSBState::get_all_nodes(true, root, nodes);
+    unordered_map<CloneTreeNode *, unordered_set<const BulkDatum *> > node2snvs;
+    for (auto node : nodes) {
+        unordered_set<const BulkDatum *> snvs;
+        CloneTreeNode::GetDataset(node, snvs);
+        node2snvs[node] = snvs;
+    }
+
+    double log_lik = 0.0, log_val = 0.0;
+    double log_prior = -log(nodes.size());
+    // for each cell
+    for (auto & c : sc_data) {
+        // compute the likelihood of it being assigned to each node
+        double log_lik_cell = DOUBLE_NEG_INF;
+        for (auto node : nodes) {
+            double log_lik_node = 0.0;
+            for (size_t binIdx = 0; binIdx < node->getBins()->size(); ++binIdx) {
+                // likelihood for a single bin
+                log_val = SCLogLikWithCopyNumber(binIdx, bulk_data, c, node, geneSet);
+                log_lik_node += log_val;
+            }
+            log_lik_cell = log_add(log_lik_cell, log_lik_node);
+        }
+        // multiply by the prior of the assignment (which is assumed to be uniform)
         log_lik += (log_lik_cell + log_prior);
     }
     return log_lik;

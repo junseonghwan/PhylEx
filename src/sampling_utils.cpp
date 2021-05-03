@@ -88,6 +88,36 @@ double log_beta_binomial_pdf(size_t k, size_t n, double alpha, double beta)
     return ret;
 }
 
+
+/**
+ * Computes the negative binomial pdf of a point in the (mean,r) parametrization
+ * @param k number of failures
+ * @param mean
+ * @param r number of successes or, equivalently, inverse of dispersion
+ * @return log probability
+ */
+double negative_binomial_pdf(size_t k, double mean, double r) {
+    double p = r/(mean + r);
+    return gsl_ran_negative_binomial_pdf(k, p, r);
+}
+
+/**
+ * Zero-Inflated Negative Binomial pdf
+ *
+ * @param k outcome of the stochastic event
+ * @param mean mean of the negative binomial distribution
+ * @param r inverse of dispersion parameter, or, equivalently, number of failures before k successes
+ * @param rho zero-inflation probability
+ * @return probability
+ */
+double zinb_pdf(size_t k, double mean, double r, double rho) {
+    double p = (1 - rho) * negative_binomial_pdf(k, mean, r);
+    if (k == 0) {
+        p += rho;
+    }
+    return p;
+}
+
 // samples an index from uniform distribution over discrete values {0, ..., N-1}
 int discrete_uniform(const gsl_rng *random, unsigned long N)
 {
