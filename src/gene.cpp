@@ -19,29 +19,6 @@ Gene::Gene(string ensembl_id, const string &chr, size_t start_pos, size_t end_po
                                                                nb_inv_dispersion(nb_inv_dispersion),
                                                                name(std::move(name)) {}
 
-const string &Gene::getChr() const {
-    return chr;
-}
-
-void Gene::setChr(const string &chromosome) {
-    chr = chromosome;
-}
-
-size_t Gene::getStartPos() const {
-    return start_pos;
-}
-
-void Gene::setStartPos(size_t startPos) {
-    start_pos = startPos;
-}
-
-size_t Gene::getEndPos() const {
-    return end_pos;
-}
-
-void Gene::setEndPos(size_t endPos) {
-    end_pos = endPos;
-}
 
 const string &Gene::getEnsemblId() const {
     return ensembl_id;

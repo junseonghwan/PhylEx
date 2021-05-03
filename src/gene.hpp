@@ -72,18 +72,6 @@ public:
     Gene(string ensembl_id, const string& chr, size_t start_pos, size_t end_pos, double per_copy_expr,
          double nb_inv_dispersion, string name);
 
-    const string &getChr() const;
-
-    void setChr(const string &chromosome);
-
-    size_t getStartPos() const;
-
-    void setStartPos(size_t startPos);
-
-    size_t getEndPos() const;
-
-    void setEndPos(size_t endPos);
-
     const string &getEnsemblId() const;
 
     void setEnsemblId(const string &ensemblId);

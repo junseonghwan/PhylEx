@@ -610,6 +610,7 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
                 new_cn_profile[b] = SampleCnProfile(rng, curr_cn, P1);
             }
             node->setCnProfile(new_cn_profile);
+            // TODO add simulation of true V(clone) variant copy number
         }
     }
 }
@@ -620,7 +621,7 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
  * @param rng GSL random number generator object
  * @param simul_config configuration parameters
  * @param gene_set vector of pointers to `Gene` objects. If empty, also the ID
- *      and all other attributes are sampled.
+ *      and all other attributes are sampled. The resulting set is sorted.
  */
 void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vector<Gene *> &gene_set) {
 
@@ -653,6 +654,8 @@ void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vec
         gene_set[g]->setGeneCopyProb(gsl_ran_beta(rng, simul_config.gene_copy_expr_prob_alpha,
                                                   simul_config.gene_copy_expr_prob_beta));
     }
+
+    sort(gene_set.begin(), gene_set.end(), comparePtrToNASeq);
 }
 
 /**
@@ -672,7 +675,10 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
     double norm_factor = 0;
     vector<double> unnormalized_means(simul_config.n_genes);
     for (int g = 0; g < simul_config.n_genes; ++g) {
-        unnormalized_means[g] = gene_set[g]->getPerCopyExpr() * node->getCnProfile()[g];
+        // the number of copies which are actually expressed depends on the copy expression probability
+        // which is a gene specific parameter of the simulation
+        size_t expr_copies = gsl_ran_binomial(rng, gene_set[g]->getGeneCopyProb(), node->getCnProfile()[g]);
+        unnormalized_means[g] = gene_set[g]->getPerCopyExpr() * expr_copies;
         norm_factor += unnormalized_means[g];
     }
 
