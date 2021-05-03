@@ -201,10 +201,11 @@ int main(int argc, char *argv[]) {
                                          false);
 
     // generate or sample a gene set for expression data
-    vector<Gene *> gene_set;
-    GenerateGenes(rand, simul_config, gene_set);
+    // sorted for speed improvement
+    vector<Gene *> sortedGeneSet;
+    GenerateGenes(rand, simul_config, sortedGeneSet);
 
-    auto bins = make_shared<vector<Bin>>(Bin::generateBinsFromGenes(gene_set, 500000));
+    auto bins = make_shared<vector<Bin>>(Bin::generateBinsFromGenes(sortedGeneSet, 500000));
     // give a reference of the bins to each node
     for (auto node: sorted_nodes) {
         node->setBins(bins);
@@ -248,14 +249,14 @@ int main(int argc, char *argv[]) {
     vector<SingleCellData *> sc_data;
     auto cell2node = GenerateScRnaData(rand, root_node, data, model_params, simul_config,
                                        sc_data,
-                                       gene_set);
+                                       sortedGeneSet);
     WriteScRnaData(output_path, data, sc_data);
     WriteCell2NodeAssignment(output_path, sc_data, cell2node);
     WriteBetaBinomHp(output_path, data);
-    WriteScRnaExpressionData(output_path, sc_data, gene_set);
+    WriteScRnaExpressionData(output_path, sc_data, sortedGeneSet);
 
     // Output information needed for evaluation.
-    WriteClonalCNProfiles(output_path, sorted_nodes, gene_set);
+    WriteClonalCNProfiles(output_path, sorted_nodes, sortedGeneSet);
 
     unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
     CloneTreeNode::Datum2Node(sorted_nodes, datum2node);
