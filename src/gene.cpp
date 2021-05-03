@@ -109,11 +109,15 @@ void Gene::setGeneCopyProb(double geneCopyProb) {
     gene_copy_prob = geneCopyProb;
 }
 
-vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &gene_set, size_t bin_size) {
-
-    // sort gene set (improves speed)
-    vector<Gene *> sortedGeneSet = gene_set;
-    sort(sortedGeneSet.begin(), sortedGeneSet.end(), comparePtrToNASeq);
+// TODO implement other smart binning methods
+/**
+ * Creates bins with a fixed size given a set of genes
+ *
+ * @param sortedGeneSet ordered gene set
+ * @param bin_size size of each bin
+ * @return vector of Bin
+ */
+vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &sortedGeneSet, size_t bin_size) {
 
     // find max position for each chromosome
     vector<size_t> chrMaxPos(25, 0);
@@ -126,6 +130,7 @@ vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &gene_set, size_t bi
     // create bins
     vector<Bin> bin_set;
     queue<Gene *> sortedGeneQueue(deque(sortedGeneSet.begin(), sortedGeneSet.end()));
+    size_t geneIdx = 0;
     // chrMaxPos is ordered by chromosomes
     for (size_t c = 0; c < chrMaxPos.size(); ++c) {
         int n_bins = chrMaxPos[c] / bin_size + 1;
@@ -134,8 +139,9 @@ vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &gene_set, size_t bi
             Bin bin = Bin(c + 1, start_pos, start_pos + bin_size);
             // only save bins in which there is at least one gene
             bool containsGene = false;
+
             while (bin.contains(*sortedGeneQueue.front())) {
-                bin.insertGene(sortedGeneQueue.front());
+                bin.insertGene(sortedGeneQueue.front(), geneIdx++);
                 sortedGeneQueue.pop();
                 containsGene = true;
             }
@@ -144,14 +150,16 @@ vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &gene_set, size_t bi
             }
         }
     }
+    assert(geneIdx == sortedGeneSet.size());
     return bin_set;
 }
 
 Bin::Bin(const string &chr, size_t start_pos, size_t end_pos) :
         NASequence(chr, start_pos, end_pos) {}
 
-void Bin::insertGene(Gene *gene) {
+void Bin::insertGene(Gene *gene, size_t geneIdx) {
     genes.push_back(gene);
+    geneIdxs.push_back(geneIdx);
 }
 
 const vector<Gene *> &Bin::getGenes() const {
@@ -163,6 +171,10 @@ void Bin::setGenes(const vector<Gene *> &genes) {
 }
 
 Bin::Bin(size_t numChr, size_t start_pos, size_t end_pos) : NASequence(numChr, start_pos, end_pos) {}
+
+const vector<size_t> &Bin::getGeneIdxs() const {
+    return geneIdxs;
+}
 
 NASequence::NASequence(const string &chr, size_t start_pos, size_t end_pos) : chr(chr),
                                                                               start_pos(start_pos),

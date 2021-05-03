@@ -109,17 +109,20 @@ public:
 
 class Bin : public NASequence {
     vector<Gene *> genes;
+    vector<size_t> geneIdxs;
 
 public:
     Bin(const string& chr, size_t start_pos, size_t end_pos);
     Bin(size_t numChr, size_t start_pos, size_t end_pos);
 
     static vector<Bin> generateBinsFromGenes(const vector<Gene *> &gene_set, size_t bin_size);
-    void insertGene(Gene *gene);
+    void insertGene(Gene *gene, size_t geneIdx);
 
     const vector<Gene *> &getGenes() const;
 
     void setGenes(const vector<Gene *> &genes);
+
+    const vector<size_t> &getGeneIdxs() const;
 };
 
 bool comparePtrToNASeq(NASequence *lhs, NASequence *rhs);
