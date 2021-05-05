@@ -65,11 +65,13 @@ vector<Gene *> Gene::readGeneCodeFromFile(const string &path) {
     while (getline(file, line)) {
         vector<string> ids;
         vector<string> res;
+        vector<string> ens_id; // remove the dot at the end
 
         boost::split(res, line, boost::is_any_of("\t"));
         boost::split(ids, res[0], boost::is_any_of("|"));
+        boost::split(ens_id, ids[1], boost::is_any_of("."));
         res[1].erase(res[1].begin(), res[1].begin() + 3); // drop "chr" from chromosome id
-        genecode.push_back(new Gene(ids[1], res[1], stoul(res[2]), stoul(res[3]),
+        genecode.push_back(new Gene(ens_id[0], res[1], stoul(res[2]), stoul(res[3]),
                                     ids[0]));
     }
 
