@@ -846,7 +846,8 @@ double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_da
                     allImbLogLik = DOUBLE_NEG_INF;
                     for (int v = 0; v < e; ++v) {
                         // compute sc snv probability
-                        double binomLogLik = gsl_ran_binomial_pdf(var_reads, (double) v / e, total_reads);
+                        double binomLogLik = gsl_sf_lnchoose(e, v) +
+                                gsl_ran_binomial_pdf(var_reads, (double) v / e, total_reads);
                         allImbLogLik = log_add(binLogLik, allImbLogLik);
                     }
                     break;

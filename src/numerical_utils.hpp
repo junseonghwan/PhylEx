@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <gsl/gsl_matrix.h>
+#include <gsl/gsl_sf.h>
 
 using namespace std;
 
