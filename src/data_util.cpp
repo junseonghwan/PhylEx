@@ -26,28 +26,25 @@
 #include "utils.hpp"
 
 NewickNode::NewickNode(string str) {
-  // split the string and set name and cellular prevalence
-  vector<string> results;
-  boost::split(results, str, boost::is_any_of(":"));
-  name = results[0];
-  cellular_prevalence = stod(results[1]);
+    // split the string and set name and cellular prevalence
+    vector<string> results;
+    boost::split(results, str, boost::is_any_of(":"));
+    name = results[0];
+    cellular_prevalence = stod(results[1]);
 }
 
-bool path_exists(string path)
-{
+bool path_exists(string path) {
     return boost::filesystem::exists(path);
 }
 
 
-gsl_matrix *read_data(string file_name, string sep, bool header)
-{
+gsl_matrix *read_data(string file_name, string sep, bool header) {
     unsigned int n_patients = 0;
     unsigned int n_genes = 0;
 
     string line;
-    ifstream dat_file (file_name);
-    if (!dat_file.is_open())
-    {
+    ifstream dat_file(file_name);
+    if (!dat_file.is_open()) {
         cerr << "Could not open the file: " << file_name << endl;
         exit(-1);
     }
@@ -59,14 +56,12 @@ gsl_matrix *read_data(string file_name, string sep, bool header)
         // skip the first line
         getline(dat_file, line);
     }
-    
-    while ( getline (dat_file, line) )
-    {
+
+    while (getline(dat_file, line)) {
         boost::split(results, line, boost::is_any_of(sep));
         if (n_genes == 0) {
             n_genes = results.size();
-        }
-        else if (results.size() != n_genes) {
+        } else if (results.size() != n_genes) {
             cerr << "Error in the input file: " << file_name << endl;
             exit(-1);
         }
@@ -89,28 +84,25 @@ gsl_matrix *read_data(string file_name, string sep, bool header)
     return matrix;
 }
 
-gsl_matrix *read_csv(string file_name, bool header)
-{
+gsl_matrix *read_csv(string file_name, bool header) {
     string line;
-    ifstream dat_file (file_name);
-    if (!dat_file.is_open())
-    {
+    ifstream dat_file(file_name);
+    if (!dat_file.is_open()) {
         cerr << "Could not open the file: " << file_name << endl;
         exit(-1);
     }
-    
+
     vector<string> results;
     vector<double> dat;
-    
+
     if (header) {
         // skip the first line
         getline(dat_file, line);
     }
-    
+
     unsigned int n_cols = 0;
     unsigned int n_rows = 0;
-    while ( getline (dat_file, line) )
-    {
+    while (getline(dat_file, line)) {
         boost::split(results, line, boost::is_any_of(","));
         if (n_cols == 0) {
             n_cols = results.size();
@@ -118,8 +110,7 @@ gsl_matrix *read_csv(string file_name, bool header)
                 cerr << "Error: " << file_name << " contains 0 columns." << endl;
                 exit(-1);
             }
-        }
-        else if (results.size() != n_cols) {
+        } else if (results.size() != n_cols) {
             cerr << "Error: Column numbers do not match in the input file: " << file_name << endl;
             exit(-1);
         }
@@ -129,7 +120,7 @@ gsl_matrix *read_csv(string file_name, bool header)
         n_rows++;
     }
     dat_file.close();
-    
+
     gsl_matrix *matrix = gsl_matrix_alloc(n_rows, n_cols);
     unsigned int idx = 0;
     for (unsigned int m = 0; m < n_rows; m++) {
@@ -138,13 +129,12 @@ gsl_matrix *read_csv(string file_name, bool header)
             idx++;
         }
     }
-    
+
     return matrix;
 }
 
 
-void write_vector(string path, const vector<unsigned int> &data)
-{
+void write_vector(string path, const vector<unsigned int> &data) {
     ofstream f;
     f.open(path, ios::out);
     for (unsigned int i = 0; i < data.size(); i++) {
@@ -153,8 +143,7 @@ void write_vector(string path, const vector<unsigned int> &data)
     f.close();
 }
 
-void write_vector(string path, const vector<double> &data)
-{
+void write_vector(string path, const vector<double> &data) {
     ofstream f;
     f.open(path, ios::out);
     for (unsigned int i = 0; i < data.size(); i++) {
@@ -164,8 +153,7 @@ void write_vector(string path, const vector<double> &data)
 }
 
 
-void write_matrix_as_csv(string path, const gsl_matrix &data)
-{
+void write_matrix_as_csv(string path, const gsl_matrix &data) {
     ofstream f;
     f.open(path, ios::out);
     if (f.is_open()) {
@@ -185,7 +173,7 @@ void write_matrix_as_csv(string path, const gsl_matrix &data)
     }
 }
 
-template <class T>
+template<class T>
 string ConvertToCommaSeparatedValues(const vector<T> values) {
     string str = "";
     for (size_t i = 0; i < values.size() - 1; i++) {
@@ -207,13 +195,11 @@ string ConvertToCommaSeparatedValues(const vector<T> values) {
 //}
 
 void WriteCtsCopyNumberProfile(string output_path, const vector<BulkDatum *> &bulk,
-                               const vector<pair<double, double> > &cts_cn_profile)
-{
+                               const vector<pair<double, double> > &cts_cn_profile) {
     ofstream f;
     f.open(output_path, ios::out);
     f << "ID\tMajorCN\tMinorCN" << endl;
-    for (unsigned int i = 0; i < bulk.size(); i++)
-    {
+    for (unsigned int i = 0; i < bulk.size(); i++) {
         f << bulk[i]->GetId() << "\t";
         f << cts_cn_profile.at(i).first << "\t";
         f << cts_cn_profile.at(i).second << "\n";
@@ -221,8 +207,7 @@ void WriteCtsCopyNumberProfile(string output_path, const vector<BulkDatum *> &bu
     f.close();
 }
 
-void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool output_genotype)
-{
+void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool output_genotype) {
     ofstream f;
     f.open(output_path, ios::out);
     if (output_genotype) {
@@ -230,8 +215,7 @@ void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool out
     } else {
         f << "ID\tCHR\tPOS\tREF\tALT\tb\td\tcn" << endl;
     }
-    for (unsigned int i = 0; i < bulk.size(); i++)
-    {
+    for (unsigned int i = 0; i < bulk.size(); i++) {
         f << bulk[i]->GetId() << "\t";
         f << bulk[i]->GetLocus().get_chr() << "\t";
         f << bulk[i]->GetLocus().get_pos() << "\t";
@@ -251,8 +235,7 @@ void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool out
 }
 
 void WriteBetaBinomHp(string output_path,
-                      const vector<BulkDatum*> &bulk_data)
-{
+                      const vector<BulkDatum *> &bulk_data) {
     ofstream f;
     f.open(output_path + "/beta_binom_hp.csv", ios::out);
     f << "ID\talpha\tbeta\n";
@@ -265,17 +248,14 @@ void WriteBetaBinomHp(string output_path,
 }
 
 void WriteScRnaData(string output_path,
-                      const vector<BulkDatum*> &bulk_data,
-                      const vector<SingleCellData *> &sc_data)
-{
+                    const vector<BulkDatum *> &bulk_data,
+                    const vector<SingleCellData *> &sc_data) {
     ofstream f;
     f.open(output_path + "/simul_sc.txt", ios::out);
     f << "ID\tCell\ta\td\tSampleName\n";
-    for (unsigned int i = 0; i < sc_data.size(); i++)
-    {
-        SingleCellData *sc = (SingleCellData *)sc_data[i];
-        for (size_t loci_idx = 0; loci_idx < bulk_data.size(); loci_idx++)
-        {
+    for (unsigned int i = 0; i < sc_data.size(); i++) {
+        SingleCellData *sc = (SingleCellData *) sc_data[i];
+        for (size_t loci_idx = 0; loci_idx < bulk_data.size(); loci_idx++) {
             auto bulk_datum = bulk_data[loci_idx];
             size_t b = sc_data[i]->GetVariantReads(loci_idx);
             size_t d = sc_data[i]->GetTotalReads(loci_idx);
@@ -306,9 +286,9 @@ void WriteScRnaExpressionData(const string &output_path, const vector<SingleCell
             f << endl;
         } else {
             // write genes expressions
-            f << gene_set[i-1]->getEnsemblId() << "\t";
+            f << gene_set[i - 1]->getEnsemblId() << "\t";
             for (auto c: sc_data) {
-                f << c->getExprReads()[i-1] << "\t";
+                f << c->getExprReads()[i - 1] << "\t";
             }
             f << endl;
         }
@@ -326,26 +306,19 @@ void WriteClonalCNProfiles(const string &output_path, const vector<CloneTreeNode
                            const vector<Gene *> &gene_set) {
     ofstream f;
     f.open(output_path + "/simul_clonal_cn.txt", ios::out);
-    for (int i = 0; i < gene_set.size() + 1; ++i) {
-        if (i == 0) {
-            // write header
-            for (auto n: nodes) {
-                f << n->GetName() << "\t";
-            }
-            f << endl;
-        } else {
-            // write copy numbers
-            f << gene_set[i-1]->getEnsemblId() << "\t";
-            for (auto n: nodes) {
-                f << n->getCnProfile()[i-1] << "\t";
-            }
-            f << endl;
+    f << "clone_id,chr,start,end,total_cn" << endl;
+
+    for (auto node: nodes) {
+        for (int i = 0; i < node->getBins()->size(); ++i) {
+            auto bin = node->getBins()->at(i);
+            f << node->GetName() << "," << bin.getChr() << "," << bin.getStartPos() << "," << bin.getEndPos() << ","
+              << node->getCnProfile()[i] << endl;
         }
     }
     f.close();
 }
 
-void WriteCell2NodeAssignment(const string& output_path,
+void WriteCell2NodeAssignment(const string &output_path,
                               const vector<SingleCellData *> &sc_data,
                               const vector<CloneTreeNode *> &cell2node) {
     ofstream f;
@@ -357,9 +330,8 @@ void WriteCell2NodeAssignment(const string& output_path,
 }
 
 void WriteTreeToFile(string output_path,
-                const vector<BulkDatum *> &bulk,
-                CloneTreeNode *root_node)
-{
+                     const vector<BulkDatum *> &bulk,
+                     CloneTreeNode *root_node) {
     if (!path_exists(output_path)) {
         // create path
         boost::filesystem::create_directories(output_path);
@@ -395,11 +367,11 @@ void WriteTreeToFile(string output_path,
         f << bulk[i]->GetId() << "\t" << eta_str << endl;
     }
     f.close();
-    
+
     // write datum to node string
     f.open(output_path + "/datum2node.tsv", ios::out);
     for (size_t i = 0; i < datum2node.size(); i++) {
-        f << bulk[i]->GetId()  << "\t" << datum2node[bulk[i]]->GetName() << "\n";
+        f << bulk[i]->GetId() << "\t" << datum2node[bulk[i]]->GetName() << "\n";
     }
     f.close();
 
@@ -409,80 +381,80 @@ void WriteTreeToFile(string output_path,
     f.open(output_path + "/tree.newick", ios::out);
     f << newick;
     f.close();
-    
+
     // Cellular prevalence for each of the nodes.
     f.open(output_path + "/node2cellular_prev.csv", ios::out);
     for (auto node : all_nodes) {
-        f << node->GetName() << "\t" << ConvertToCommaSeparatedValues(node->NodeParameter().GetCellularPrevalences()) << "\n";
+        f << node->GetName() << "\t" << ConvertToCommaSeparatedValues(node->NodeParameter().GetCellularPrevalences())
+          << "\n";
     }
     f.close();
 }
 
-double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *data)
-{
+double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *data) {
     stack<string> char_stack;
     vector<NewickNode *> children;
-    unordered_map<string, NewickNode*> token2node;
-    unordered_map<string, CloneTreeNode*> name2clone_node;
+    unordered_map<string, NewickNode *> token2node;
+    unordered_map<string, CloneTreeNode *> name2clone_node;
 
     //auto state = new TSSBState<BulkDatum, SingleCellData, CloneTreeNodeParam>();
     stringstream token;
     bool token_end = false;
 
     for (size_t i = 0; i < newick.size(); i++) {
-      string ch(1, newick.at(i));
-      if (ch == "(") {
-        // start of token
-        char_stack.push(ch);
-      } else if (ch == ")" || ch == ",") {
-        // end of token
-        token_end = true;
-      } else {
-        token << ch;
-      }
-
-      if (token_end) {
-        // Push the token to stack
-        char_stack.push(token.str());
-        
-        // Create Newick node
-        NewickNode *node = new NewickNode(token.str());
-        token2node[token.str()] = node;
-        
-        // If children is nonempty, add children to this node.
-        if (children.size() > 0) {
-          for (NewickNode *child : children) {
-            node->children.push_back(child);
-          }
-          // Clear children vector.
-          children.clear();
+        string ch(1, newick.at(i));
+        if (ch == "(") {
+            // start of token
+            char_stack.push(ch);
+        } else if (ch == ")" || ch == ",") {
+            // end of token
+            token_end = true;
+        } else {
+            token << ch;
         }
 
-        // If we see ")", we need to fill the children vector.
-        if (ch == ")") {
-          while (true) {
-            string ch = char_stack.top();
-            char_stack.pop();
-            if (ch == "(")
-              break;
-            // get Newick node
-            NewickNode *node = token2node[ch];
-            children.push_back(node);
-          }
+        if (token_end) {
+            // Push the token to stack
+            char_stack.push(token.str());
+
+            // Create Newick node
+            NewickNode *node = new NewickNode(token.str());
+            token2node[token.str()] = node;
+
+            // If children is nonempty, add children to this node.
+            if (children.size() > 0) {
+                for (NewickNode *child : children) {
+                    node->children.push_back(child);
+                }
+                // Clear children vector.
+                children.clear();
+            }
+
+            // If we see ")", we need to fill the children vector.
+            if (ch == ")") {
+                while (true) {
+                    string ch = char_stack.top();
+                    char_stack.pop();
+                    if (ch == "(")
+                        break;
+                    // get Newick node
+                    NewickNode *node = token2node[ch];
+                    children.push_back(node);
+                }
+            }
+
+            cout << "Read new token: " << token.str() << endl;
+            token.str(string());
+            token_end = false;
         }
-        
-        cout << "Read new token: " << token.str() << endl;
-        token.str(string());
-        token_end = false;
-      }
     }
     cout << "Final token: " << token.str() << endl;
     // Fill the children nodes for root.
     NewickNode *root = new NewickNode(token.str());
     if (children.size() > 0) {
-      for (NewickNode *child : children) {
-        root->children.push_back(child);
-      }
+        for (NewickNode *child : children) {
+            root->children.push_back(child);
+        }
     }
 
     token2node[token.str()] = root;
@@ -509,7 +481,7 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
             //      boost::split(results, child->name, boost::is_any_of("_"));
             //      size_t child_idx = stoi(results[results.size()-1]);
             auto *child = *it;
-            CloneTreeNode *child_node = (CloneTreeNode*)parent->SpawnChild(0.0);
+            CloneTreeNode *child_node = (CloneTreeNode *) parent->SpawnChild(0.0);
             child_node->SetCellularPrevalenceAtRegion(0, child->cellular_prevalence);
             q1.push(child);
             q2.push(child_node);
@@ -526,7 +498,7 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
 //    for (size_t i = 0; i < ret.size(); i++) {
 //        cout << ret.at(i)->Print() << endl;
 //    }
-  
+
     gsl_rng *random = generate_random_object(1);
     ModelParams model_params(1, 0.5, 0.5, 0.001);
 
@@ -605,26 +577,22 @@ double parse_newick(string newick, string data_assigment, vector<BulkDatum *> *d
 //  bulk_assignment_file.close();
 //}
 
-void read_data_assignment(string file_path)
-{
-  ifstream dat_file (file_path);
-  if (!dat_file.is_open())
-  {
-      cerr << "Could not open the file: " << file_path << endl;
-      exit(-1);
-  }
+void read_data_assignment(string file_path) {
+    ifstream dat_file(file_path);
+    if (!dat_file.is_open()) {
+        cerr << "Could not open the file: " << file_path << endl;
+        exit(-1);
+    }
 
-  string line;
-  while ( getline (dat_file, line) )
-  {
-    vector<string> results;
-    boost::split(results, line, boost::is_any_of(","));
-  }
-  dat_file.close();
+    string line;
+    while (getline(dat_file, line)) {
+        vector<string> results;
+        boost::split(results, line, boost::is_any_of(","));
+    }
+    dat_file.close();
 }
 
-string write_newick(CloneTreeNode *node)
-{
+string write_newick(CloneTreeNode *node) {
     unordered_map<size_t, pair<double, CloneTreeNode *> > &children = node->GetIdx2Child();
     if (children.size() == 0) {
         //return (node->get_name() + ":" + to_string(node->get_node_parameter().get_cellular_prev()));
@@ -654,8 +622,7 @@ void fill_node_to_param(CloneTreeNode *node,
     }
 }
 
-void WriteLogLikToFile(string output_path, double val)
-{
+void WriteLogLikToFile(string output_path, double val) {
     ofstream f;
     f.open(output_path, ios::out);
     f << val << endl;
@@ -664,8 +631,7 @@ void WriteLogLikToFile(string output_path, double val)
 
 void write_tree(string output_path,
                 const vector<BulkDatum *> &bulk,
-                CompactTSSBState &state)
-{
+                CompactTSSBState &state) {
     if (!path_exists(output_path)) {
         // create path
         boost::filesystem::create_directories(output_path);
@@ -691,10 +657,10 @@ void write_tree(string output_path,
     f.open(output_path + "/datum2node.tsv", ios::out);
     auto datum2node = state.get_datum2node();
     for (size_t i = 0; i < datum2node.size(); i++) {
-        f << bulk[i]->GetId()  << "\t" << datum2node[i] << "\n";
+        f << bulk[i]->GetId() << "\t" << datum2node[i] << "\n";
     }
     f.close();
-    
+
     //write_vector(output_path + "/cluster_labels.txt", state.get_cluster_labels());
     f.open(output_path + "/cluster_labels.tsv", ios::out);
     auto cluster_labels = state.get_cluster_labels();
@@ -720,10 +686,9 @@ void write_tree(string output_path,
 }
 
 void WriteCopyNumberProfileToFile(string output_path,
-                      const vector<BulkDatum *> &bulk_data,
-                      CloneTreeNode *root_node,
-                      unordered_map<CloneTreeNode *, vector<pair<size_t, size_t> > > &cn_profile)
-{
+                                  const vector<BulkDatum *> &bulk_data,
+                                  CloneTreeNode *root_node,
+                                  unordered_map<CloneTreeNode *, vector<pair<size_t, size_t> > > &cn_profile) {
     // cn_profile stores copy number profile for each node as vector, where vector is ordered in the same way as the mutations in the bulk input file
     vector<CloneTreeNode *> nodes;
     CloneTreeNode::BreadthFirstTraversal(root_node, nodes, false);
@@ -733,11 +698,9 @@ void WriteCopyNumberProfileToFile(string output_path,
     gsl_matrix *cnv_ref_mat = gsl_matrix_alloc(n_muts, n_nodes);
     gsl_matrix *cnv_var_mat = gsl_matrix_alloc(n_muts, n_nodes);
 
-    for (size_t i = 0; i < nodes.size(); i++)
-    {
+    for (size_t i = 0; i < nodes.size(); i++) {
         vector<pair<size_t, size_t> > &vec = cn_profile[nodes[i]];
-        for (size_t j = 0; j < vec.size(); j++)
-        {
+        for (size_t j = 0; j < vec.size(); j++) {
             gsl_matrix_set(cnv_ref_mat, j, i, vec[j].first);
             gsl_matrix_set(cnv_var_mat, j, i, vec[j].second);
         }
@@ -747,8 +710,7 @@ void WriteCopyNumberProfileToFile(string output_path,
     write_matrix_as_csv(output_path + "/cnv_var.csv", *cnv_var_mat);
 }
 
-string convert_chr_to_string(size_t chr)
-{
+string convert_chr_to_string(size_t chr) {
     if (chr == 22) {
         return "X";
     } else if (chr == 23) {
@@ -758,8 +720,7 @@ string convert_chr_to_string(size_t chr)
     }
 }
 
-size_t convert_chr_to_int(string chr)
-{
+size_t convert_chr_to_int(string chr) {
     if (chr == "X") {
         return 22;
     } else if (chr == "Y") {
