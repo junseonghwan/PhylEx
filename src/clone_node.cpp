@@ -832,7 +832,7 @@ double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_da
     for (auto geneIdx: node->getBins()->at(bin_idx).getGeneIdxs()) {
         double geneLogLik = DOUBLE_NEG_INF;
         int total_cn = node->getCnProfile()[bin_idx];
-        for (int e = 1; e < total_cn; ++e) {
+        for (int e = 1; e <= total_cn; ++e) {
             // marginalize the number of expressed copies `e`
             double allImbLogLik = 0.0; // when no snv is present in the gene
             for (auto loc_idx: sc->GetLoci()) {
@@ -857,9 +857,9 @@ double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_da
             double exprLogLik = log(gsl_ran_binomial_pdf(e, geneSet[geneIdx]->getGeneCopyProb(), total_cn)); // binom
             // clonealign formula
             double mean = sc->getDepthSize() * geneSet[geneIdx]->getPerCopyExpr() * e / normFactor;
-            exprLogLik += log(zinb_pdf(sc->getExprReads()[geneIdx], mean,
+            exprLogLik += log_zinb_pdf(sc->getExprReads()[geneIdx], mean,
                                    geneSet[geneIdx]->getNbInvDispersion(),
-                                   sc->getZeroInflationProbs()[geneIdx])); // gene expr likelihood
+                                   sc->getZeroInflationProbs()[geneIdx]); // gene expr likelihood
             exprLogLik += allImbLogLik; // add allelic imbalance component (can be 0)
 
             geneLogLik = log_add(geneLogLik, exprLogLik); // addend of the outer sum

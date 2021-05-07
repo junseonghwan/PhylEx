@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
     vector<Gene *> sortedGeneSet;
     GenerateGenes(rand, simul_config, sortedGeneSet);
 
-    auto bins = make_shared<vector<Bin>>(Bin::generateBinsFromGenes(sortedGeneSet, 500000));
+    auto bins = make_shared<vector<Bin>>(Bin::generateBinsFromGenes(sortedGeneSet, 2600700));
     // give a reference of the bins to each node
     for (auto node: sorted_nodes) {
         node->setBins(bins);
@@ -275,10 +275,11 @@ int main(int argc, char *argv[]) {
 //                                           model_params);
 // FIXME
 //  computeTotSCLogLik takes ages
-// double sc_log_lik = computeTotSCLogLik(root_node, data, sc_data, sortedGeneSet);
+    double sc_log_lik = computeTotSCLogLik(root_node, data, sc_data, sortedGeneSet);
+//    double sc_log_lik = 0.;
     WriteTreeToFile(output_path, data, root_node);
     WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
-    WriteLogLikToFile(output_path + "/log_lik_sc.txt", 0);
+    WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);
 
     // output cluster labels
     vector<unsigned int> cluster_labels;
