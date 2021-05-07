@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <gsl/gsl_rng.h>
+#include "numerical_utils.hpp"
 
 using namespace std;
 
@@ -23,6 +24,7 @@ double bounded_beta(const gsl_rng *random, double alpha, double beta);
 double log_beta_binomial_pdf(size_t k, size_t n, double alpha, double beta);
 double negative_binomial_pdf(size_t k, double mean, double r);
 double zinb_pdf(size_t k, double mean, double r, double rho);
+double log_zinb_pdf(size_t k, double mean, double r, double rho);
 
 void uniform(const gsl_rng *random, unsigned int N, double *ret);
 double uniform(const gsl_rng *random);

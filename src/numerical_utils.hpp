@@ -12,6 +12,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <cmath>
 
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf.h>
@@ -26,6 +27,7 @@ extern const double NaN;
 
 // returns log sum as by-product
 double log_dirichlet_pdf(unsigned int K, double *alpha, double *theta);
+double log_negative_binomial_pdf(unsigned int k, double mean, double r);
 double log_binomial_pdf(const unsigned int k, const double p, const unsigned int n);
 double normalize(const vector<double> &log_weights, vector<double> &weights);
 void normalize(const vector<double> &log_weights, vector<double> &weights, double log_norm);

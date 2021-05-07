@@ -8,7 +8,6 @@
 #include "numerical_utils.hpp"
 
 #include <assert.h>
-#include <cmath>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_sf.h>
@@ -39,6 +38,22 @@ double log_dirichlet_pdf(unsigned int K, double *alpha, double *theta)
     {
         log_p -= gsl_sf_lngamma (alpha[i]);
     }
+    return log_p;
+}
+
+/**
+ * Parametrized by mean and inverse dispersion parameter
+ * @param k
+ * @param mean
+ * @param r
+ * @return
+ */
+double log_negative_binomial_pdf(unsigned int k, double mean, double r) {
+    double log_p = gsl_sf_lngamma(k + r) -
+                   gsl_sf_lngamma(k + 1) -
+                   gsl_sf_lngamma(r) +
+                   r * (log(r) - log(r + mean)) +
+                   k * (log(mean) - log(mean + r));
     return log_p;
 }
 

@@ -118,6 +118,14 @@ double zinb_pdf(size_t k, double mean, double r, double rho) {
     return p;
 }
 
+double log_zinb_pdf(size_t k, double mean, double r, double rho) {
+    double log_p = log(1 - rho) + log_negative_binomial_pdf(k, mean, r);
+    if (k == 0) {
+        log_p = log_add(log_p, log(rho));
+    }
+    return log_p;
+}
+
 // samples an index from uniform distribution over discrete values {0, ..., N-1}
 int discrete_uniform(const gsl_rng *random, unsigned long N)
 {
