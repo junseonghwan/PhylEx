@@ -21,7 +21,7 @@
 #include "Eigen/Dense"
 #include "Eigen/Eigenvalues"
 
-const bool verbose = true;
+const bool verbose = false;
 
 CloneTreeNode *SampleFromTssbPrior(size_t region_count,
                                    const gsl_rng *random,

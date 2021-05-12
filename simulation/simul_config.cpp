@@ -67,6 +67,8 @@ void SimulationConfig::insert_option(const string &key, const string &val) {
             this->death_rate = stod(val);
         } else if (key == "max_cn") {
             this->max_cn = stoul(val);
+        } else if (key == "cn_hmm_smoothing_rate") {
+            this->cn_hmm_smoothing_rate = stod(val);
         } else if (key == "var_cp_prob") {
             this->var_cp_prob = stod(val);
         } else if (key == "n_cells") {
@@ -143,7 +145,7 @@ SimulationConfig *SimulationConfig::parse_config_file(const string &config_file_
                                    "randomize_branching", "randomize_cf", "min_cf", "snv_sc_sparsity", "n_genes",
                                    "zero_inflation_alpha", "zero_inflation_beta", "nb_inv_dispersion_shape",
                                    "nb_inv_dispersion_scale", "gene_copy_expr_prob_alpha", "gene_copy_expr_prob_beta",
-                                   "depth_size_max", "depth_size_min", "output_path"};
+                                   "depth_size_max", "depth_size_min", "cn_hmm_smoothing_rate", "output_path"};
 
     // create the config object
     auto config = new SimulationConfig();

@@ -100,6 +100,8 @@ void CreateSNVs(gsl_rng *random, const SimulationConfig &simul_config, vector<Bu
     string chr;
     size_t pos;
     size_t n_bins = bins.size();
+    // FIXME make sure that each SNV falls in a different gene
+    // TODO add SNV to the Gene
     for (size_t i = 0; i < simul_config.n_sites; i++) {
         // sample the bin in which the SNV is going to fall
         size_t binIdx = gsl_rng_uniform_int(random, n_bins);
@@ -592,6 +594,25 @@ void GenerateScRnaReads(const gsl_rng *random,
     }
 }
 
+/**
+ * Simple algorithm for deciding whether accepting the copy number evolved from above or the copy number on the left.
+ * TODO implement more clever solution e.g. accepting the previous bin based on the difference between the two proposals
+ *  Which of the two copy numbers is more likely to be true from a biological point of view?
+ * @param rng
+ * @param simulConfig
+ * @param parentCn
+ * @param prevCn
+ * @return
+ */
+size_t sampleHmmCn(const gsl_rng *rng, const SimulationConfig &simulConfig, size_t parentCn, size_t prevCn) {
+    if (gsl_ran_bernoulli(rng, simulConfig.cn_hmm_smoothing_rate) == 1) {
+        // accept the previous bin cn
+        return prevCn;
+    } else {
+        return parentCn;
+    }
+}
+
 void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *root,
                            Eigen::MatrixXf &P1) {
     vector<CloneTreeNode *> sorted_nodes;
@@ -607,7 +628,10 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
             vector<size_t> new_cn_profile(n_bins);
             for (int b = 0; b < n_bins; ++b) {
                 size_t curr_cn = parent->getCnProfile()[b];
-                new_cn_profile[b] = SampleCnProfile(rng, curr_cn, P1);
+                size_t parentProposalCn = SampleCnProfile(rng, curr_cn, P1);
+                size_t prevBinCn = b > 0 ? new_cn_profile[b-1] : parentProposalCn;
+                // decide whether to accept the cn from the parent node or the previous bin
+                new_cn_profile[b] = sampleHmmCn(rng, simul_config, parentProposalCn, prevBinCn)
             }
             node->setCnProfile(new_cn_profile);
             // TODO add simulation of true V(clone) variant copy number

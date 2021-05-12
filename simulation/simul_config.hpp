@@ -36,6 +36,8 @@ public:
     double birth_rate;
     double death_rate;
     size_t max_cn;
+    double cn_hmm_smoothing_rate;   // how likely is to accept the cn from the previous bin
+                                    // instead of the new evolution cn
 
     // Bulk data configuration.
     size_t n_sites;
