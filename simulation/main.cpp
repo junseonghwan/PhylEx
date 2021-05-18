@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
     CreateSNVs(rand, simul_config, data, *bins);
     vector<pair<double, double> > cts_cn_profile;
     if (bd_process) {
-        GenerateBulkDataWithBDProcess(rand, simul_config, data, root_node, cts_cn_profile);
+        GenerateBulkDataWithBDProcess(rand, simul_config, data, root_node, cts_cn_profile, sortedGeneSet);
     } else {
         GenerateBulkData(rand, simul_config, data, root_node);
     }

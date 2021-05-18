@@ -69,6 +69,8 @@ class CloneTreeNode
 
     // clone-specific total copy number per each bin
     vector<size_t> cn_profile;
+    // clone-specific expressed total copy number per gene
+    vector<size_t> geneCnProfile;
     // bin-set
     shared_ptr<vector<Bin>> bins;
 
@@ -99,8 +101,9 @@ public:
     const pair<double, CloneTreeNode *> &GetChild(size_t child_idx) const;
 
     const vector<size_t> &getCnProfile() const;
-
     void setCnProfile(const vector<size_t> &cnProfile);
+    const vector<size_t> &getGeneCnProfile() const;
+    void setGeneCnProfile(const vector<size_t> &geneCnProfile);
 
     const shared_ptr<vector<Bin>> &getBins() const;
 

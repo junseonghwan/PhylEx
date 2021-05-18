@@ -346,7 +346,8 @@ Eigen::MatrixXf SampleRefVarCn(gsl_rng *rng, const SimulationConfig &simulationC
  * @param cts_cn reference and variant copy number profile for each SNV
  */
 void GenerateBulkDataWithBDProcess(gsl_rng *random, const SimulationConfig &simul_config, vector<BulkDatum *> &data,
-                                   CloneTreeNode *root_node, vector<pair<double, double> > &cts_cn)
+                                   CloneTreeNode *root_node, vector<pair<double, double> > &cts_cn,
+                                   vector<Gene *> &gene_set)
 {
     unordered_map<CloneTreeNode*, vector<pair<size_t, size_t> > > cn_profile;
 
@@ -375,7 +376,7 @@ void GenerateBulkDataWithBDProcess(gsl_rng *random, const SimulationConfig &simu
     }
 
     // generate clonal copy number profiles
-    EvolveCloneSpecificCN(random, simul_config, root_node, P1);
+    EvolveCloneSpecificCN(random, simul_config, root_node, P1, gene_set);
 
     // Assign data to nodes.
     size_t b_alleles, depth;
@@ -620,7 +621,7 @@ size_t sampleHmmCn(const gsl_rng *rng, const SimulationConfig &simulConfig, size
 }
 
 void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *root,
-                           Eigen::MatrixXf &P1) {
+                           Eigen::MatrixXf &P1, vector<Gene *> &gene_set) {
     vector<CloneTreeNode *> sorted_nodes;
     CloneTreeNode::BreadthFirstTraversal(root, sorted_nodes);
 
@@ -630,6 +631,7 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
         if (parent == nullptr) {
             // root node has copy number 2
             node->setCnProfile(vector<size_t>(n_bins, 2));
+
         } else {
             vector<size_t> new_cn_profile(n_bins);
             for (int b = 0; b < n_bins; ++b) {
@@ -641,6 +643,15 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
             }
             node->setCnProfile(new_cn_profile);
             // TODO add simulation of true V(clone) variant copy number
+        }
+        // sample the actually expressed copies of each gene
+        // given the bin copy number.
+        // the number of copies which are actually expressed depends on the copy expression probability
+        // which is a gene specific parameter of the simulation
+        vector<size_t> geneCnProfile(simul_config.n_genes);
+        for (int g = 0; g < simul_config.n_genes; ++g) {
+            geneCnProfile[g] = gsl_ran_binomial(rng, gene_set[g]->getGeneCopyProb(),
+                                                node->getCnProfile()[gene_set[g]->getBinIdx()]);
         }
     }
 }
@@ -703,16 +714,11 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
 
     // simulate depth/library size
     sc.setDepthSize(gsl_ran_flat(rng, simul_config.depth_size_min, simul_config.depth_size_max));
-    vector<size_t> geneCnProfile(simul_config.n_genes);
 
     double norm_factor = 0;
     vector<double> unnormalized_means(simul_config.n_genes);
     for (int g = 0; g < simul_config.n_genes; ++g) {
-        // the number of copies which are actually expressed depends on the copy expression probability
-        // which is a gene specific parameter of the simulation
-        geneCnProfile[g] = gsl_ran_binomial(rng, gene_set[g]->getGeneCopyProb(),
-                                              node->getCnProfile()[gene_set[g]->getBinIdx()]);
-        unnormalized_means[g] = gene_set[g]->getPerCopyExpr() * geneCnProfile[g];
+        unnormalized_means[g] = gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g];
         norm_factor += unnormalized_means[g];
     }
 
@@ -795,14 +801,10 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
     sc.setDepthSize(gsl_ran_beta(rng, 2, 2) * 2); // TODO add these parameters to the configuration file
 
     vector<size_t> expr_reads(simul_config.n_genes);
-    vector<size_t> geneCnProfile(simul_config.n_genes);
     switch (simul_config.exprModel) {
         case POISSON: {
             for (int g = 0; g < simul_config.n_genes; ++g) {
-                // sample the number of actually expressed copies
-                geneCnProfile[g] = gsl_ran_binomial(rng, gene_set[g]->getGeneCopyProb(),
-                                                      node->getCnProfile()[gene_set[g]->getBinIdx()]);
-                double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * geneCnProfile[g]);
+                double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
                 expr_reads[g] = gsl_ran_poisson(rng, mean);
             }
             break;
@@ -815,9 +817,7 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
                 if (zero_inflation) {
                     expr_reads[g] = 0;
                 } else {
-                    geneCnProfile[g] = gsl_ran_binomial(rng, gene_set[g]->getGeneCopyProb(),
-                                                          node->getCnProfile()[gene_set[g]->getBinIdx()]);
-                    double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * geneCnProfile[g]);
+                    double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
                     expr_reads[g] = gsl_ran_poisson(rng, mean);
                 }
             }
@@ -827,9 +827,7 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
         case NEG_BINOM: {
             for (int g = 0; g < simul_config.n_genes; ++g) {
                 // NB expressed in terms of mean/var
-                geneCnProfile[g] = gsl_ran_binomial(rng, gene_set[g]->getGeneCopyProb(),
-                                                      node->getCnProfile()[gene_set[g]->getBinIdx()]);
-                double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * geneCnProfile[g]);
+                double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
                 double r = gene_set[g]->getNbInvDispersion();
                 // derive p NB parameter
                 double p = r/(mean + r);
@@ -847,10 +845,8 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
                 if (zero_inflation) {
                     expr_reads[g] = 0;
                 } else {
-                    geneCnProfile[g] = gsl_ran_binomial(rng, gene_set[g]->getGeneCopyProb(),
-                                                          node->getCnProfile()[gene_set[g]->getBinIdx()]);
                     // NB expressed in terms of mean/var
-                    double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * geneCnProfile[g]);
+                    double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
                     double r = gene_set[g]->getNbInvDispersion();
                     // derive p NB parameter
                     double p = r/(mean + r);

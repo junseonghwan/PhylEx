@@ -38,11 +38,9 @@ void GenerateBulkData(gsl_rng *random,
                       const SimulationConfig &simul_config,
                       vector<BulkDatum *> &data,
                       CloneTreeNode *root_node);
-void GenerateBulkDataWithBDProcess(gsl_rng *random,
-                                   const SimulationConfig &simul_config,
-                                   vector<BulkDatum *> &data,
-                                   CloneTreeNode *root_node,
-                                   vector<pair<double, double> > &cts_cn);
+void GenerateBulkDataWithBDProcess(gsl_rng *random, const SimulationConfig &simul_config, vector<BulkDatum *> &data,
+                                   CloneTreeNode *root_node, vector<pair<double, double> > &cts_cn,
+                                   vector<Gene *> &gene_set);
 vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_node, const vector<BulkDatum *> &data,
                                           const ModelParams &model_params, const SimulationConfig &simul_config,
                                           vector<SingleCellData *> &sc_data, vector<Gene *> &gene_set);
@@ -82,12 +80,8 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random,
 Eigen::MatrixXf SampleRefVarCn(gsl_rng *rng, const SimulationConfig &simulationConfig, const vector<CloneTreeNode *> &sortedNodes,
                                CloneTreeNode *assignedNode, size_t binIdx);
 
-void EvolveCloneSpecificCN(
-        const gsl_rng *rng,
-        const SimulationConfig &simul_config,
-        CloneTreeNode *root,
-        Eigen::MatrixXf &P1
-);
+void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *root,
+                           Eigen::MatrixXf &P1, vector<Gene *> &gene_set);
 
 //void GenerateScRnaReads(const gsl_rng *random,
 //                        const SimulationConfig &simul_config,
