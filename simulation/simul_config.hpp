@@ -14,6 +14,7 @@
 #include <boost/program_options.hpp>
 
 #include "single_cell.hpp"
+#include "expr_model.h"
 
 using namespace std;
 namespace po = boost::program_options;
@@ -70,17 +71,19 @@ public:
     // gene expression configuration
     size_t n_genes;
     // rho simulated with beta dist
-    double zero_inflation_alpha;
-    double zero_inflation_beta;
+    double zero_inflation_alpha = -1;
+    double zero_inflation_beta = -1;
     // r simulated with gamma dist
-    double nb_inv_dispersion_shape;
-    double nb_inv_dispersion_scale;
+    double nb_inv_dispersion_shape = -1;
+    double nb_inv_dispersion_scale = -1;
     // depth size s uniform parameters
     double depth_size_min;
     double depth_size_max;
     // gene copy expression probability beta params
     double gene_copy_expr_prob_alpha;
     double gene_copy_expr_prob_beta;
+
+    expr_model exprModel = POISSON;
 
     SimulationConfig();
     static SimulationConfig *parse_config_file(const string &config_file_path);

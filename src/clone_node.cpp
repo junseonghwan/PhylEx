@@ -823,7 +823,7 @@ double ScLikelihood(size_t loci_idx,
  * @return
  */
 double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_data, const SingleCellData *sc,
-                              const CloneTreeNode *node, const vector<Gene *> &geneSet) {
+                              const CloneTreeNode *node, const vector<Gene *> &geneSet, const ModelParams &modelParams) {
     // precompute the normalization factor for the mean
     double normFactor = computeNormFactor(node);
 
@@ -857,9 +857,28 @@ double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_da
             double exprLogLik = log(gsl_ran_binomial_pdf(e, geneSet[geneIdx]->getGeneCopyProb(), total_cn)); // binom
             // clonealign formula
             double mean = sc->getDepthSize() * geneSet[geneIdx]->getPerCopyExpr() * e / normFactor;
-            exprLogLik += log_zinb_pdf(sc->getExprReads()[geneIdx], mean,
-                                   geneSet[geneIdx]->getNbInvDispersion(),
-                                   sc->getZeroInflationProbs()[geneIdx]); // gene expr likelihood
+            switch (modelParams.getExprModel()) {
+                case POISSON: {
+                    exprLogLik += log_poisson_pdf(sc->getExprReads()[geneIdx], mean); // gene expr likelihood
+                    break;
+                }
+                case NEG_BINOM: {
+                    exprLogLik += log_negative_binomial_pdf(sc->getExprReads()[geneIdx], mean,
+                                               geneSet[geneIdx]->getNbInvDispersion());
+                    break;
+                }
+                case ZIP: {
+                    exprLogLik += log_zip_pdf(sc->getExprReads()[geneIdx], mean,
+                                                            sc->getZeroInflationProbs()[geneIdx]);
+                    break;
+                }
+                case ZINB: {
+                    exprLogLik += log_zinb_pdf(sc->getExprReads()[geneIdx], mean,
+                                               geneSet[geneIdx]->getNbInvDispersion(),
+                                               sc->getZeroInflationProbs()[geneIdx]);
+                    break;
+                }
+            }
             exprLogLik += allImbLogLik; // add allelic imbalance component (can be 0)
 
             geneLogLik = log_add(geneLogLik, exprLogLik); // addend of the outer sum

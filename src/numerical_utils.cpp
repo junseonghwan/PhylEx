@@ -5,6 +5,11 @@
  *      Author: seonghwanjun
  */
 
+#include "sampling_utils.hpp"
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_rng.h>
+#include <limits>
+#include <algorithm>
 #include "numerical_utils.hpp"
 
 #include <assert.h>
@@ -42,7 +47,74 @@ double log_dirichlet_pdf(unsigned int K, double *alpha, double *theta)
 }
 
 /**
+ * Logarithm of Poisson PMF
+ *
+ * @param k
+ * @param mean
+ * @return
+ */
+double log_poisson_pdf(unsigned int k, double mean) {
+    return k * log(mean) - mean - gsl_sf_lnfact(k);
+}
+
+/**
+ * Log of Zero-Inflated Poisson
+ *
+ *  p = \rho * 1(k = 0) + (1 - \rho) * poisson(k; mean)
+ *
+ * @param k
+ * @param mean
+ * @param rho zero-inflation prob
+ * @return
+ */
+double log_zip_pdf(unsigned int k, double mean, double rho) {
+    double log_p = log(1 - rho) + log_poisson_pdf(k, mean);
+    if (k == 0) {
+        log_p = log_add(log_p, log(rho));
+    }
+    return log_p;
+}
+
+/**
+ * Computes the negative binomial pdf of a point in the (mean,r) parametrization
+ * @param k number of failures
+ * @param mean
+ * @param r number of successes or, equivalently, inverse of dispersion
+ * @return log probability
+ */
+double negative_binomial_pdf(size_t k, double mean, double r) {
+    double p = r/(mean + r);
+    return gsl_ran_negative_binomial_pdf(k, p, r);
+}
+
+/**
+ * Zero-Inflated Negative Binomial pdf
+ *
+ * @param k outcome of the stochastic event
+ * @param mean mean of the negative binomial distribution
+ * @param r inverse of dispersion parameter, or, equivalently, number of failures before k successes
+ * @param rho zero-inflation probability
+ * @return probability
+ */
+double zinb_pdf(size_t k, double mean, double r, double rho) {
+    double p = (1 - rho) * negative_binomial_pdf(k, mean, r);
+    if (k == 0) {
+        p += rho;
+    }
+    return p;
+}
+
+double log_zinb_pdf(size_t k, double mean, double r, double rho) {
+    double log_p = log(1 - rho) + log_negative_binomial_pdf(k, mean, r);
+    if (k == 0) {
+        log_p = log_add(log_p, log(rho));
+    }
+    return log_p;
+}
+
+/**
  * Parametrized by mean and inverse dispersion parameter
+ *
  * @param k
  * @param mean
  * @param r

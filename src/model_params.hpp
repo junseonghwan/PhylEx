@@ -14,6 +14,8 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_rng.h>
 
+#include "expr_model.h"
+
 using namespace std;
 
 double conditional_prob(size_t y, size_t x, double p_var);
@@ -44,6 +46,8 @@ class ModelParams
 
     double sc_bursty_alpha0_ = -1;
     double sc_bursty_beta0_ = -1;
+
+    expr_model exprModel = POISSON;
 
     // sc_mixture_proportions[0]: Dropout for variant.
     // sc_mixture_proportions[1]: Bursty for variant.
@@ -125,7 +129,11 @@ public:
     bool UseSingleCellDropoutDistribution() {
         return (sc_dropout_alpha0_ > 0 && sc_dropout_beta0_ > 0);
     }
-    
+
+    const expr_model &getExprModel() const;
+
+    void setExprModel(const expr_model &exprModel);
+
     void RandomInit(gsl_rng *random);
 };
 

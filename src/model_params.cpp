@@ -116,3 +116,11 @@ void ModelParams::RandomInit(gsl_rng *random)
     lambda_ = gsl_ran_flat(random, lambda_min, lambda_max);
     gamma_ = gsl_ran_flat(random, gamma_min, gamma_max);
 }
+
+const expr_model &ModelParams::getExprModel() const {
+    return exprModel;
+}
+
+void ModelParams::setExprModel(const expr_model &exprModel) {
+    ModelParams::exprModel = exprModel;
+}

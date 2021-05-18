@@ -180,9 +180,7 @@ double ComputeSingleCellLikelihood(CloneTreeNode *root,
                           vector<SingleCellData *> &sc_data,
                           const ModelParams &model_params);
 
-double computeTotSCLogLik(CloneTreeNode *root,
-                          vector<BulkDatum *> &bulk_data,
-                          vector<SingleCellData *> &sc_data,
-                          const vector<Gene *> &geneSet);
+double computeTotSCLogLik(CloneTreeNode *root, vector<BulkDatum *> &bulk_data, vector<SingleCellData *> &sc_data,
+                          const vector<Gene *> &geneSet, const ModelParams &modelParams);
 
 #endif /* tssb_state_hpp */

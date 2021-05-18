@@ -185,7 +185,7 @@ double ScLikelihood(size_t loci_idx,
                     bool has_snv,
                     const ModelParams &model_params);
 double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_data, const SingleCellData *sc,
-                              const CloneTreeNode *node, const vector<Gene *> &geneSet);
+                              const CloneTreeNode *node, const vector<Gene *> &geneSet, const ModelParams &modelParams);
 double computeNormFactor(const CloneTreeNode *node);
 double ScLikelihoodWithDropout(size_t loci_idx,
                                const BulkDatum *bulk,

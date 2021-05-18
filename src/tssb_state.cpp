@@ -1164,10 +1164,8 @@ double ComputeSingleCellLikelihood(CloneTreeNode *root,
  * @param geneSet
  * @return
  */
-double computeTotSCLogLik(CloneTreeNode *root,
-                          vector<BulkDatum *> &bulk_data,
-                          vector<SingleCellData *> &sc_data,
-                          const vector<Gene *> &geneSet)
+double computeTotSCLogLik(CloneTreeNode *root, vector<BulkDatum *> &bulk_data, vector<SingleCellData *> &sc_data,
+                          const vector<Gene *> &geneSet, const ModelParams &modelParams)
 {
     vector<CloneTreeNode *> nodes;
     TSSBState::get_all_nodes(true, root, nodes);
@@ -1180,6 +1178,7 @@ double computeTotSCLogLik(CloneTreeNode *root,
 
     double log_lik = 0.0, log_val = 0.0;
     double log_prior = -log(nodes.size());
+
     // for each cell
     for (auto & c : sc_data) {
         // compute the likelihood of it being assigned to each node
@@ -1188,7 +1187,7 @@ double computeTotSCLogLik(CloneTreeNode *root,
             double log_lik_node = 0.0;
             for (size_t binIdx = 0; binIdx < node->getBins()->size(); ++binIdx) {
                 // likelihood for a single bin
-                log_val = SCLogLikWithCopyNumber(binIdx, bulk_data, c, node, geneSet);
+                log_val = SCLogLikWithCopyNumber(binIdx, bulk_data, c, node, geneSet, modelParams);
                 log_lik_node += log_val;
             }
             log_lik_cell = log_add(log_lik_cell, log_lik_node);

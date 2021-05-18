@@ -143,8 +143,7 @@ SimulationConfig *SimulationConfig::parse_config_file(const string &config_file_
                                    "randomize_dropout", "bursty_prob", "sc_bursty_alpha0", "sc_bursty_beta0",
                                    "sc_error_distn_variance_factor", "beta_binomial_hp_max",
                                    "randomize_branching", "randomize_cf", "min_cf", "snv_sc_sparsity", "n_genes",
-                                   "zero_inflation_alpha", "zero_inflation_beta", "nb_inv_dispersion_shape",
-                                   "nb_inv_dispersion_scale", "gene_copy_expr_prob_alpha", "gene_copy_expr_prob_beta",
+                                   "gene_copy_expr_prob_alpha", "gene_copy_expr_prob_beta",
                                    "depth_size_max", "depth_size_min", "cn_hmm_smoothing_rate", "output_path"};
 
     // create the config object
@@ -170,5 +169,21 @@ SimulationConfig *SimulationConfig::parse_config_file(const string &config_file_
         exit(-1);
     }
     config_file.close();
+
+    // determine the type of the model for gene expression data based on the input parameters
+    if (config->nb_inv_dispersion_scale == -1) {
+        if (config->zero_inflation_beta == -1) {
+            config->exprModel = POISSON;
+        } else {
+            config->exprModel = ZIP;
+        }
+    } else {
+        if (config->zero_inflation_beta == -1) {
+            config->exprModel = NEG_BINOM;
+        } else {
+            config->exprModel = ZINB;
+        }
+    }
+
     return config;
 }

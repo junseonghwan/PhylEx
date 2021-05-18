@@ -60,13 +60,16 @@ void GenerateGenes(
         vector<Gene *> &gene_set
 );
 
-void GenerateScRnaExpression(
+void GenerateScRnaExpressionNorm(
         const gsl_rng *rng,
         const SimulationConfig &simul_config,
         CloneTreeNode *node,
         SingleCellData &sc,
         vector<Gene *> &gene_set
 );
+
+void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_config, CloneTreeNode *node,
+                             SingleCellData &sc, vector<Gene *> &gene_set);
 
 Eigen::MatrixXf EvolveCn(gsl_rng *random,
                          vector<CloneTreeNode *> &nodes,

@@ -162,6 +162,8 @@ int main(int argc, char *argv[]) {
     model_params.SetVariantCopyProbability(simul_config.var_cp_prob);
     model_params.SetSingleCellBurstyAlphaParameter(simul_config.sc_bursty_alpha0);
     model_params.SetSingleCellBurstyBetaParameter(simul_config.sc_bursty_beta0);
+    model_params.setExprModel(simul_config.exprModel);
+    cout << "Expression model: " << simul_config.exprModel << endl;
 
     bool bd_process = false;
     if (simul_config.birth_rate > 0 && simul_config.max_cn > 2) {
@@ -275,7 +277,7 @@ int main(int argc, char *argv[]) {
 //                                           model_params);
 // FIXME
 //  computeTotSCLogLik takes ages
-    double sc_log_lik = computeTotSCLogLik(root_node, data, sc_data, sortedGeneSet);
+    double sc_log_lik = computeTotSCLogLik(root_node, data, sc_data, sortedGeneSet, model_params);
 //    double sc_log_lik = 0.;
     WriteTreeToFile(output_path, data, root_node);
     WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);

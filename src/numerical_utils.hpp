@@ -16,6 +16,7 @@
 
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf.h>
+#include <gsl/gsl_rng.h>
 
 using namespace std;
 
@@ -25,9 +26,15 @@ extern const double DOUBLE_INF;
 extern const double DOUBLE_NEG_INF;
 extern const double NaN;
 
+double negative_binomial_pdf(size_t k, double mean, double r);
+double zinb_pdf(size_t k, double mean, double r, double rho);
+
 // returns log sum as by-product
 double log_dirichlet_pdf(unsigned int K, double *alpha, double *theta);
+double log_poisson_pdf(unsigned int k, double mean);
+double log_zip_pdf(unsigned int k, double mean, double rho);
 double log_negative_binomial_pdf(unsigned int k, double mean, double r);
+double log_zinb_pdf(size_t k, double mean, double r, double rho);
 double log_binomial_pdf(const unsigned int k, const double p, const unsigned int n);
 double normalize(const vector<double> &log_weights, vector<double> &weights);
 void normalize(const vector<double> &log_weights, vector<double> &weights, double log_norm);
