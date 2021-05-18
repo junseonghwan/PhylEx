@@ -88,6 +88,14 @@ void Gene::setGeneCopyProb(double geneCopyProb) {
     gene_copy_prob = geneCopyProb;
 }
 
+size_t Gene::getBinIdx() const {
+    return bin_idx;
+}
+
+void Gene::setBinIdx(size_t binIdx) {
+    bin_idx = binIdx;
+}
+
 // TODO implement other smart binning methods
 /**
  * Creates bins with a fixed size given a set of genes
@@ -108,7 +116,7 @@ vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &sortedGeneSet, size
 
     // create bins
     vector<Bin> bin_set;
-    queue<Gene *> sortedGeneQueue(deque(sortedGeneSet.begin(), sortedGeneSet.end()));
+    queue<Gene *> sortedGeneQueue(deque<Gene *>(sortedGeneSet.begin(), sortedGeneSet.end()));
     size_t geneIdx = 0;
     // chrMaxPos is ordered by chromosomes
     for (size_t chr = 0; chr < chrMaxPos.size(); ++chr) {
@@ -120,6 +128,7 @@ vector<Bin> Bin::generateBinsFromGenes(const vector<Gene *> &sortedGeneSet, size
             bool containsGene = false;
 
             while (!sortedGeneQueue.empty() && bin.contains(*sortedGeneQueue.front())) {
+                sortedGeneQueue.front()->setBinIdx(i);
                 bin.insertGene(sortedGeneQueue.front(), geneIdx++);
                 sortedGeneQueue.pop();
                 containsGene = true;

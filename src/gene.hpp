@@ -60,6 +60,7 @@ class Gene : public NASequence {
 
     string ensembl_id;
     string name;
+    size_t bin_idx;
 
     double per_copy_expr; // mu_g
     double nb_inv_dispersion; // r_g
@@ -93,6 +94,10 @@ public:
     void setGeneCopyProb(double geneCopyProb);
 
     static vector<Gene *> readGeneCodeFromFile(const string &path);
+
+    size_t getBinIdx() const;
+
+    void setBinIdx(size_t binIdx);
 };
 
 class Bin : public NASequence {
