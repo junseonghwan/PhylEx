@@ -74,8 +74,6 @@ class CloneTreeNode
     // bin-set
     shared_ptr<vector<Bin>> bins;
 
-    bool operator==(const CloneTreeNode &other) const;
-
     // change the last part of the node's name to j -- used extensively by reorder_sticks
     void EditName(size_t j);
     
@@ -180,6 +178,8 @@ public:
 
     static CloneTreeNode *CreateRootNode(size_t region_count);
     static void RetrieveLoci(CloneTreeNode *node, unordered_set<Locus> &ret);
+
+    bool operator==(const CloneTreeNode &other) const;
 };
 
 double ScLikelihood(size_t loci_idx,
