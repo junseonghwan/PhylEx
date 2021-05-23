@@ -864,7 +864,7 @@ double SCLogLikWithCopyNumber(size_t bin_idx, const vector<BulkDatum *> &bulk_da
             // compute gene expression prob (ZINB dist) multiplied by the prior for `e` (binomial)
             double exprLogLik = log(gsl_ran_binomial_pdf(e, geneSet[geneIdx]->getGeneCopyProb(), total_cn)); // binom
             // clonealign formula
-            double mean = sc->getDepthSize() * geneSet[geneIdx]->getPerCopyExpr() * e / normFactor;
+            double mean = sc->getSizeFactor() * geneSet[geneIdx]->getPerCopyExpr() * e / normFactor;
             switch (modelParams.getExprModel()) {
                 case POISSON: {
                     exprLogLik += log_poisson_pdf(sc->getExprReads()[geneIdx], mean); // gene expr likelihood

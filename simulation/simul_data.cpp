@@ -713,7 +713,7 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
                                  SingleCellData &sc, vector<Gene *> &gene_set) {
 
     // simulate depth/library size
-    sc.setDepthSize(gsl_ran_flat(rng, simul_config.depth_size_min, simul_config.depth_size_max));
+    sc.setSizeFactor(gsl_ran_flat(rng, simul_config.size_factor_min, simul_config.size_factor_max));
 
     double norm_factor = 0;
     vector<double> unnormalized_means(simul_config.n_genes);
@@ -726,7 +726,7 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
     switch (simul_config.exprModel) {
         case POISSON: {
             for (int g = 0; g < simul_config.n_genes; ++g) {
-                double mean = sc.getDepthSize() * unnormalized_means[g] / norm_factor;
+                double mean = sc.getSizeFactor() * unnormalized_means[g] / norm_factor;
                 expr_reads[g] = gsl_ran_poisson(rng, mean);
             }
             break;
@@ -739,7 +739,7 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
                 if (zero_inflation) {
                     expr_reads[g] = 0;
                 } else {
-                    double mean = sc.getDepthSize() * unnormalized_means[g] / norm_factor;
+                    double mean = sc.getSizeFactor() * unnormalized_means[g] / norm_factor;
                     expr_reads[g] = gsl_ran_poisson(rng, mean);
                 }
             }
@@ -749,7 +749,7 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
         case NEG_BINOM: {
             for (int g = 0; g < simul_config.n_genes; ++g) {
                 // NB expressed in terms of mean/var
-                double nb_mean = sc.getDepthSize() * unnormalized_means[g] / norm_factor;
+                double nb_mean = sc.getSizeFactor() * unnormalized_means[g] / norm_factor;
                 double r = gene_set[g]->getNbInvDispersion();
                 // derive p NB parameter
                 double p = r/(nb_mean + r);
@@ -768,7 +768,7 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
                     expr_reads[g] = 0;
                 } else {
                     // NB expressed in terms of mean/var
-                    double nb_mean = sc.getDepthSize() * unnormalized_means[g] / norm_factor;
+                    double nb_mean = sc.getSizeFactor() * unnormalized_means[g] / norm_factor;
                     double r = gene_set[g]->getNbInvDispersion();
                     // derive p NB parameter
                     double p = r/(nb_mean + r);
@@ -798,13 +798,13 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
                                  SingleCellData &sc, vector<Gene *> &gene_set) {
 
     // simulate size factor (!= library size)
-    sc.setDepthSize(gsl_ran_beta(rng, 2, 2) * 2); // TODO add these parameters to the configuration file
+    sc.setSizeFactor(gsl_ran_beta(rng, 2, 2) * 2); // TODO add these parameters to the configuration file
 
     vector<size_t> expr_reads(simul_config.n_genes);
     switch (simul_config.exprModel) {
         case POISSON: {
             for (int g = 0; g < simul_config.n_genes; ++g) {
-                double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
+                double mean = exp(sc.getSizeFactor() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
                 expr_reads[g] = gsl_ran_poisson(rng, mean);
             }
             break;
@@ -817,7 +817,7 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
                 if (zero_inflation) {
                     expr_reads[g] = 0;
                 } else {
-                    double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
+                    double mean = exp(sc.getSizeFactor() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
                     expr_reads[g] = gsl_ran_poisson(rng, mean);
                 }
             }
@@ -827,7 +827,7 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
         case NEG_BINOM: {
             for (int g = 0; g < simul_config.n_genes; ++g) {
                 // NB expressed in terms of mean/var
-                double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
+                double mean = exp(sc.getSizeFactor() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
                 double r = gene_set[g]->getNbInvDispersion();
                 // derive p NB parameter
                 double p = r/(mean + r);
@@ -846,7 +846,7 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
                     expr_reads[g] = 0;
                 } else {
                     // NB expressed in terms of mean/var
-                    double mean = exp(sc.getDepthSize() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
+                    double mean = exp(sc.getSizeFactor() * gene_set[g]->getPerCopyExpr() * node->getGeneCnProfile()[g]);
                     double r = gene_set[g]->getNbInvDispersion();
                     // derive p NB parameter
                     double p = r/(mean + r);

@@ -62,17 +62,17 @@ void SingleCellData::setZeroInflationProbs(const vector<double> &zeroInflationPr
     zero_inflation_probs = zeroInflationProbs;
 }
 
-double SingleCellData::getDepthSize() const {
-    return depth_size;
+double SingleCellData::getSizeFactor() const {
+    return size_factor;
 }
 
-void SingleCellData::setDepthSize(double depthSize) {
-    depth_size = depthSize;
+void SingleCellData::setSizeFactor(double sizeFactor) {
+    size_factor = sizeFactor;
 }
 
 void SingleCellData::print() {
     // TODO extend with single cell allelic imbalance data
-    cout << "[sc] cell " << cell_name << ", sn " << depth_size << endl;
+    cout << "[sc] cell " << cell_name << ", sn " << size_factor << endl;
     cout << "- expr: [";
     for (auto it: expr_reads) {
         cout << it << ", ";

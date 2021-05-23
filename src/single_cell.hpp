@@ -33,7 +33,7 @@ class SingleCellData
     // maps expression read to specific gene
     vector<size_t> expr_reads;
     // parameters
-    double depth_size; // s_c, or library size
+    double size_factor; // s_c, or library size
     vector<double> zero_inflation_probs; // rho_gc
 
 public:
@@ -66,9 +66,9 @@ public:
 
     void setZeroInflationProbs(const vector<double> &zeroInflationProbs);
 
-    double getDepthSize() const;
+    double getSizeFactor() const;
 
-    void setDepthSize(double depthSize);
+    void setSizeFactor(double sizeFactor);
 
     void print();
 

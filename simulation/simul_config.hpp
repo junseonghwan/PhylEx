@@ -70,15 +70,15 @@ public:
 
     // gene expression configuration
     size_t n_genes;
-    // rho simulated with beta dist
+    // rho simulated with beta dist (if -1, POISSON or NEG_BINOM model is used)
     double zero_inflation_alpha = -1;
     double zero_inflation_beta = -1;
-    // r simulated with gamma dist
+    // r simulated with gamma dist (if -1, POISSON or ZIP model is used)
     double nb_inv_dispersion_shape = -1;
     double nb_inv_dispersion_scale = -1;
     // depth size s uniform parameters
-    double depth_size_min;
-    double depth_size_max;
+    double size_factor_min;
+    double size_factor_max;
     // gene copy expression probability beta params
     double gene_copy_expr_prob_alpha;
     double gene_copy_expr_prob_beta;
