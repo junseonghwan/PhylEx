@@ -226,9 +226,10 @@ void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool out
     ofstream f;
     f.open(output_path, ios::out);
     if (output_genotype) {
-        f << "ID\tCHR\tPOS\tREF\tALT\tb\td\tmajor_cn\tminor_cn" << endl;
+        //f << "ID\tCHR\tPOS\tREF\tALT\tb\td\tmajor_cn\tminor_cn" << endl;
+        f << "ID\tb\td\tmajor_cn\tminor_cn" << endl;
     } else {
-        f << "ID\tCHR\tPOS\tREF\tALT\tb\td\tcn" << endl;
+        f << "ID\tb\td\tcn" << endl;
     }
     for (unsigned int i = 0; i < bulk.size(); i++)
     {
