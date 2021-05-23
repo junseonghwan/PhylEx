@@ -233,11 +233,11 @@ void WriteBulkData(string output_path, const vector<BulkDatum *> &bulk, bool out
     for (unsigned int i = 0; i < bulk.size(); i++)
     {
         f << bulk[i]->GetId() << "\t";
-        f << bulk[i]->GetLocus().get_chr() << "\t";
-        f << bulk[i]->GetLocus().get_pos() << "\t";
+        //f << bulk[i]->GetLocus().get_chr() << "\t";
+        //f << bulk[i]->GetLocus().get_pos() << "\t";
         //f << "Gene" << "\t"; // Some generic gene name.
-        f << "A" << "\t"; // Write arbitrary nucleotide base.
-        f << "C" << "\t"; // Write arbitrary nucleotide base.
+        //f << "A" << "\t"; // Write arbitrary nucleotide base.
+        //f << "C" << "\t"; // Write arbitrary nucleotide base.
         f << ConvertToCommaSeparatedValues(bulk[i]->GetVariantReadCount()) << "\t";
         f << ConvertToCommaSeparatedValues(bulk[i]->GetReadCount()) << "\t";
         if (output_genotype) {
