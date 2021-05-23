@@ -5,9 +5,6 @@
 //  Created by Seong-Hwan Jun on 2019-07-30.
 //
 
-#include <vector>
-#include <gsl/gsl_sf.h>
-
 #include "utils.hpp"
 
 using namespace std;

@@ -60,7 +60,7 @@ double log_poisson_pdf(unsigned int k, double mean) {
 /**
  * Log of Zero-Inflated Poisson
  *
- *  p = \rho * 1(k = 0) + (1 - \rho) * poisson(k; mean)
+ *  p = rho * 1(k = 0) + (1 - rho) * poisson(k; mean)
  *
  * @param k
  * @param mean

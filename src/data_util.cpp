@@ -23,7 +23,6 @@
 #include <gsl/gsl_randist.h>
 
 #include "tssb_state.hpp"
-#include "utils.hpp"
 
 NewickNode::NewickNode(string str) {
     // split the string and set name and cellular prevalence

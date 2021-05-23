@@ -1,7 +1,6 @@
 #include "tssb_state.hpp"
 
 #include <omp.h>
-#include "utils.hpp"
 
 TSSBState::TSSBState(const gsl_rng *random,
                      CloneTreeNode *root,

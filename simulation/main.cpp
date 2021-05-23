@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
     vector<Gene *> sortedGeneSet;
     GenerateGenes(rand, simul_config, sortedGeneSet);
 
-    auto bins = make_shared<vector<Bin>>(Bin::generateBinsFromGenes(sortedGeneSet, 2600700));
+    auto bins = make_shared<vector<Bin>>(Bin::generateBinsFromGenes(sortedGeneSet, 500000));
     // give a reference of the bins to each node
     for (auto node: sorted_nodes) {
         node->setBins(bins);
