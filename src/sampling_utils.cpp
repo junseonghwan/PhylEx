@@ -188,3 +188,19 @@ size_t discrete(const gsl_rng *random, vector<double> probs)
     }
     return j;
 }
+
+/**
+ * Sample without replacement `k` indices out of a total size of `n`
+ *
+ * @param rng
+ * @param n
+ * @param k
+ * @return array of unique indices
+ */
+size_t* sampleIndices(const gsl_rng *rng, size_t n, size_t k) {
+    auto idxs = new size_t[n];
+    for (size_t i = 0; i < n; ++i) {idxs[i] = i;}
+    auto samples = new size_t[k];
+    gsl_ran_choose(rng, samples, k, idxs, n, sizeof(size_t));
+    return samples;
+}

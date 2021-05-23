@@ -40,5 +40,6 @@ int multinomial(const gsl_rng *random, const vector<double> &unnormalized_probs,
 // ASSERT: the length of indices is N
 // each element of indices taking on values {0, ..., normalized_probs.size()}
 void multinomial_sample_indices(const gsl_rng *random, unsigned int N, const vector<double> &normalized_probs, unsigned int *indices);
+size_t* sampleIndices(const gsl_rng *rng, size_t n, size_t k);
 
 #endif /* SRC_SAMPLING_UTILS_HPP_ */

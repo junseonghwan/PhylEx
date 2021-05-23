@@ -653,6 +653,7 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
             geneCnProfile[g] = gsl_ran_binomial(rng, gene_set[g]->getGeneCopyProb(),
                                                 node->getCnProfile()[gene_set[g]->getBinIdx()]);
         }
+        node->setGeneCnProfile(geneCnProfile);
     }
 }
 
@@ -677,10 +678,7 @@ void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vec
     } else {
         auto genecode = Gene::readGeneCodeFromFile(simul_config.genecode_path);
         // sample n_genes from the genecode
-        auto idxs = new size_t[genecode.size()];
-        for (size_t i = 0; i < genecode.size(); ++i) {idxs[i] = i;}
-        auto samples = new size_t[simul_config.n_genes];
-        gsl_ran_choose(rng, samples, simul_config.n_genes, idxs, genecode.size(), sizeof(size_t));
+        auto samples = sampleIndices(rng, genecode.size(), simul_config.n_genes);
         // push the sampled genes into the gene_set
         for (int g = 0; g < simul_config.n_genes; ++g) {
             gene_set.push_back(genecode[samples[g]]);
@@ -690,7 +688,7 @@ void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vec
     for (int g = 0; g < simul_config.n_genes; ++g) {
         // FIXME add normalization flag (perCopyExpr is log(ran_gaussian) when normalizing -> clonealign model
         //  max value should be approx 0.58
-        gene_set[g]->setPerCopyExpr(gsl_ran_gaussian(rng, 0.5) + 1);
+        gene_set[g]->setPerCopyExpr(gsl_ran_gaussian(rng, 0.1) + 0.3);
         gene_set[g]->setNbInvDispersion(gsl_ran_gamma(rng, simul_config.nb_inv_dispersion_shape,
                                                       simul_config.nb_inv_dispersion_scale));
         gene_set[g]->setGeneCopyProb(gsl_ran_beta(rng, simul_config.gene_copy_expr_prob_alpha,

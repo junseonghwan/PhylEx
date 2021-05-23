@@ -11,9 +11,8 @@
 #include "model_params.hpp"
 #include "single_cell.hpp"
 #include "simul_config.hpp"
-#include "tssb_state.hpp"
-
 #include "simul_data.hpp"
+#include "analysis.hpp"
 
 namespace po = boost::program_options;
 using namespace std;
@@ -277,11 +276,19 @@ int main(int argc, char *argv[]) {
 //                                           model_params);
 // FIXME
 //  computeTotSCLogLik takes ages
-    double sc_log_lik = computeTotSCLogLik(root_node, data, sc_data, sortedGeneSet, model_params);
-//    double sc_log_lik = 0.;
+//    double sc_log_lik = computeTotSCLogLik(root_node, data, sc_data, sortedGeneSet, model_params);
+    double sc_log_lik = 0.;
     WriteTreeToFile(output_path, data, root_node);
     WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
     WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);
+
+    // Create directories for output.
+    string sens_output_path = output_path + "/sens";
+    boost::filesystem::path sens_outpath(sens_output_path);
+    boost::filesystem::create_directories(sens_outpath);
+    // sensitivity simulation on copy numbers
+    cnSensitivitySimulation(100, sc_data, cell2node, sorted_nodes, simul_config, sortedGeneSet,
+                            sens_output_path, rand);
 
     // output cluster labels
     vector<unsigned int> cluster_labels;
