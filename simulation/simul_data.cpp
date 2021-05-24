@@ -284,7 +284,7 @@ Eigen::MatrixXf EvolveCn(gsl_rng *random, vector<CloneTreeNode *> &nodes, unorde
  */
 Eigen::MatrixXf SampleRefVarCn(gsl_rng *rng, const SimulationConfig &simulationConfig,
                                const vector<CloneTreeNode *> &sortedNodes, CloneTreeNode *assignedNode, size_t binIdx) {
-    size_t n_nodes = sortedNodes.size();
+    int n_nodes = sortedNodes.size();
 
     // Indexing:
     // Rows -> nodes.
@@ -302,8 +302,8 @@ Eigen::MatrixXf SampleRefVarCn(gsl_rng *rng, const SimulationConfig &simulationC
         node = node->GetParentNode();
     }
 
-    size_t ref_cn, var_cn;
-    for (size_t i = 0; i < sortedNodes.size(); i++) {
+    int ref_cn, var_cn;
+    for (int i = 0; i < sortedNodes.size(); i++) {
         auto currNode = sortedNodes[i];
         auto parent_node = currNode->GetParentNode();
         if (currNode->IsRoot()) {
@@ -312,7 +312,7 @@ Eigen::MatrixXf SampleRefVarCn(gsl_rng *rng, const SimulationConfig &simulationC
             continue;
         }
         // retrieve the total copy number of the bin in which the SNV is located
-        size_t tot_cn = currNode->getCnProfile().at(binIdx);
+        int tot_cn = currNode->getCnProfile().at(binIdx);
         if (currNode == assignedNode) {
             // sample var_cn, ensure that it is at least 1
             // there must be at least one variant copy because an SNV has been assigned
@@ -651,7 +651,7 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
                 int next_bp = negative_binomial(rng, 67, 6000) + 1;
                 for (int db = 0; db < next_bp && b < n_bins; ++db) {
                     int x = parent->getCnProfile()[b];
-                    new_cn_profile[b] = min(max(x + delta, 0), (int) simul_config.max_cn);
+                    new_cn_profile[b] = min(max(x + delta, 1), (int) simul_config.max_cn);
                     b++;
                 }
 //
