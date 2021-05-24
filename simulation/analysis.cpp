@@ -19,13 +19,13 @@
  */
 double geneExprLogLikCopyNumber(const vector<SingleCellData *> &sc_data, const vector<CloneTreeNode *> &cell2node,
                                 const vector<size_t> &gene_cn, const SimulationConfig &simulationConfig,
-                                const vector<Gene *> &gene_set, const CloneTreeNode &cn_node, bool norm_model) {
+                                const vector<Gene *> &gene_set, const CloneTreeNode &cn_node) {
     double logLik = 0;
 
     for (int c = 0; c < sc_data.size(); ++c) {
         auto cn = cn_node == *cell2node[c] ? gene_cn : cell2node[c]->getGeneCnProfile();
         auto means = compute_means(sc_data[c]->getSizeFactor(), simulationConfig.depth_sf_ratio,
-                                    gene_set, gene_cn, norm_model);
+                                    gene_set, cn, simulationConfig.norm_model);
 
         for (int g = 0; g < gene_cn.size(); ++g) {
             switch (simulationConfig.exprModel) {
@@ -52,13 +52,23 @@ double geneExprLogLikCopyNumber(const vector<SingleCellData *> &sc_data, const v
 double* compute_means(double size_factor, double depth_sf_ratio, const vector<Gene *> &gene_set,
                       const vector<size_t> &gene_cn, bool norm_model) {
     auto means = new double[gene_set.size()];
-    for (int g = 0; g < gene_set.size(); ++g) {
-        if (norm_model) {
-            means[g] = size_factor * depth_sf_ratio * gene_set[g]->getPerCopyExpr() * gene_cn[g];
-        } else {
-            exp(size_factor * gene_set[g]->getPerCopyExpr() * gene_cn[g]);
+    if (norm_model) {
+        double norm_factor = 0;
+        auto unnormalized_means = new double[gene_set.size()];
+        for (int g = 0; g < gene_set.size(); ++g) {
+            unnormalized_means[g] = gene_set[g]->getPerCopyExpr() * gene_cn[g];
+            norm_factor += unnormalized_means[g];
+        }
+        for (int g = 0; g < gene_set.size(); ++g) {
+            double depth_size = size_factor * depth_sf_ratio;
+            means[g] = depth_size * unnormalized_means[g] / norm_factor;
+        }
+    } else {
+        for (int g = 0; g < gene_set.size(); ++g) {
+            means[g] = exp(size_factor * gene_set[g]->getPerCopyExpr() * gene_cn[g]);
         }
     }
+
     return means;
 }
 
@@ -66,7 +76,7 @@ double geneExprLogLikCopyNumber(const vector<SingleCellData *> &sc_data, const v
                                 const SimulationConfig &simulationConfig, const vector<Gene *> &gene_set) {
     // call the function using true copy number values
     return geneExprLogLikCopyNumber(sc_data, cell2node, cell2node[0]->getGeneCnProfile(),
-                                    simulationConfig, gene_set, *cell2node[0], true);
+                                    simulationConfig, gene_set, *cell2node[0]);
 }
 
 void cnSensitivitySimulation(size_t n, const vector<SingleCellData *> &sc_data,
@@ -130,7 +140,7 @@ void cnSensitivitySimulation(size_t n, const vector<SingleCellData *> &sc_data,
         }
         fCnVar << endl;
 
-        auto logLik = geneExprLogLikCopyNumber(sc_data, cell2node, cn, simul_config, gene_set, *nodes[cloneIdx], true);
+        auto logLik = geneExprLogLikCopyNumber(sc_data, cell2node, cn, simul_config, gene_set, *nodes[cloneIdx]);
         fLikVar << logLik << endl;
     }
     fCnVar.close();
@@ -144,10 +154,5 @@ size_t perturbateCn(const gsl_rng *rng, int old_cn, int max_cn) {
     delta = delta <= 0 ? delta - 1 : delta;
     int new_cn = old_cn + delta;
     // make sure the new copy number stays in the boundaries
-    if (new_cn < 0) {
-        return 0;
-    } else if (new_cn > max_cn) {
-        return max_cn;
-    }
-    return new_cn;
+    return max(min(new_cn, max_cn), 1);
 }

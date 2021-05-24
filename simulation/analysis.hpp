@@ -12,7 +12,7 @@
 
 double geneExprLogLikCopyNumber(const vector<SingleCellData *> &sc_data, const vector<CloneTreeNode *> &cell2node,
                                 const vector<size_t> &gene_cn, const SimulationConfig &simulationConfig,
-                                const vector<Gene *> &gene_set, const CloneTreeNode &cn_node, bool norm_model = true);
+                                const vector<Gene *> &gene_set, const CloneTreeNode &cn_node);
 
 // true copy number gene expression likelihood
 double geneExprLogLikCopyNumber(const vector<SingleCellData *> &sc_data, const vector<CloneTreeNode *> &cell2node,
