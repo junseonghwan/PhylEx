@@ -77,13 +77,13 @@ public:
     double nb_inv_dispersion_shape = -1;
     double nb_inv_dispersion_scale = -1;
     // depth size s uniform parameters
-    double size_factor_min;
-    double size_factor_max;
+    double depth_sf_ratio;
     // gene copy expression probability beta params
     double gene_copy_expr_prob_alpha;
     double gene_copy_expr_prob_beta;
 
     expr_model exprModel = POISSON;
+    bool norm_model = true; // clonealign model (with normalization)
 
     SimulationConfig();
     static SimulationConfig *parse_config_file(const string &config_file_path);

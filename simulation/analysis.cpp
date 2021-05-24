@@ -19,25 +19,27 @@
  */
 double geneExprLogLikCopyNumber(const vector<SingleCellData *> &sc_data, const vector<CloneTreeNode *> &cell2node,
                                 const vector<size_t> &gene_cn, const SimulationConfig &simulationConfig,
-                                const vector<Gene *> &gene_set, const CloneTreeNode &cn_node) {
+                                const vector<Gene *> &gene_set, const CloneTreeNode &cn_node, bool norm_model) {
     double logLik = 0;
 
     for (int c = 0; c < sc_data.size(); ++c) {
         auto cn = cn_node == *cell2node[c] ? gene_cn : cell2node[c]->getGeneCnProfile();
+        auto means = compute_means(sc_data[c]->getSizeFactor(), simulationConfig.depth_sf_ratio,
+                                    gene_set, gene_cn, norm_model);
+
         for (int g = 0; g < gene_cn.size(); ++g) {
-            double mean = exp(sc_data[c]->getSizeFactor() * gene_set[g]->getPerCopyExpr() * cn[g]);
             switch (simulationConfig.exprModel) {
                 case POISSON:
-                    logLik += log_poisson_pdf(sc_data[c]->getExprReads()[g], mean);
+                    logLik += log_poisson_pdf(sc_data[c]->getExprReads()[g], means[g]);
                     break;
                 case NEG_BINOM:
-                    logLik += log_negative_binomial_pdf(sc_data[c]->getExprReads()[g], mean, gene_set[g]->getNbInvDispersion());
+                    logLik += log_negative_binomial_pdf(sc_data[c]->getExprReads()[g], means[g], gene_set[g]->getNbInvDispersion());
                     break;
                 case ZIP:
-                    logLik += log_zip_pdf(sc_data[c]->getExprReads()[g], mean, sc_data[c]->getZeroInflationProbs()[g]);
+                    logLik += log_zip_pdf(sc_data[c]->getExprReads()[g], means[g], sc_data[c]->getZeroInflationProbs()[g]);
                     break;
                 case ZINB:
-                    logLik += log_zinb_pdf(sc_data[c]->getExprReads()[g], mean, gene_set[g]->getNbInvDispersion(),
+                    logLik += log_zinb_pdf(sc_data[c]->getExprReads()[g], means[g], gene_set[g]->getNbInvDispersion(),
                                            sc_data[c]->getZeroInflationProbs()[g]);
                     break;
             }
@@ -47,11 +49,24 @@ double geneExprLogLikCopyNumber(const vector<SingleCellData *> &sc_data, const v
     return logLik;
 }
 
+double* compute_means(double size_factor, double depth_sf_ratio, const vector<Gene *> &gene_set,
+                      const vector<size_t> &gene_cn, bool norm_model) {
+    auto means = new double[gene_set.size()];
+    for (int g = 0; g < gene_set.size(); ++g) {
+        if (norm_model) {
+            means[g] = size_factor * depth_sf_ratio * gene_set[g]->getPerCopyExpr() * gene_cn[g];
+        } else {
+            exp(size_factor * gene_set[g]->getPerCopyExpr() * gene_cn[g]);
+        }
+    }
+    return means;
+}
+
 double geneExprLogLikCopyNumber(const vector<SingleCellData *> &sc_data, const vector<CloneTreeNode *> &cell2node,
                                 const SimulationConfig &simulationConfig, const vector<Gene *> &gene_set) {
     // call the function using true copy number values
     return geneExprLogLikCopyNumber(sc_data, cell2node, cell2node[0]->getGeneCnProfile(),
-                                    simulationConfig, gene_set, *cell2node[0]);
+                                    simulationConfig, gene_set, *cell2node[0], true);
 }
 
 void cnSensitivitySimulation(size_t n, const vector<SingleCellData *> &sc_data,
@@ -115,7 +130,7 @@ void cnSensitivitySimulation(size_t n, const vector<SingleCellData *> &sc_data,
         }
         fCnVar << endl;
 
-        auto logLik = geneExprLogLikCopyNumber(sc_data, cell2node, cn, simul_config, gene_set, *nodes[cloneIdx]);
+        auto logLik = geneExprLogLikCopyNumber(sc_data, cell2node, cn, simul_config, gene_set, *nodes[cloneIdx], true);
         fLikVar << logLik << endl;
     }
     fCnVar.close();

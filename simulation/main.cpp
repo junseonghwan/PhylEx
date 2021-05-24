@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
     // generate or sample a gene set for expression data
     // sorted for speed improvement
     vector<Gene *> sortedGeneSet;
-    GenerateGenes(rand, simul_config, sortedGeneSet);
+    GenerateGenes(rand, simul_config, sortedGeneSet, simul_config.norm_model);
 
     auto bins = make_shared<vector<Bin>>(Bin::generateBinsFromGenes(sortedGeneSet, 500000));
     // give a reference of the bins to each node
@@ -282,7 +282,7 @@ int main(int argc, char *argv[]) {
     WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
     WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);
 
-    // Create directories for output.
+    // sensitivity analysis on copy numbers
     string sens_output_path = output_path + "/sens";
     boost::filesystem::path sens_outpath(sens_output_path);
     boost::filesystem::create_directories(sens_outpath);

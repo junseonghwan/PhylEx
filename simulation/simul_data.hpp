@@ -52,11 +52,7 @@ void GenerateScRnaReads(const gsl_rng *random,
                         SingleCellData &sc);
 
 
-void GenerateGenes(
-        const gsl_rng *rng,
-        const SimulationConfig &simul_config,
-        vector<Gene *> &gene_set
-);
+void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vector<Gene *> &gene_set, bool norm_model);
 
 void GenerateScRnaExpressionNorm(
         const gsl_rng *rng,

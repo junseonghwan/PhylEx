@@ -495,18 +495,22 @@ vector<CloneTreeNode *> GenerateScRnaData(gsl_rng *random, CloneTreeNode *root_n
                             data,
                             bulk_sc_coverage,
                             *sc);
-//        GenerateScRnaExpressionNorm(
-//                random,
-//                simul_config,
-//                node,
-//                *sc,
-//                gene_set);
-        GenerateScRnaExpression(
-                random,
-                simul_config,
-                node,
-                *sc,
-                gene_set);
+
+        if (simul_config.norm_model) {
+            GenerateScRnaExpressionNorm(
+                    random,
+                    simul_config,
+                    node,
+                    *sc,
+                    gene_set);
+        } else {
+            GenerateScRnaExpression(
+                    random,
+                    simul_config,
+                    node,
+                    *sc,
+                    gene_set);
+        }
 
         sc_data.push_back(sc);
         if (verbose) {
@@ -679,8 +683,9 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
  * @param gene_set vector of pointers to `Gene` objects. If empty, also the ID
  *      and all other attributes are sampled. The resulting set is sorted.
  */
-void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vector<Gene *> &gene_set) {
-
+void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vector<Gene *> &gene_set,
+                   bool norm_model)
+{
     if (simul_config.genecode_path.empty()) {
         for (int g = 0; g < simul_config.n_genes; ++g) {
             string ensembl_id = "ENSG" + to_string(g);
@@ -700,9 +705,8 @@ void GenerateGenes(const gsl_rng *rng, const SimulationConfig &simul_config, vec
     }
     // simulate per-copy expression
     for (int g = 0; g < simul_config.n_genes; ++g) {
-        // FIXME add normalization flag (perCopyExpr is log(ran_gaussian) when normalizing -> clonealign model
-        //  max value should be approx 0.58
-        gene_set[g]->setPerCopyExpr(gsl_ran_gaussian(rng, 0.1) + 0.3);
+        double perCopyExpr = norm_model ? exp(gsl_ran_gaussian(rng, 1)) : gsl_ran_gaussian(rng, 0.1) + 0.3;
+        gene_set[g]->setPerCopyExpr(perCopyExpr);
         gene_set[g]->setNbInvDispersion(gsl_ran_gamma(rng, simul_config.nb_inv_dispersion_shape,
                                                       simul_config.nb_inv_dispersion_scale));
         gene_set[g]->setGeneCopyProb(gsl_ran_beta(rng, simul_config.gene_copy_expr_prob_alpha,
@@ -725,7 +729,7 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
                                  SingleCellData &sc, vector<Gene *> &gene_set) {
 
     // simulate depth/library size
-    sc.setSizeFactor(gsl_ran_flat(rng, simul_config.size_factor_min, simul_config.size_factor_max));
+    sc.setSizeFactor(gsl_ran_flat(rng, 0, 2));
 
     double norm_factor = 0;
     vector<double> unnormalized_means(simul_config.n_genes);
@@ -738,7 +742,8 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
     switch (simul_config.exprModel) {
         case POISSON: {
             for (int g = 0; g < simul_config.n_genes; ++g) {
-                double mean = sc.getSizeFactor() * unnormalized_means[g] / norm_factor;
+                double depth_size = sc.getSizeFactor() * simul_config.depth_sf_ratio;
+                double mean = depth_size * unnormalized_means[g] / norm_factor;
                 expr_reads[g] = gsl_ran_poisson(rng, mean);
             }
             break;
@@ -751,7 +756,8 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
                 if (zero_inflation) {
                     expr_reads[g] = 0;
                 } else {
-                    double mean = sc.getSizeFactor() * unnormalized_means[g] / norm_factor;
+                    double depth_size = sc.getSizeFactor() * simul_config.depth_sf_ratio;
+                    double mean = depth_size * unnormalized_means[g] / norm_factor;
                     expr_reads[g] = gsl_ran_poisson(rng, mean);
                 }
             }
@@ -761,7 +767,8 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
         case NEG_BINOM: {
             for (int g = 0; g < simul_config.n_genes; ++g) {
                 // NB expressed in terms of mean/var
-                double nb_mean = sc.getSizeFactor() * unnormalized_means[g] / norm_factor;
+                double depth_size = sc.getSizeFactor() * simul_config.depth_sf_ratio;
+                double nb_mean = depth_size * unnormalized_means[g] / norm_factor;
                 double r = gene_set[g]->getNbInvDispersion();
                 // derive p NB parameter
                 double p = r/(nb_mean + r);
@@ -780,7 +787,8 @@ void GenerateScRnaExpressionNorm(const gsl_rng *rng, const SimulationConfig &sim
                     expr_reads[g] = 0;
                 } else {
                     // NB expressed in terms of mean/var
-                    double nb_mean = sc.getSizeFactor() * unnormalized_means[g] / norm_factor;
+                    double depth_size = sc.getSizeFactor() * simul_config.depth_sf_ratio;
+                    double nb_mean = depth_size * unnormalized_means[g] / norm_factor;
                     double r = gene_set[g]->getNbInvDispersion();
                     // derive p NB parameter
                     double p = r/(nb_mean + r);
@@ -810,7 +818,7 @@ void GenerateScRnaExpression(const gsl_rng *rng, const SimulationConfig &simul_c
                                  SingleCellData &sc, vector<Gene *> &gene_set) {
 
     // simulate size factor (!= library size)
-    sc.setSizeFactor(gsl_ran_beta(rng, 2, 2) * 2); // TODO add these parameters to the configuration file
+    sc.setSizeFactor(gsl_ran_flat(rng, 0, 2));
 
     vector<size_t> expr_reads(simul_config.n_genes);
     switch (simul_config.exprModel) {
