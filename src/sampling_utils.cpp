@@ -204,3 +204,9 @@ size_t* sampleIndices(const gsl_rng *rng, size_t n, size_t k) {
     gsl_ran_choose(rng, samples, k, idxs, n, sizeof(size_t));
     return samples;
 }
+
+size_t negative_binomial(const gsl_rng *rng, double mean, double var) {
+    double p = mean / var;
+    double n = mean * p / (1 - p);
+    return gsl_ran_negative_binomial(rng, p, n);
+}

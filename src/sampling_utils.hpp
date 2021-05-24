@@ -37,6 +37,8 @@ unsigned int multinomial(const gsl_rng *random, vector<double> &normalized_probs
 void multinomial(const gsl_rng *random, unsigned int N, vector<double> &normalized_probs, unsigned int *result);
 int multinomial(const gsl_rng *random, const vector<double> &unnormalized_probs, double norm);
 
+size_t negative_binomial(const gsl_rng *rng, double mean, double var);
+
 // ASSERT: the length of indices is N
 // each element of indices taking on values {0, ..., normalized_probs.size()}
 void multinomial_sample_indices(const gsl_rng *random, unsigned int N, const vector<double> &normalized_probs, unsigned int *indices);

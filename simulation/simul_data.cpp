@@ -6,9 +6,10 @@
 //
 
 #include "simul_data.hpp"
-
 #include "data_util.hpp"
 #include "tssb_state.hpp"
+
+#include <cmath>
 
 /**
  * Sample the next state given the current using the transition matrix P
@@ -634,12 +635,25 @@ void EvolveCloneSpecificCN(const gsl_rng *rng, const SimulationConfig &simul_con
 
         } else {
             vector<size_t> new_cn_profile(n_bins);
-            for (int b = 0; b < n_bins; ++b) {
-                size_t curr_cn = parent->getCnProfile()[b];
-                size_t parentProposalCn = SampleCnProfile(rng, curr_cn, P1);
-                size_t prevBinCn = b > 0 ? new_cn_profile[b-1] : parentProposalCn;
-                // decide whether to accept the cn from the parent node or the previous bin
-                new_cn_profile[b] = sampleHmmCn(rng, simul_config, parentProposalCn, prevBinCn);
+            int b = 0;
+            while (b < n_bins) {
+                int curr_cn = parent->getCnProfile()[b];
+                // sample delta
+                int parentProposalCn = SampleCnProfile(rng, curr_cn, P1);
+                int delta = parentProposalCn - curr_cn;
+
+                // sample break-point: sample the number of bins before the next bp
+                // parameters are taken from an exploratory analysis of real copy numbers
+                int next_bp = negative_binomial(rng, 67, 6000) + 1;
+                for (int db = 0; db < next_bp && b < n_bins; ++db) {
+                    int x = parent->getCnProfile()[b];
+                    new_cn_profile[b] = min(max(x + delta, 0), (int) simul_config.max_cn);
+                    b++;
+                }
+//
+//                size_t prevBinCn = b > 0 ? new_cn_profile[b-1] : parentProposalCn;
+//                // decide whether to accept the cn from the parent node or the previous bin
+//                new_cn_profile[b] = sampleHmmCn(rng, simul_config, parentProposalCn, prevBinCn);
             }
             node->setCnProfile(new_cn_profile);
             // TODO add simulation of true V(clone) variant copy number

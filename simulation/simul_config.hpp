@@ -89,6 +89,9 @@ public:
     static SimulationConfig *parse_config_file(const string &config_file_path);
     void insert_option(const string &key, const string &val);
 
+    // TODO add new parameter for breakpoint sampling
+    double breakpoint_mean;
+    double breakpoint_var;
 };
 
 #endif /* simul_config_h */
