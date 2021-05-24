@@ -54,6 +54,9 @@ double log_dirichlet_pdf(unsigned int K, double *alpha, double *theta)
  * @return
  */
 double log_poisson_pdf(unsigned int k, double mean) {
+    if (k == 0 && mean == 0) {
+        return 0;
+    }
     return k * log(mean) - mean - gsl_sf_lnfact(k);
 }
 
@@ -121,11 +124,16 @@ double log_zinb_pdf(size_t k, double mean, double r, double rho) {
  * @return
  */
 double log_negative_binomial_pdf(unsigned int k, double mean, double r) {
-    double log_p = gsl_sf_lngamma(k + r) -
-                   gsl_sf_lngamma(k + 1) -
-                   gsl_sf_lngamma(r) +
-                   r * (log(r) - log(r + mean)) +
-                   k * (log(mean) - log(mean + r));
+    double log_p;
+    if (mean == 0 && k == 0) {
+        log_p = 0;
+    } else {
+        log_p = gsl_sf_lngamma(k + r) -
+          gsl_sf_lngamma(k + 1) -
+          gsl_sf_lngamma(r) +
+          r * (log(r) - log(r + mean)) +
+          k * (log(mean) - log(mean + r));
+    }
     return log_p;
 }
 
