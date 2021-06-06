@@ -28,5 +28,9 @@ size_t perturbateCn(const gsl_rng *rng, int old_cn, int max_cn);
 double* compute_means(double size_factor, double depth_sf_ratio, const vector<Gene *> &gene_set,
                       const vector<size_t> &gene_cn, bool norm_model = true);
 
+void testModel(const vector<SingleCellData *> &sc_data,
+                 const vector<CloneTreeNode *> &cell2node, const vector<CloneTreeNode *> &nodes,
+                 const SimulationConfig &simul_config, const vector<Gene *> &gene_set);
+
 
 #endif //PHYLEX_ANALYSIS_H

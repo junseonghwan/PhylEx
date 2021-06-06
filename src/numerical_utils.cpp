@@ -12,7 +12,7 @@
 #include <algorithm>
 #include "numerical_utils.hpp"
 
-#include <assert.h>
+#include <cassert>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_sf.h>
@@ -54,10 +54,13 @@ double log_dirichlet_pdf(unsigned int K, double *alpha, double *theta)
  * @return
  */
 double log_poisson_pdf(unsigned int k, double mean) {
+    double log_p = k * log(mean) - mean - gsl_sf_lnfact(k);
     if (k == 0 && mean == 0) {
-        return 0;
+        log_p = 0;
+    } else if (isnan(log_p)) {
+        log_p = DOUBLE_NEG_INF;
     }
-    return k * log(mean) - mean - gsl_sf_lnfact(k);
+    return log_p;
 }
 
 /**
@@ -133,6 +136,9 @@ double log_negative_binomial_pdf(unsigned int k, double mean, double r) {
           gsl_sf_lngamma(r) +
           r * (log(r) - log(r + mean)) +
           k * (log(mean) - log(mean + r));
+    }
+    if (isnan(log_p)) {
+        log_p = DOUBLE_NEG_INF;
     }
     return log_p;
 }

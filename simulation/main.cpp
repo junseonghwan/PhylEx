@@ -282,13 +282,15 @@ int main(int argc, char *argv[]) {
     WriteLogLikToFile(output_path + "/log_lik_bulk.txt", bulk_log_lik);
     WriteLogLikToFile(output_path + "/log_lik_sc.txt", sc_log_lik);
 
-    // sensitivity analysis on copy numbers
-    string sens_output_path = output_path + "/sens";
-    boost::filesystem::path sens_outpath(sens_output_path);
-    boost::filesystem::create_directories(sens_outpath);
-    // sensitivity simulation on copy numbers
-    cnSensitivitySimulation(100, sc_data, cell2node, sorted_nodes, simul_config, sortedGeneSet,
-                            sens_output_path, rand);
+//    // sensitivity analysis on copy numbers
+//    string sens_output_path = output_path + "/sens";
+//    boost::filesystem::path sens_outpath(sens_output_path);
+//    boost::filesystem::create_directories(sens_outpath);
+//    // sensitivity simulation on copy numbers
+//    cnSensitivitySimulation(100, sc_data, cell2node, sorted_nodes, simul_config, sortedGeneSet,
+//                            sens_output_path, rand);
+
+//    testModel(sc_data, cell2node, sorted_nodes, simul_config, sortedGeneSet);
 
     // output cluster labels
     vector<unsigned int> cluster_labels;

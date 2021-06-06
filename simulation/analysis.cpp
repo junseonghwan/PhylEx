@@ -156,3 +156,176 @@ size_t perturbateCn(const gsl_rng *rng, int old_cn, int max_cn) {
     // make sure the new copy number stays in the boundaries
     return max(min(new_cn, max_cn), 1);
 }
+
+// for each clone and for each bin and for each copy number compute the likelihood
+// n_clones * n_bins * 7
+
+double* precomputeLikelihoods(const vector<SingleCellData *> &sc_data,
+                              const vector<CloneTreeNode *> &cell2node, const vector<CloneTreeNode *> &nodes,
+                              const SimulationConfig &simul_config, const vector<Gene *> &gene_set)
+{
+    // find the node indices for easy access
+    map<CloneTreeNode, int> node2idx;
+    size_t V = nodes.size();
+    for (int i = 0; i < V; ++i) {
+        node2idx[*nodes[i]] = i;
+    }
+    // define the size of the llArray
+    size_t B = nodes[0]->getCnProfile().size();
+    size_t C = sc_data.size();
+    size_t cnRange = simul_config.max_cn + 1;
+
+    // allocate memory and initialize to 0
+    auto llArray = new double[V * B * cnRange]{0};
+
+    // compute norm factors for each node
+    auto norm_factors = new double[V];
+    for (int v = 0; v < V; ++v) {
+        norm_factors[v] = computeNormFactor(nodes[v]);
+    }
+
+    // iterate through cells, bins and copy number values
+    for (int c = 0; c < C; ++c) {
+        int v = node2idx[*cell2node[c]];
+
+        for (int b = 0; b < B; ++b) {
+            for (int cn = 0; cn < cnRange; ++cn) {
+                size_t idx = v * B * cnRange + b * cnRange + cn; // 3D array indexing
+                for (auto g: nodes[v]->getBins()->at(b).getGeneIdxs()) {
+
+                    double mean;
+                    if (simul_config.norm_model) {
+                        double unnorm_mean = sc_data[c]->getSizeFactor() * simul_config.depth_sf_ratio
+                                * gene_set[g]->getPerCopyExpr() * cn;
+                        // use approximate norm factor so that it's easier
+                        mean = unnorm_mean / norm_factors[v];
+                    } else {
+                        mean = exp(sc_data[c]->getSizeFactor() * gene_set[g]->getPerCopyExpr() * cn);
+                    }
+
+                    // compute the partial likelihood for each gene
+                    switch (simul_config.exprModel) {
+                        case POISSON:
+                            llArray[idx] += log_poisson_pdf(sc_data[c]->getExprReads()[g], mean);
+                            break;
+                        case NEG_BINOM:
+                            llArray[idx] += log_negative_binomial_pdf(sc_data[c]->getExprReads()[g],
+                                                                      mean, gene_set[g]->getNbInvDispersion());
+                            break;
+                        case ZIP:
+                            llArray[idx] += log_zip_pdf(sc_data[c]->getExprReads()[g], mean,
+                                                        sc_data[c]->getZeroInflationProbs()[g]);
+                            break;
+                        case ZINB:
+                            llArray[idx] += log_zinb_pdf(sc_data[c]->getExprReads()[g], mean,
+                                                         gene_set[g]->getNbInvDispersion(),
+                                                         sc_data[c]->getZeroInflationProbs()[g]);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+    return llArray;
+
+}
+
+void testModel(const vector<SingleCellData *> &sc_data,
+                 const vector<CloneTreeNode *> &cell2node, const vector<CloneTreeNode *> &nodes,
+                 const SimulationConfig &simul_config, const vector<Gene *> &gene_set)
+{
+    size_t V = nodes.size();
+    size_t G = gene_set.size();
+    size_t cnRange = simul_config.max_cn + 1;
+
+    // map nodes to set of cells and compute the norm factors for each node
+    vector<vector<size_t>> node2cells(V);
+    auto norm_factors = new double[V];
+    for (int v = 0; v < V; ++v) {
+        vector<size_t> cells;
+        for (int c = 0; c < sc_data.size(); ++c) {
+            if (cell2node[c] == nodes[v]) {
+                cells.push_back(c);
+            }
+        }
+        node2cells[v] = cells;
+        norm_factors[v] = computeNormFactor(nodes[v]);
+    }
+
+    for (int model = POISSON; model < 4; ++model) {
+
+        double acc = 0;
+        double mse = 0;
+        double mad = 0;
+        double prevChoices = 0;
+        double infll_count = 0;
+        int count = 0;
+
+        for (int v = 0; v < V; ++v) {
+            for (int g = 0; g < G; ++g) {
+                int cn_pred = -1;
+                double maxll = DOUBLE_NEG_INF;
+
+                for (int cn = 0; cn < cnRange; ++cn) {
+
+                    double ll = 0;
+                    for (auto c: node2cells[v]) {
+
+                        double mean;
+                        if (simul_config.norm_model) {
+                            double unnorm_mean = sc_data[c]->getSizeFactor() * simul_config.depth_sf_ratio
+                                                 * gene_set[g]->getPerCopyExpr() * cn;
+                            // use approximate norm factor so that it's easier
+                            mean = unnorm_mean / norm_factors[v];
+                        } else {
+                            mean = exp(sc_data[c]->getSizeFactor() * gene_set[g]->getPerCopyExpr() * cn);
+                        }
+
+                        // for each cell in node v and for each gene,
+                        // compute the likelihood of each copy number and take the argmax
+                        // compute the partial likelihood for each gene
+                        switch (model) {
+                            case POISSON:
+                                ll += log_poisson_pdf(sc_data[c]->getExprReads()[g], mean);
+                                break;
+                            case NEG_BINOM:
+                                ll += log_negative_binomial_pdf(sc_data[c]->getExprReads()[g],
+                                                                mean, gene_set[g]->getNbInvDispersion());
+                                break;
+                            case ZIP:
+                                ll += log_zip_pdf(sc_data[c]->getExprReads()[g], mean,
+                                                  sc_data[c]->getZeroInflationProbs()[g]);
+                                break;
+                            case ZINB:
+                                ll += log_zinb_pdf(sc_data[c]->getExprReads()[g], mean,
+                                                   gene_set[g]->getNbInvDispersion(),
+                                                   sc_data[c]->getZeroInflationProbs()[g]);
+                                break;
+                            default:
+                                cerr << "Model " << model << " doesn't exist!" << endl;
+                        }
+                    }
+                    infll_count += DOUBLE_NEG_INF == ll;
+                    if (ll > maxll) {
+                        maxll = ll;
+                        cn_pred = cn;
+                    } else if (ll == maxll && g > 0 && nodes[v]->getGeneCnProfile()[g - 1] == cn) {
+                        cn_pred = cn;
+                        prevChoices++;
+                    }
+                }
+                int cn_true = nodes[v]->getGeneCnProfile()[g];
+                acc += cn_pred == cn_true;
+                mse += pow(cn_pred - cn_true, 2);
+                mad += abs(cn_pred - cn_true);
+                count++;
+            }
+        }
+
+        cout << (expr_model) model << " | acc: " << acc/count * 100;
+        cout << ", mse: " << mse / count;
+        cout << ", mad: " << mad / count << endl;
+//        cout << "previous choices (%): " << prevChoices / count * 100 << endl;
+//        cout << "negative infinite ll values (%): " << infll_count / (count * cnRange) * 100 << endl;
+    }
+}
