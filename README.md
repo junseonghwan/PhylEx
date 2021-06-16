@@ -10,6 +10,17 @@ This software performs integrated analysis of bulk DNA-seq and single cell RNA-s
 + `boost`
 + `cmake`
 + `libomp`
++ `pkg-config`
+
+Recommended approach is to install [homebrew](https://brew.sh/) package manager for OSX.
+
+```
+brew install cmake
+brew install pkg-config
+brew install gsl
+brew install boost
+brew install libomp
+```
 
 ## Instructions
 
