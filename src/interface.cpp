@@ -277,41 +277,43 @@ vector<double> ParseRegionalCNData(string line) {
     return data;
 }
 
-void ProcessBulkWithTotalCopyNumberProfile(ifstream &dat_file,
-                                           vector<BulkDatum *> &bulk_data,
-                                           unordered_map<string, size_t> &mut_id2idx) {
-    vector<string> results;
-    string line;
-    while ( getline (dat_file, line) )
-    {
-        boost::split(results, line, boost::is_any_of("\t"));
-        string mut_id = results[0];
-        auto n_vars = ParseRegionalData(results[1]);
-        auto n_reads = ParseRegionalData(results[2]);
-        
-        if (mut_id2idx.count(mut_id) > 0) {
-            cerr << "Error: " << mut_id << " already exists!" << endl;
-            exit(-1);
-        }
-        
-        BulkDatum *datum = new BulkDatum(mut_id, "", 0, n_vars, n_reads);
-        mut_id2idx[mut_id] = bulk_data.size();
-        bulk_data.push_back(datum);
-    }
-}
+//void ProcessBulkWithTotalCopyNumberProfile(ifstream &dat_file,
+//                                           vector<BulkDatum *> &bulk_data,
+//                                           unordered_map<string, size_t> &mut_id2idx) {
+//    vector<string> results;
+//    string line;
+//    while ( getline (dat_file, line) )
+//    {
+//        boost::split(results, line, boost::is_any_of("\t"));
+//        string mut_id = results[0];
+//        auto n_vars = ParseRegionalData(results[1]);
+//        auto n_reads = ParseRegionalData(results[2]);
+//
+//        if (mut_id2idx.count(mut_id) > 0) {
+//            cerr << "Error: " << mut_id << " already exists!" << endl;
+//            exit(-1);
+//        }
+//
+//        BulkDatum *datum = new BulkDatum(mut_id, "", 0, n_vars, n_reads);
+//        mut_id2idx[mut_id] = bulk_data.size();
+//        bulk_data.push_back(datum);
+//    }
+//}
 
 void ProcessBulkWithTotalCopyNumber(ifstream &dat_file,
                                     vector<BulkDatum *> &bulk_data,
-                                    unordered_map<string, size_t> &somatic_loci) {
+                                    unordered_map<string, size_t> &somatic_loci,
+                                    bool includes_loci_info = false) {
+    size_t loci_skip = includes_loci_info ? 4 : 0;
     vector<string> results;
     string line;
     while ( getline (dat_file, line) )
     {
         boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
         string mut_id = results[0];
-        auto n_vars = ParseRegionalData(results[1]);
-        auto n_reads = ParseRegionalData(results[2]);
-        auto total_cn = ParseRegionalData(results[3]);
+        auto n_vars = ParseRegionalData(results[1 + loci_skip]);
+        auto n_reads = ParseRegionalData(results[2 + loci_skip]);
+        auto total_cn = ParseRegionalData(results[3 + loci_skip]);
 
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
@@ -327,8 +329,10 @@ void ProcessBulkWithTotalCopyNumber(ifstream &dat_file,
 
 void ProcessBulkWithGenotype(ifstream &dat_file,
                              vector<BulkDatum *> &bulk_data,
-                             unordered_map<string, size_t> &somatic_loci)
+                             unordered_map<string, size_t> &somatic_loci,
+                             bool includes_loci_info = false)
 {
+    size_t loci_skip = includes_loci_info ? 4 : 0;
     vector<string> results;
     string line;
     while ( getline (dat_file, line) )
@@ -336,11 +340,11 @@ void ProcessBulkWithGenotype(ifstream &dat_file,
         boost::split(results, line, boost::is_any_of("\t"), boost::token_compress_on);
         string mut_id = results[0];
         
-        vector<size_t> var_reads = ParseRegionalData(results[1]);
-        vector<size_t> total_reads = ParseRegionalData(results[2]);
+        vector<size_t> var_reads = ParseRegionalData(results[1 + loci_skip]);
+        vector<size_t> total_reads = ParseRegionalData(results[2 + loci_skip]);
         
-        vector<size_t> major_cns = ParseRegionalData(results[3]);
-        vector<size_t> minor_cns = ParseRegionalData(results[4]);
+        vector<size_t> major_cns = ParseRegionalData(results[3 + loci_skip]);
+        vector<size_t> minor_cns = ParseRegionalData(results[4 + loci_skip]);
         
         if (somatic_loci.count(mut_id) > 0) {
             cerr << "Error: " << mut_id << " already exists!" << endl;
@@ -372,15 +376,16 @@ void Interface::ReadBulkData()
     getline(dat_file, line);
     boost::split(results, line, boost::is_any_of("\t"));
 
-    if (results.size() == BULK_WITH_GENOTYPE_COLUMN_COUNT) {
-        ProcessBulkWithGenotype(dat_file, bulk_data_, mut_id2bulk_idx_);
+    if (results.size() == BULK_WITH_GENOTYPE_COLUMN_COUNT ||
+            results.size() == (BULK_WITH_GENOTYPE_COLUMN_COUNT + 4)) {
+        ProcessBulkWithGenotype(dat_file, bulk_data_, mut_id2bulk_idx_,
+                                results.size() == (BULK_WITH_GENOTYPE_COLUMN_COUNT + 4));
         cn_input_type_ = CopyNumberInputType::GENOTYPE;
-    } else if (results.size() == BULK_WITH_TOTAL_CN_COLUMN_COUNT) {
-        ProcessBulkWithTotalCopyNumber(dat_file, bulk_data_, mut_id2bulk_idx_);
+    } else if (results.size() == BULK_WITH_TOTAL_CN_COLUMN_COUNT ||
+            results.size() == (BULK_WITH_TOTAL_CN_COLUMN_COUNT + 4)) {
+        ProcessBulkWithTotalCopyNumber(dat_file, bulk_data_, mut_id2bulk_idx_,
+                                       results.size() == (BULK_WITH_TOTAL_CN_COLUMN_COUNT + 4));
         cn_input_type_ = CopyNumberInputType::TOTAL_CN;
-    } else if (results.size() == BULK_WITH_TOTAL_CN_PRIOR_COLUMN_COUNT) {
-        ProcessBulkWithTotalCopyNumberProfile(dat_file, bulk_data_, mut_id2bulk_idx_);
-        cn_input_type_ = CopyNumberInputType::UNDETERMINED;
     } else {
         cerr << "Error: invalid bulk input format.\n";
         exit(-1);

@@ -22,8 +22,6 @@ const double DEFAULT_GAMMA_MAX = 5.0;
 
 const size_t BULK_WITH_GENOTYPE_COLUMN_COUNT = 5;
 const size_t BULK_WITH_TOTAL_CN_COLUMN_COUNT = 4;
-// Not supporting CN_PRIOR option for now.
-const size_t BULK_WITH_TOTAL_CN_PRIOR_COLUMN_COUNT = -1;
 
 enum CopyNumberInputType {
     TOTAL_CN, GENOTYPE, TOTAL_CN_PROFILE, UNDETERMINED
