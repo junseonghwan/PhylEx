@@ -1,5 +1,8 @@
 #include "tssb_state.hpp"
 
+#include <algorithm>
+#include <iterator>
+
 #include <omp.h>
 #include "utils.hpp"
 
@@ -677,6 +680,7 @@ gsl_matrix *TSSBState::get_ancestral_matrix(TSSBState &state)
     return A;
 }
 
+
 /**********************
  Functions for sampling
  **********************/
@@ -1150,4 +1154,46 @@ double ComputeSingleCellLikelihood(CloneTreeNode *root,
         log_lik += (log_lik_cell + log_prior);
     }
     return log_lik;
+}
+
+vector<CloneTreeNode *> AssignSingleCells(CloneTreeNode *root,
+                                                vector<BulkDatum *> &bulk_data,
+                                                vector<SingleCellData *> &sc_data,
+                                                const ModelParams &model_params)
+{
+    vector<CloneTreeNode *> cell_assignment;
+    
+    vector<CloneTreeNode *> nodes;
+    TSSBState::get_all_nodes(true, root, nodes);
+    unordered_map<CloneTreeNode *, unordered_set<const BulkDatum *> > node2snvs;
+    for (auto node : nodes) {
+        unordered_set<const BulkDatum *> snvs;
+        CloneTreeNode::GetDataset(node, snvs);
+        node2snvs[node] = snvs;
+    }
+
+    bool has_snv;
+    double log_lik = 0.0, log_val = 0.0;
+    vector<double> log_lik_nodes(nodes.size());
+    for (size_t c = 0; c < sc_data.size(); c++) {
+        
+        for (size_t node_idx = 0; node_idx < nodes.size(); node_idx++) {
+            auto node = nodes.at(node_idx);
+            double log_lik_node = 0.0;
+            for (size_t loci_idx : sc_data.at(c)->GetLoci()) {
+                has_snv = node2snvs.at(node).count(bulk_data.at(loci_idx)) ? true : false;
+                log_val = ScLikelihood(loci_idx,
+                                       bulk_data.at(loci_idx),
+                                       sc_data.at(c),
+                                       has_snv,
+                                       model_params);
+                log_lik_node += log_val;
+            }
+            log_lik_nodes.at(node_idx) = log_lik_node;
+        }
+        // Assign cell to node with highest likelihood.
+        auto result = std::distance(log_lik_nodes.begin(), std::max_element(log_lik_nodes.begin(), log_lik_nodes.end()));
+        cell_assignment.push_back(nodes.at(result));
+    }
+    return cell_assignment;
 }

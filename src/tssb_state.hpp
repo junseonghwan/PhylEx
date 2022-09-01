@@ -179,5 +179,8 @@ double ComputeSingleCellLikelihood(CloneTreeNode *root,
                     vector<BulkDatum *> &bulk_data,
                     vector<SingleCellData *> &sc_data,
                     const ModelParams &model_params);
-
+vector<CloneTreeNode *> AssignSingleCells(CloneTreeNode *root,
+                                          vector<BulkDatum *> &bulk_data,
+                                          vector<SingleCellData *> &sc_data,
+                                          const ModelParams &model_params);
 #endif /* tssb_state_hpp */

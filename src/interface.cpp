@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <gsl/gsl_statistics.h>
 
@@ -574,7 +575,9 @@ void Interface::Run()
     model_params_.SetAlpha0(model_params_.GetAlpha0Bound(true)/2);
     model_params_.SetLambda(model_params_.GetLambdaBound(true)/2);
     model_params_.SetGamma(model_params_.GetGammaBound(true)/2);
-    RunSliceSampler(random, model_params_);
+    auto tssb_state = RunSliceSampler(random, model_params_);
+    vector<CloneTreeNode *> cell_assignment = AssignSingleCells(tssb_state->get_root(), bulk_data_, sc_data_, model_params_);
+    WriteCell2NodeAssignment(config_.output_path, sc_data_, cell_assignment);
 }
 
 void Interface::Print() {
