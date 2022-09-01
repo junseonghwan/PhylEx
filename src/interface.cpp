@@ -25,18 +25,18 @@
 #include "utils.hpp"
 
 void WriteBestTress(string output_path,
-                      const vector<BulkDatum *> &bulk,
-                      vector<pair<double, shared_ptr<CompactTSSBState > > > &best_states)
+                    const vector<BulkDatum *> &bulk,
+                    const vector<SingleCellData *> &sc_data,
+                    vector<pair<double, shared_ptr<CompactTSSBState > > > &best_states)
 {
     size_t n_trees = best_states.size();
     for (size_t i = 0; i < best_states.size(); i++)
     {
         string path = output_path + "/tree" + to_string(i);
         size_t idx = n_trees-i-1;
-        write_tree(path,
-                             bulk,
-                             *best_states[idx].second.get());
+        write_tree(path, bulk, *best_states[idx].second.get());
         WriteLogLikToFile(path + "/log_lik.txt", best_states[idx].first);
+        WriteCell2NodeAssignment(path, sc_data, best_states.at(idx).second->get_cell_assignment());
     }
 }
 
@@ -146,10 +146,10 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         gamma.push_back(params.GetGamma());
         
         if (joint_best.size() < state_count) {
-            auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree));
+            auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree, model_params_));
             joint_best.push_back(make_pair(log_lik, compact_state));
         } else {
-            auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree));
+            auto compact_state = shared_ptr<CompactTSSBState >(new CompactTSSBState(*tree, model_params_));
             if (log_lik > joint_best[0].first) {
                 joint_best[0] = make_pair(log_lik, compact_state);
                 sort(joint_best.begin(), joint_best.end(), comp_states);
@@ -158,12 +158,12 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
         
         if ((iter % config_.thinning) == 0 || (iter + 1) == n_iter) {
             // store current tree
-            auto compact_state = shared_ptr<CompactTSSBState >(new  CompactTSSBState(*tree));
+            auto compact_state = shared_ptr<CompactTSSBState >(new  CompactTSSBState(*tree, model_params_));
             states.push_back(make_pair(log_lik, compact_state));
         }
 
         if ((iter % config_.output_interval) == 0) {
-            WriteBestTress(config_.output_path + "/joint", bulk_data_, joint_best);
+            WriteBestTress(config_.output_path + "/joint", bulk_data_, sc_data_, joint_best);
             for (size_t i = n_trees; i < states.size(); i++) {
                 write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second.get());
                 WriteLogLikToFile(config_.output_path + "/states/tree" + to_string(n_trees) + "/log_lik.txt", states[i].first);
@@ -178,7 +178,7 @@ TSSBState *Interface::RunSliceSampler(const gsl_rng *random,
     write_vector(config_.output_path + "/timing.txt", timing);
     
     // flush the states
-    WriteBestTress(config_.output_path + "/joint", bulk_data_, joint_best);
+    WriteBestTress(config_.output_path + "/joint", bulk_data_, sc_data_, joint_best);
     for (size_t i = n_trees; i < states.size(); i++) {
         write_tree(config_.output_path + "/states/tree" + to_string(n_trees) + "/", bulk_data_, *states[i].second.get());
         WriteLogLikToFile(config_.output_path + "/states/tree" + to_string(n_trees) + "/log_lik.txt", states[i].first);
@@ -575,9 +575,7 @@ void Interface::Run()
     model_params_.SetAlpha0(model_params_.GetAlpha0Bound(true)/2);
     model_params_.SetLambda(model_params_.GetLambdaBound(true)/2);
     model_params_.SetGamma(model_params_.GetGammaBound(true)/2);
-    auto tssb_state = RunSliceSampler(random, model_params_);
-    vector<CloneTreeNode *> cell_assignment = AssignSingleCells(tssb_state->get_root(), bulk_data_, sc_data_, model_params_);
-    WriteCell2NodeAssignment(config_.output_path, sc_data_, cell_assignment);
+    RunSliceSampler(random, model_params_);
 }
 
 void Interface::Print() {

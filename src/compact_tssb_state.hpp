@@ -21,10 +21,11 @@ class CompactTSSBState
     vector<string> datum2node;
     vector<CloneTreeNodeParam *> datum2param;
     unordered_map<string, vector<double> > node2param;
+    vector<CloneTreeNode *> cell_assignment;
     vector<unsigned int> cluster_labels;
     string newick;
 public:
-    CompactTSSBState(TSSBState &tssb_state);
+    CompactTSSBState(TSSBState &tssb_state, const ModelParams &model_params);
     ~CompactTSSBState();
 
     gsl_matrix *GetAncestralMatrix() { return ancestral_matrix; }
@@ -32,6 +33,7 @@ public:
     inline const vector<unsigned int> &get_cluster_labels() const { return cluster_labels; };
     inline const string get_newick() const { return newick; }
     inline const vector<string> &get_datum2node() const { return datum2node; }
+    inline const vector<CloneTreeNode *> &get_cell_assignment() const { return cell_assignment; }
     inline const unordered_map<string, vector<double> > &get_node2param() const { return node2param; }
 };
 

@@ -1,7 +1,7 @@
 
 #include "compact_tssb_state.hpp"
 
-CompactTSSBState::CompactTSSBState(TSSBState &tssb_state)
+CompactTSSBState::CompactTSSBState(TSSBState &tssb_state, const ModelParams &model_params)
 {
     newick = write_newick(tssb_state.get_root());
     fill_node_to_param(tssb_state.get_root(), node2param);
@@ -16,6 +16,8 @@ CompactTSSBState::CompactTSSBState(TSSBState &tssb_state)
         datum2param.push_back(new CloneTreeNodeParam(node->NodeParameter()));
         datum2node.push_back(node->GetName());
     }
+    
+    cell_assignment = tssb_state.get_cell_assignment(model_params);
     
     // get non-empty nodes
     //    vector<CloneTreeNode *> nodes;

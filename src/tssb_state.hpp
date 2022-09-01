@@ -43,7 +43,7 @@ class TSSBState
 
     vector<BulkDatum *> *bulk_data_;
     vector<bool> has_sc_coverage_;
-    vector<SingleCellData *> *sc_data;
+    vector<SingleCellData *> *sc_data_;
 
     unordered_map<const BulkDatum *, CloneTreeNode *> datum2node;
 
@@ -135,6 +135,7 @@ public:
     static double get_log_prior_assignment(CloneTreeNode *root);
     //inline double get_log_lik_bulk() { return log_lik_bulk; }
     inline double get_log_lik_sc() { return log_lik_sc; }
+    vector<CloneTreeNode *> get_cell_assignment(const ModelParams &model_params);
 
     // for output and debugging
     string print();

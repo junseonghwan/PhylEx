@@ -25,7 +25,7 @@ root(root),
 use_geometric_mean_(use_geometric_mean),
 bulk_data_(bulk_data),
 has_sc_coverage_(bulk_data_->size(), false),
-sc_data(sc_data),
+sc_data_(sc_data),
 log_lik_datum(log_lik_datum),
 log_lik_sc_at_site(log_lik_sc_at_site),
 sc_presence_matrix_(bulk_data->size(), vector<double>(sc_data->size())),
@@ -55,7 +55,7 @@ sc_absence_matrix_(bulk_data->size(), vector<double>(sc_data->size()))
 }
 
 void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
-    size_t cell_count = sc_data->size();
+    size_t cell_count = sc_data_->size();
     size_t mutation_count = bulk_data_->size();
 
     // Evaluate single cell log likelihoods.
@@ -67,16 +67,16 @@ void TSSBState::ProcessSingleCellData(const ModelParams &model_params) {
         for (size_t c = 0; c < cell_count; c++) {
             sc_presence_matrix_[n][c] = log_lik_sc_at_site(n,
                                                              bulk_data_->at(n),
-                                                             sc_data->at(c),
+                                                             sc_data_->at(c),
                                                              true,
                                                              model_params);
             sc_absence_matrix_[n][c] = log_lik_sc_at_site(n,
                                                             bulk_data_->at(n),
-                                                            sc_data->at(c),
+                                                            sc_data_->at(c),
                                                             false,
                                                             model_params);
-            auto total_reads = sc_data->at(c)->GetTotalReads(n);
-            auto var_reads = sc_data->at(c)->GetVariantReads(n);
+            auto total_reads = sc_data_->at(c)->GetTotalReads(n);
+            auto var_reads = sc_data_->at(c)->GetVariantReads(n);
             sc_coverage_count += (total_reads > 0) ? 1 : 0;
             sc_var_coverage_count += (var_reads > 0) ? 1 : 0;
         }
@@ -98,10 +98,10 @@ void TSSBState::InitializeDataAssignment(const gsl_rng *random, size_t mut_id, c
 
 void TSSBState::InitializeCacheForNode(CloneTreeNode *v)
 {
-    if (!v->IsCacheAllocated(sc_data->size())) {
-        v->AllocateCache(sc_data->size());
+    if (!v->IsCacheAllocated(sc_data_->size())) {
+        v->AllocateCache(sc_data_->size());
         double log_lik;
-        for (size_t c = 0; c < sc_data->size(); c++) {
+        for (size_t c = 0; c < sc_data_->size(); c++) {
             log_lik = compute_loglik_sc(v, c);
             v->UpdateCache(c, log_lik);
         }
@@ -111,7 +111,7 @@ void TSSBState::InitializeCacheForNode(CloneTreeNode *v)
 void TSSBState::UpdateSingleCellCache(CloneTreeNode *curr_node, CloneTreeNode *new_node, size_t mut_id, const ModelParams &params)
 {
     //cout << "===== Update sc cache =====" << endl;
-    if (sc_data == 0) {
+    if (sc_data_ == 0) {
         return;
     }
 
@@ -125,12 +125,12 @@ void TSSBState::UpdateSingleCellCache(CloneTreeNode *curr_node, CloneTreeNode *n
         // Check if cache is already allocated for v.
         // If not, initialize cache.
         // If yes, update cache.
-        if (!v->IsCacheAllocated(sc_data->size())) {
+        if (!v->IsCacheAllocated(sc_data_->size())) {
             InitializeCacheForNode(v);
             continue;
         }
 
-        for (size_t c = 0; c < sc_data->size(); c++) {
+        for (size_t c = 0; c < sc_data_->size(); c++) {
             double x = sc_presence_matrix_.at(mut_id).at(c);
             v->UpdateCache(c, -x);
             exp_mut_status = v->IsDescendantOf(new_node) ? true : false;
@@ -141,11 +141,11 @@ void TSSBState::UpdateSingleCellCache(CloneTreeNode *curr_node, CloneTreeNode *n
     }
 
     for (CloneTreeNode *v : subtree_new) {
-        if (!v->IsCacheAllocated(sc_data->size())) {
+        if (!v->IsCacheAllocated(sc_data_->size())) {
             InitializeCacheForNode(v);
             continue;
         }
-        for (size_t c = 0; c < sc_data->size(); c++) {
+        for (size_t c = 0; c < sc_data_->size(); c++) {
             exp_mut_status = v->IsDescendantOf(curr_node) ? true : false;
             double x = exp_mut_status ? sc_presence_matrix_.at(mut_id).at(c) :
                                         sc_absence_matrix_.at(mut_id).at(c);
@@ -308,7 +308,7 @@ void TSSBState::AssignDatum(CloneTreeNode *curr_node, CloneTreeNode *new_node, s
     
     // update single cell cache.
     // TODO: do it only if mut_id has single cell coverage.
-    if (update_cache && sc_data != 0 && sc_data->size() > 0)
+    if (update_cache && sc_data_ != 0 && sc_data_->size() > 0)
         UpdateSingleCellCache(curr_node, new_node, mut_id, model_params);
 }
 
@@ -338,7 +338,7 @@ double TSSBState::get_log_prior_assignment(CloneTreeNode *root)
 
 double TSSBState::compute_log_likelihood_sc(bool verbose)
 {
-    if (sc_data->size() == 0) {
+    if (sc_data_->size() == 0) {
         return 0.0;
     }
 
@@ -348,7 +348,7 @@ double TSSBState::compute_log_likelihood_sc(bool verbose)
     get_all_nodes(true, root, all_nodes);
     
     double log_prior_assignment = -log(all_nodes.size());
-    for (size_t c = 0; c < sc_data->size(); c++) {
+    for (size_t c = 0; c < sc_data_->size(); c++) {
         double log_lik_cell = DOUBLE_NEG_INF;
         for (size_t i = 0; i < all_nodes.size(); i++) {
             CloneTreeNode *node = all_nodes[i];
@@ -364,14 +364,14 @@ double TSSBState::compute_log_likelihood_sc(bool verbose)
     }
     
     if (use_geometric_mean_) {
-        log_lik_sc /= sc_data->size();
+        log_lik_sc /= sc_data_->size();
     }
     return log_lik_sc;
 }
 
 double TSSBState::compute_log_likelihood_sc_cached(bool verbose)
 {
-    if (sc_data == 0 || sc_data->size() == 0) {
+    if (sc_data_ == 0 || sc_data_->size() == 0) {
         return 0.0;
     }
 
@@ -389,7 +389,7 @@ double TSSBState::compute_log_likelihood_sc_cached(bool verbose)
     double log_lik_sc = 0.0;
     double log_val;
     // TODO: this can be parallelized over cells -- but this is not the bottleneck.
-    for (size_t c = 0; c < sc_data->size(); c++) {
+    for (size_t c = 0; c < sc_data_->size(); c++) {
         // Marginalize over the nodes.
         //std::cout << sc_data->at(c)->GetName() << std::endl;
         double log_lik_cell = DOUBLE_NEG_INF;
@@ -408,7 +408,7 @@ double TSSBState::compute_log_likelihood_sc_cached(bool verbose)
 
     // Raise single cell likelihood to power of 1/C.
     if (use_geometric_mean_) {
-        log_lik_sc /= sc_data->size();
+        log_lik_sc /= sc_data_->size();
     }
     return log_lik_sc;
 }
@@ -417,7 +417,7 @@ double TSSBState::compute_loglik_sc(CloneTreeNode *v, size_t cell_id)
 {
     double log_lik = 0.0;
     bool has_snv;
-    auto loci_idxs = sc_data->at(cell_id)->GetLoci();
+    auto loci_idxs = sc_data_->at(cell_id)->GetLoci();
     for (size_t loci_idx : loci_idxs) {
         const BulkDatum *snv = bulk_data_->at(loci_idx);
         auto u = datum2node[snv];
@@ -680,6 +680,10 @@ gsl_matrix *TSSBState::get_ancestral_matrix(TSSBState &state)
     return A;
 }
 
+vector<CloneTreeNode *> TSSBState::get_cell_assignment(const ModelParams &model_params)
+{
+    return AssignSingleCells(this->get_root(), *bulk_data_, *sc_data_, model_params);
+}
 
 /**********************
  Functions for sampling
