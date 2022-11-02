@@ -8,7 +8,7 @@ CompactTSSBState::CompactTSSBState(TSSBState &tssb_state, const ModelParams &mod
 
     // construct ancestral matrix
     ancestral_matrix = TSSBState::get_ancestral_matrix(tssb_state);
-    
+
     // construct datum2param
     CloneTreeNode *node;
     for (size_t i = 0; i < tssb_state.get_data().size(); i++) {
@@ -16,7 +16,7 @@ CompactTSSBState::CompactTSSBState(TSSBState &tssb_state, const ModelParams &mod
         datum2param.push_back(new CloneTreeNodeParam(node->NodeParameter()));
         datum2node.push_back(node->GetName());
     }
-    
+
     cell_assignment = tssb_state.get_cell_assignment(model_params);
     
     // get non-empty nodes

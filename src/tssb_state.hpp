@@ -135,7 +135,7 @@ public:
     static double get_log_prior_assignment(CloneTreeNode *root);
     //inline double get_log_lik_bulk() { return log_lik_bulk; }
     inline double get_log_lik_sc() { return log_lik_sc; }
-    vector<CloneTreeNode *> get_cell_assignment(const ModelParams &model_params);
+    vector<string> get_cell_assignment(const ModelParams &model_params);
 
     // for output and debugging
     string print();
@@ -180,8 +180,8 @@ double ComputeSingleCellLikelihood(CloneTreeNode *root,
                     vector<BulkDatum *> &bulk_data,
                     vector<SingleCellData *> &sc_data,
                     const ModelParams &model_params);
-vector<CloneTreeNode *> AssignSingleCells(CloneTreeNode *root,
-                                          vector<BulkDatum *> &bulk_data,
-                                          vector<SingleCellData *> &sc_data,
-                                          const ModelParams &model_params);
+vector<string> AssignSingleCells(CloneTreeNode *root,
+                                 vector<BulkDatum *> &bulk_data,
+                                 vector<SingleCellData *> &sc_data,
+                                 const ModelParams &model_params);
 #endif /* tssb_state_hpp */

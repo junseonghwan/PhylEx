@@ -296,11 +296,11 @@ void WriteScRnaData(string output_path,
 
 void WriteCell2NodeAssignment(string output_path,
                               const vector<SingleCellData *> &sc_data,
-                              const vector<CloneTreeNode *> &cell2node) {
+                              const vector<string> &cell2node) {
     ofstream f;
     f.open(output_path + "/cell2node.txt", ios::out);
     for (size_t i = 0; i < cell2node.size(); i++) {
-        f << sc_data.at(i)->GetName() << "\t" << cell2node.at(i)->GetName() << "\n";
+        f << sc_data.at(i)->GetName() << "\t" << cell2node.at(i) << "\n";
     }
     f.close();
 }

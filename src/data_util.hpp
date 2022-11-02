@@ -46,7 +46,7 @@ void WriteScRnaData(string output_path,
                     const vector<SingleCellData *> &sc_data);
 void WriteCell2NodeAssignment(string output_path,
                               const vector<SingleCellData *> &sc_data,
-                              const vector<CloneTreeNode *> &cell2node);
+                              const vector<string> &cell2node);
 void write_tree(string output_path,
                 const vector<BulkDatum *> &bulk,
                 CompactTSSBState &state);

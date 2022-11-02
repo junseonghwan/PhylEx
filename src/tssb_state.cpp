@@ -680,7 +680,7 @@ gsl_matrix *TSSBState::get_ancestral_matrix(TSSBState &state)
     return A;
 }
 
-vector<CloneTreeNode *> TSSBState::get_cell_assignment(const ModelParams &model_params)
+vector<string> TSSBState::get_cell_assignment(const ModelParams &model_params)
 {
     return AssignSingleCells(this->get_root(), *bulk_data_, *sc_data_, model_params);
 }
@@ -1160,12 +1160,12 @@ double ComputeSingleCellLikelihood(CloneTreeNode *root,
     return log_lik;
 }
 
-vector<CloneTreeNode *> AssignSingleCells(CloneTreeNode *root,
-                                                vector<BulkDatum *> &bulk_data,
-                                                vector<SingleCellData *> &sc_data,
-                                                const ModelParams &model_params)
+vector<string> AssignSingleCells(CloneTreeNode *root,
+                                 vector<BulkDatum *> &bulk_data,
+                                 vector<SingleCellData *> &sc_data,
+                                 const ModelParams &model_params)
 {
-    vector<CloneTreeNode *> cell_assignment;
+    vector<string> cell_assignment;
     
     vector<CloneTreeNode *> nodes;
     TSSBState::get_all_nodes(true, root, nodes);
@@ -1197,7 +1197,7 @@ vector<CloneTreeNode *> AssignSingleCells(CloneTreeNode *root,
         }
         // Assign cell to node with highest likelihood.
         auto result = std::distance(log_lik_nodes.begin(), std::max_element(log_lik_nodes.begin(), log_lik_nodes.end()));
-        cell_assignment.push_back(nodes.at(result));
+        cell_assignment.push_back(nodes.at(result)->GetName());
     }
     return cell_assignment;
 }
