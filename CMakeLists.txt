@@ -10,6 +10,8 @@ set(CMAKE_C_FLAGS "-Wall -g" )
 #set(Boost_USE_STATIC_LIBS ON)
 #set(Boost_USE_MULTITHREADED OFF)
 
+add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
+
 if (APPLE)
     set(OPENMP_CXX_INCLUDE_DIRS /usr/local/opt/libomp/include)
     set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" CACHE INTERNAL "OpenMP flags for Xcode toolchain.")
