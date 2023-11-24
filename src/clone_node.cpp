@@ -7,6 +7,7 @@
 
 #include "clone_node.hpp"
 
+#include <cmath>
 #include <iomanip>
 #include <unordered_set>
 
