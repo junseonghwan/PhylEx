@@ -6,10 +6,11 @@ add_library(tssb STATIC ${SRCS}) # create static library
 add_executable(run ${SRCS}) # create the executable file
 
 find_package (PkgConfig REQUIRED)
-find_package(Boost 1.61 COMPONENTS regex system filesystem program_options REQUIRED)
+find_package(Boost COMPONENTS regex system filesystem program_options REQUIRED)
 find_package (GSL REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
+    message(STATUS "Boost library: ${Boost_LIBRARY_DIRS}")
 endif()
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)

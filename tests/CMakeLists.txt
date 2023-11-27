@@ -4,7 +4,7 @@ include_directories(/usr/local/include/ ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOUR
 set(Boost_USE_STATIC_LIBS ON)
 
 find_package (PkgConfig REQUIRED)
-find_package(Boost 1.61 COMPONENTS unit_test_framework filesystem REQUIRED)
+find_package(Boost COMPONENTS unit_test_framework filesystem REQUIRED)
 find_package (GSL REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
